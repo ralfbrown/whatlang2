@@ -2118,38 +2118,6 @@ static bool cosine_term(const PackedTrieNode *node, const uint8_t *,
 
 //----------------------------------------------------------------------
 
-#if 0
-//USEME
-static bool all_cosine_term(const PackedTrieNode *node, const uint8_t *,
-			    unsigned /*keylen*/, void *user_data)
-{
-   WeightedLanguageScores **scores = (WeightedLanguageScores**)user_data ;
-   const PackedTrieFreq *frequencies
-      = node->frequencies((PackedTrieFreq*)scores[0]->userData()) ;
-   for (const PackedTrieFreq *freq = frequencies ; freq ; freq = freq->next())
-      {
-      if (freq->isStopgram())
-	 continue ;
-      double lang1prob = freq->probability() ;
-      unsigned langid = freq->languageID() ;
-      for (const PackedTrieFreq *freq2 = frequencies ;
-	   freq2 ;
-	   freq2 = freq->next())
-	 {
-	 if (freq2->isStopgram())
-	    continue ;
-	 unsigned lang2 = freq2->languageID() ;
-	 double lang2prob = freq2->probability() ;
-	 scores[langid]->incrWeight(lang2,lang2prob * lang2prob) ;
-	 scores[langid]->increment(lang2,lang1prob * lang2prob) ;
-	 }
-      }
-   return true ;
-}
-#endif /* 0 */
-
-//----------------------------------------------------------------------
-
 LanguageScores *LanguageIdentifier::similarity(unsigned langid) const
 {
    if (langid >= numLanguages() || !trie())
