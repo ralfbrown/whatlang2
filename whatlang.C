@@ -5,7 +5,7 @@
 /*									*/
 /*  File:     whatlang.C  main program/wrapper for simple identifier	*/
 /*  Version:  1.30							*/
-/*  LastEdit: 01jul2019 						*/
+/*  LastEdit: 2019-07-07 						*/
 /*                                                                      */
 /*  (c) Copyright 2011,2012,2013,2014,2019				*/
 /*		 Ralf Brown/Carnegie Mellon University			*/
@@ -45,7 +45,7 @@
 
 #define CUTOFF_RATIO 0.8
 
-#define VERSION "1.24"
+#define VERSION "1.30"
 
 /************************************************************************/
 /*	Types for this Module						*/
@@ -74,7 +74,7 @@ static double bigram_weight = DEFAULT_BIGRAM_WEIGHT ;
 static void usage(const char *argv0)
 {
    fprintf(stderr,
-	   "WhatLang v" VERSION "  Copyright 2011,2012 Ralf Brown/CMU -- GNU GPLv3\n"
+	   "WhatLang v" VERSION "  Copyright 2011,2012,2019 Ralf Brown/CMU -- GNU GPLv3\n"
 	   "Usage: %s [flags] [file]\n"
 	   "Flags:\n"
 	   "  -h     show this usage summary\n"
