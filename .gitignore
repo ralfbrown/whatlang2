@@ -1,1 +1,6 @@
 framepac
+build
+bin
+*.a
+*.o
+*.s
