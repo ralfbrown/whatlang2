@@ -1,0 +1,13 @@
+This is the 'whatlang' language identifier, updated to use FramepaC-ng
+and compile properly in C++11 under more recent compilers than the
+version originally included as part of LA-Strings (the language-aware
+text-string extractor).
+
+The makefile assumes that the 'framepac' subdirectory contains a copy
+of FramepaC-ng.  If you already have a copy installed, just make it a
+symlink (git has been told to ignore 'framepac').  Otherwise, you can
+use 'git submodule' to install a copy from the FramepaC-ng repo.
+
+Due to the size of the data files for training, they have not been
+copied to GitHub.  You can still retrieve them from SourceForge, at
+https://sourceforge.net/projects/la-strings/files/Language-Data/

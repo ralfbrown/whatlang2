@@ -1,0 +1,384 @@
+LangIdent - Ngram-based language identification
+
+========
+MkLangID
+========
+
+The 'mklangid' program is used to generate a language-model database
+for language identification in the 'whatlang' and 'la-strings'
+programs.
+
+
+Usage Summary
+-------------
+
+   mklangid [=DBFILE] [options] file [file ...] [options file [file ...] ...]
+   mklangid [=DBFILE] -Cthresh,outfile
+
+If the =DBFILE option is present, DBFILE will be used as the language
+database file rather than the compiled-in default name (typically
+/usr/share/langident/languages.db).  This option must be first.
+Double the equal sign (i.e. ==DBFILE) to avoid modifying the database
+file; this is useful for running multiple concurrent language model
+builds with stop-grams (see -R).  Use -w to store the results in
+separate text files if you have chosen not to update the database
+file.
+
+The named files are used as training data.  They should be plain text
+files in the appropriate encoding, but should not be preprocessed in
+any way (i.e. do not convert to lowercase, separate or strip
+punctuation, etc.) as that would degrade the accuracy of the model
+compared to the texts which are to be analyzed using the model.  For
+best results, the data should be diverse and without large-scale
+repetitions (i.e. remove duplicate copies of repetitious items such as
+fixed headings), and there should be at least one million characters
+(i.e. 1-3 MB, depending on average bytes per character), though it is
+possible to build an effective model from as little as 100KB of text.
+More than 10 million characters of training data will generally only
+result in slower training.
+
+Each separate group of files will generate a separate language model.
+You must change at least one of the four language options described in
+the next section between different models; it is not permitted to have
+multiple models with identical language attributes, but you may have
+multiple models for a particular language if the region or source
+differ.
+
+
+Language options
+----------------
+
+Each language model has four attributes identifying its language: the
+actual language name, the regional variant of the language, the
+character encoding, and the source of the data.  Regional variants
+allow distinction between British and American English, for example
+(en_GB vs en_US), or European versus Brazilian Portugese (pt_PT vs
+pt_BR).  The data source could be used to distinguish between
+different genres having differing styles, such as newswire and online
+chats, or different domains, such as chemistry and astronomy.
+
+The flags controlling these attributes are:
+
+   -l LANG
+	the actual language (preferably an ISO-639 two- or
+	three-letter code); if LANG contains an equal sign, the part
+	before the equal sign is taken as the language code and the
+	part after the equal sign is used as the 'friendly' long name
+	which may optionally be requested by commandline option to
+	la-strings.
+   -r REG
+	the regional variant (typically two-letter country code)
+   -e ENC
+	the character encoding, such as ASCII, Latin-1, UTF-8,
+	Shift-JIS, or GB-2312.
+   -s SRC
+	the source of the data (this permits multiple models for the
+	same regional variant in the same character encoding).
+   
+Model options
+-------------
+
+   -f
+   -fc
+   -ft
+	The following file or group of files is a frequency list,
+	rather than raw text.  The -f variant requires a file in the
+	format used for the -w option (count, then string with special
+	characters quoted by backslash, with an optional first line
+	containing TotalCount:), while the -fc variant expects a file
+	in the format used by the An Crubadan web crawler project
+	(count, then string without backslash quoting, where '<' and
+	'>' represent start and end of a word), and the -ft variant
+	requires a file in the format used by the TextCat Perl script
+	(string, then tab, then count).  This flag affects only the
+	immediately following group of files.  The -k, -m, -M, -n,
+	-nn, -a, -O, -2, and -8 flags are ignored when using -f or -ft.
+
+   -k K
+	Collect the top K n-grams by frequency to form the model.
+	Note that there is a small amount of filtering to eliminate
+	redundant n-grams, so the K n-grams selected for the model may
+	not be strictly the highest-frequency n-grams.  By default,
+	5,000 n-grams are used.
+
+   -L N
+        Limit training to the first N bytes of the input data.  This
+        option is primarily for ablation experiments, but may be
+        useful if you have large data files and do not want to create
+        new training files specifically for MkLangID.
+
+   -m N
+	Require the n-grams for the model to consist of at least N
+	bytes.  The default (also minimum) value is 3.
+
+   -M N
+	Limit n-grams to at most N bytes.  May not be less than the
+	minimum value selected with -m.  The default limit is 10
+	bytes, the maximum limit is 500 bytes.  Note that the
+	extraction may stop before reaching the limit because there
+	are no more n-grams in the top K beyond a certain length.
+
+   -b
+	Omit the bigram byte model from the final language model.
+	This flag affects only the immediately following group of
+	files.  In general, including bigrams in the models results in
+	little or no difference in accuracy while increasing the size
+	of the models and doubling runtime for language identification.
+
+   -n
+	Skip newlines when building model.  N-grams containing \n or
+	\r are ignored when counting frequencies, as are those
+	beginning with a tab or blank.  Should only be used with
+	character encodings which do not contain those four byte
+	values as part of multi-byte characters (e.g. UTF-8 is OK,
+	UTF-16 is not).  This flag affects only the immediately
+	following group of files.
+
+   -nn
+	Skip newlines and ignore n-grams starting with multiple digits
+	or certain repeated punctuation marks.  This cuts down on
+	numbers in the model, which are not particularly useful for
+	distinguishing between languages, in favor of more distinctive
+	n-grams.  This flag affects only the immediately following
+	group of files, and acts like -n when -2b or -8b are also used.
+
+   -O FACTOR
+	Because n-grams are collected incrementally from shorter to
+	longer to allow the counts to fit in memory, very skewed
+	distributions may cause some longer n-grams to be missed.  To
+	counteract this problem, a small amount of oversampling is
+	performed at each step, which may be further increased with
+	this option.
+
+   -a PROPORTION
+	MkLangID prunes the language model by eliminating n-grams
+	which provide no useful information because (nearly) all of
+	their occurrences are part of longer n-grams which are also
+	present in the model.  This option controls the pruning
+	threshold, eliminating n-grams for which at least PROPORTION
+	of all occurrences are accounted for by longer n-grams in the
+	model.  The default value is 0.90, i.e. 90% of all instances
+	must be accounted for before an n-gram is pruned.
+
+   -d DISCOUNT
+	Apply a discount factor of DISCOUNT (1.0 or higher) to the
+	language model being built, which biases identification away
+	from classifying its input using this model.
+
+   -1
+	Convert the input from Latin-1 (ISO 8859-1) to UTF-8.  This
+	option applies only to the following group of files, and
+	overrides both -2 and -8.
+
+   -2l
+   -2b
+	Extend each byte of the input file(s) to 16 bits for "wide
+	ASCII". The -2l variant is little-endian (zero byte follows
+	input byte), while the -2b variant is big-endian (zero byte
+	precedes input byte).  This option, -1, and -8 are mutually
+	exclusive.  The input should normally be in ASCII or Latin-1
+  	encoding, as extending these with NUL bytes produces the same
+        file as conversion to UTF-16 would produce.
+
+   -2n
+   -2-
+	Cancel "wide ASCII" mode.  Do not insert NUL bytes between
+	the bytes of the input file(s).
+
+   -8l
+   -8b
+	Treat the input as UTF-8 encoding, and convert to UTF-16.  The
+	-8l variant is little-endian, while the -8b variant is
+	big-endian.  This option, -1 and -2 are mutually exlusive.
+
+   -8n
+   -8-
+	Cancel UTF-8 to UTF-16 conversion mode.  This option is
+	actually a synonym for -2n/-2- as both specify no conversion
+	of the input.
+
+   -A ALIGN
+	Set the model's byte alignment (1 [default], 2, or 4).
+	N-grams will only be computed when building or compared when
+	identifying if they start at a multiple of ALIGN bytes from
+	the start of the input.  This is useful for character
+	encodings which are a fixed number of bytes per character,
+	e.g. UTF-16BE and UTF-16LE.  In the particular case of UTF-16,
+	enforcing the alignment dramatically improves the ability to
+	distinguish between big-endian and little-endian.
+
+   -R SPEC
+	Compute stop-grams relative to one or more other,
+	closely-related languages.  N-grams which occur in the top-K
+	lists for any of the named languages but are never seen in the
+	training data for the current language model are flagged as
+	stop-grams which receive a substantial penalty in scoring the
+	likelihood that a given string is in the model's language.
+
+	SPEC may either list of specific languages to be used, or a
+	threshold on the similarity score between the current language
+	and the other languages in the database.  If SPEC begins with
+	an at-sign (@), then all languages whose similarity score is
+	at least as high as the decimal number (0.0 to 1.0, values of
+	0.4 to 0.6 are generally good [*]) following the at-sign will be
+	used.  Otherwise, SPEC is a comma separated list of language
+	specifiers of the form
+	    languagecode_region-encoding/source
+	e.g.
+	    en_US-ASCII/Wikipedia
+        Any of the four components except the language code may be
+	omitted, along with the punctuation mark which introduces its
+	field, e.g.
+	    en/Wikipedia
+        and
+	    en-ASCII
+        are both valid, however, fields must be given in order.  If
+	a given specifier does not match a unique model within the
+	language database, an error message is printed and that
+	specifier is ignored.
+
+	Note that if the threshold variant is used, the language being
+	trained must already be present in the database, and it is
+	*highly* desireable that both the training data and all
+	training options be the same as when the language was added to
+	the database.
+
+	[*] The similarity scores changed with v1.19; they are now
+	computed from the smoothed probabilities rather than raw
+	probabilities, and thus the range of good values is no longer
+	0.75 to 0.90.
+
+    -B BOOST
+	When computing stop-grams, also increase the smoothed score of
+	n-grams which are unique to the model being built by a factor
+	of BOOST.  Default of 1.0 means no boost.
+
+Model Clustering
+----------------
+
+    -C threshold,outputfile
+	Cluster the models for each distinct character encoding
+	present in the language database file, and create a new
+	language database file called "outputfile".  The threshold
+	sets the similarity value below which models will not be
+	merged; 0.0 will merge all models for a given encoding into a
+	single merged model, while 1.0 will only merge identical
+	models.  Currently the threshold must be 0.0.
+
+Output Options
+--------------
+
+    -h
+	Show usage summary.
+
+    -v
+	Run verbosely.
+
+    -w FILE
+	Write the resulting vocabulary list to FILE in plain text (one
+	word per line).
+
+    -D
+	dump the computed multi-language model to standard output for
+	debugging purposes.
+
+
+
+========
+WhatLang
+========
+
+The 'whatlang' program is intended primarily as a debugging tool for
+the LangIdent code, but may also be useful in it own right.  Given a
+language database created by 'mklangid', it identifies the most likely
+language(s) for each fixed-size block in the specified file(s).
+
+
+Usage Summary
+-------------
+
+    whatlang [options] file [file ...]
+	Process each of the named file, identifying the languages by
+	block
+
+    whatlang [options]  <file
+	Process standard input, identifying languages by block
+
+When using named files on the command line, each file's language
+identifications are preceded by the name of the file in the format
+   File <filename>:
+
+The output format for a block is
+   @ SSSSSSSS-EEEEEEEE lang1:score [lang2:score ...]
+where SSSSSSSS is the hexadecimal starting offset of the block and
+EEEEEEEE is the ending offset.  Note that blocks overlap somewhat, so
+the end offset of one block will be after the start offset of the
+next.
+
+
+Identification Options
+----------------------
+
+    -l FILE
+	Use language identification database in FILE instead of the
+	default database.
+
+    -b N
+	Set block size to N bytes (default 4096).  Blocks are
+	overlapped by 1/4 to avoid discontinuities in the language
+	identification.
+
+ 	There are three special cases.  Specifying an N of 0 (-b0) is
+	equivalent to a very large block size intended to cover an
+	entire file and will suppress the output of block offsets and
+	ignore any remaining input after the large first block.
+	Specifying an N of 1 (-b1) requests that the language be
+	identified for each line of text; this mode assumes that the
+	input is a text file, and that all occurrences of the byte
+	0x0A (newline) are in fact line ends.  Thus, it will not work
+	properly if the text is using an encoding consisting of
+	multiple bytes if any of the individual bytes of a character
+	may have the value 0x0A.  Specifying an N of 2 (-b2) is the
+	same as -b1, except that inter-string score smoothing is
+	applied as in LA-Strings.
+
+    -W SPEC
+	Control some of the weights used in scoring strings.  SPEC is
+	a comma-separated list of weight specifiers, which consist of
+	a single letter immediately followed by a decimal number.  The
+	currently supported weights are
+	    b  bigram scores (default 0.15)
+	    s  stopgrams (default 2.0)
+	Although this flag is primarily for development purposes,
+	setting bigram weights to zero with "-Wb0.0" results in a
+	three-fold speedup in language identification with minimal
+	increase in error rates, as summing the bigram counts takes
+	the bulk of the time during language identification. (As of
+	v1.15, the default language models included with LA-Strings no
+	longer include bigrams, so "-Wb" has no effect.)
+
+
+Output Options
+--------------
+
+    -n N
+	Output at most N guesses for the language of a block (default
+	1).
+
+    -r RATIO
+	Don't output languages scoring less than RATIO times the
+	highest score (default 0.75)
+
+    -s
+	If multiple sources are present for a language, show all of
+	them and their respective scores.  By default, the score for a
+	language is that of the highest-scoring source for the
+	language.
+
+    -t
+	Request terse output.  Only the language name will be output,
+	not the full description including region and encoding.  For
+	example, "en" instead of "en_US-utf8".
+
+
+=========================================================================
