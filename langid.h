@@ -28,9 +28,10 @@
 #define __LANGID_H_INCLUDED
 
 #include "ptrie.h"
-#include "FramepaC.h"
+//#include "FramepaC.h"
 
 #include "framepac/cstring.h"
+#include "framepac/file.h"
 
 using namespace std ;
 using namespace Fr ;
@@ -256,9 +257,9 @@ class LanguageID
       bool operator == (const LanguageID &) const ;
 
       // I/O
-      static LanguageID* read(FILE *fp, unsigned version) ;
-      static bool read(FILE *fp, LanguageID *langID, unsigned version) ;
-      bool write(FILE *fp) const ;
+      static LanguageID* read(Fr::CFile& f, unsigned version) ;
+      static bool read(Fr::CFile& f, LanguageID *langID, unsigned version) ;
+      bool write(Fr::CFile& f) const ;
    } ;
 
 //----------------------------------------------------------------------
@@ -450,11 +451,11 @@ class LanguageIdentifier
       bool computeSimilarities() ;
 
       // I/O
-      static bool checkSignature(FILE *fp, unsigned *version = nullptr) ;
+      static bool checkSignature(Fr::CFile& f, unsigned *version = nullptr) ;
       bool writeStatistics(FILE *fp) const ;
-      bool writeHeader(FILE *fp) const ;
-      bool write(FILE *fp) ;
-      bool write(const char *filename) const ;
+      bool writeHeader(Fr::CFile& f) const ;
+      bool write(Fr::CFile& f) ;
+      bool write(const char* filename) const ;
       bool dump(FILE *fp, bool show_ngrams = false) const ;
    } ;
 

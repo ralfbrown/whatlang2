@@ -5,7 +5,7 @@
 /*									*/
 /*  File:     prepfile.h	preprocessed file input			*/
 /*  Version:  1.30							*/
-/*  LastEdit: 27jun2019							*/
+/*  LastEdit: 2019-07-07						*/
 /*                                                                      */
 /*  (c) Copyright 2010,2011,2012,2013,2014,2015,2019			*/
 /*		 Ralf Brown/Carnegie Mellon University			*/
@@ -56,47 +56,6 @@ enum BigramExtension
 
 class PreprocessedInputFile
    {
-   private:
-      Fr::CharPtr m_filename ;
-      Fr::CFile*  m_fp ;
-      size_t	  m_max_sample_bytes ;
-      uint64_t	  m_bytes_read ;
-      bool	  m_piped ;
-      bool	  m_uniform_sample ;
-      bool	  m_convert_Latin1 ;
-      bool        m_ignore_whitespace ;
-      BigramExtension m_bigram_ext ;
-      unsigned    m_alignment ;
-      Fr::List   *m_buffered_lines ;
-      unsigned char buffered_char ;
-      unsigned    original_buffer_len ;
-      unsigned    translit_buffer_ptr ;
-      unsigned    translit_buffer_len ;
-#ifndef NO_ICONV
-      iconv_t     m_conversion ;
-      unsigned char original_buffer[BUFFER_SIZE] ;
-#endif /* !NO_ICONV */
-      unsigned char translit_buffer[2*BUFFER_SIZE] ;
-      static Fr::CharPtr s_from_enc ;
-      static Fr::CharPtr s_to_enc ;
-      static uint64_t s_sample_bytes ;
-      static bool   s_sample_uniformly ;
-      static bool   s_convert_Latin1 ;
-      static bool   s_ignore_whitespace ;
-      static BigramExtension s_bigram_ext ;
-      static unsigned s_alignment ;
-   public://FIXME
-
-   protected:
-      Fr::CFile* open_sampled_input_file(const char *filename, size_t max_bytes) ;
-      bool initializeTransliteration(const char *from, const char *to) ;
-      bool shutdownTransliteration() ;
-      int readInput(unsigned char *buf, size_t buflen) ;
-      int fillBuffer() ;
-      int peekAtBuffer() ;
-      int getFromBuffer() ;
-      unsigned getCodepoint() ;
-
    public:
       PreprocessedInputFile() ;
       PreprocessedInputFile(const char *filename, uint64_t sample_limit = s_sample_bytes,
@@ -132,6 +91,46 @@ class PreprocessedInputFile
       void ignoreWhitespace(bool ignore) { m_ignore_whitespace = ignore ; }
       static void setIgnoreWhitespace(bool ignore) { s_ignore_whitespace = ignore ; }
       static bool setDefaultTransliteration(const char *from, const char *to) ;
+
+   protected:
+      Fr::CFile* open_sampled_input_file(const char *filename, size_t max_bytes) ;
+      bool initializeTransliteration(const char *from, const char *to) ;
+      bool shutdownTransliteration() ;
+      int readInput(unsigned char *buf, size_t buflen) ;
+      int fillBuffer() ;
+      int peekAtBuffer() ;
+      int getFromBuffer() ;
+      unsigned getCodepoint() ;
+
+   private:
+      Fr::CharPtr m_filename ;
+      Fr::CFile*  m_fp ;
+      size_t	  m_max_sample_bytes ;
+      uint64_t	  m_bytes_read ;
+      bool	  m_piped ;
+      bool	  m_uniform_sample ;
+      bool	  m_convert_Latin1 ;
+      bool        m_ignore_whitespace ;
+      BigramExtension m_bigram_ext ;
+      unsigned    m_alignment ;
+      Fr::List   *m_buffered_lines ;
+      unsigned char buffered_char ;
+      unsigned    original_buffer_len ;
+      unsigned    translit_buffer_ptr ;
+      unsigned    translit_buffer_len ;
+#ifndef NO_ICONV
+      iconv_t     m_conversion ;
+      unsigned char original_buffer[BUFFER_SIZE] ;
+#endif /* !NO_ICONV */
+      unsigned char translit_buffer[2*BUFFER_SIZE] ;
+      static Fr::CharPtr s_from_enc ;
+      static Fr::CharPtr s_to_enc ;
+      static uint64_t s_sample_bytes ;
+      static bool   s_sample_uniformly ;
+      static bool   s_convert_Latin1 ;
+      static bool   s_ignore_whitespace ;
+      static BigramExtension s_bigram_ext ;
+      static unsigned s_alignment ;
    } ;
 
 // end of file prepfile.h //

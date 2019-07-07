@@ -1011,53 +1011,45 @@ LangIDPackedTrie *LangIDPackedTrie::load(const char *filename)
 
 //----------------------------------------------------------------------
 
-bool LangIDPackedTrie::writeHeader(FILE *fp) const
+bool LangIDPackedTrie::writeHeader(Fr::CFile& f) const
 {
    // write the signature string
    const size_t siglen = sizeof(PACKEDTRIE_SIGNATURE) ;
-   if (fwrite(PACKEDTRIE_SIGNATURE,sizeof(char),siglen,fp) != siglen)
+   if (f.write(PACKEDTRIE_SIGNATURE,siglen,sizeof(char)) != siglen)
       return false; 
    // follow with the format version number
    unsigned char version = PACKEDTRIE_FORMAT_VERSION ;
-   if (fwrite(&version,sizeof(char),sizeof(version),fp) != sizeof(version))
-      return false ;
    unsigned char bits = PTRIE_BITS_PER_LEVEL ;
-   if (fwrite(&bits,sizeof(char),sizeof(bits),fp) != sizeof(bits))
+   if (!f.writeValue(version) || !f.writeValue(bits))
       return false ;
    // write out the size of the trie
    UInt32 val_used(size()), val_keylen(longestKey()), val_numterm(m_numterminals) ;
-   if (fwrite((char*)&val_used,sizeof(val_used),1,fp) != 1 || 
-      fwrite((char*)&val_keylen,sizeof(val_keylen),1,fp) != 1 ||
-      fwrite((char*)&val_numterm,sizeof(val_numterm),1,fp) != 1)
+   if (!f.writeValue(val_used) ||
+      !f.writeValue(val_keylen) ||
+      !f.writeValue(val_numterm))
       return false ;
    // pad the header with NULs for the unused reserved portion of the header
    for (size_t i = 0 ; i < PACKEDTRIE_PADBYTES_1 ; i++)
       {
-      if (fputc('\0',fp) == EOF)
-	 return false ;
+      f.putc('\0') ;
       }
    return true ;
 }
 
 //----------------------------------------------------------------------
 
-bool LangIDPackedTrie::write(FILE *fp) const
+bool LangIDPackedTrie::write(Fr::CFile& f) const
 {
-   if (fp)
-      {
-      if (writeHeader(fp))
-	 {
-	 // write the actual trie nodes
-	 if (fwrite(m_nodes,sizeof(PackedSimpleTrieNode),m_size,fp) != m_size)
-	    return false ;
-	 // write the terminals
-	 if (fwrite(m_terminals,sizeof(PackedTrieTerminalNode),
-		    m_numterminals,fp) != m_numterminals)
-	    return false ;
-	 return true ;
-	 }
-      }
-   return false ;
+   if (!f || !writeHeader(f))
+      return false ;
+   // write the actual trie nodes
+   if (f.write(m_nodes,m_size,sizeof(PackedSimpleTrieNode)) != m_size)
+      return false ;
+   // write the terminals
+   if (f.write(m_terminals,m_numterminals,sizeof(PackedTrieTerminalNode)) != m_numterminals)
+      return false ;
+   f.writeComplete() ;
+   return true ;
 }
 
 //----------------------------------------------------------------------
@@ -1065,9 +1057,7 @@ bool LangIDPackedTrie::write(FILE *fp) const
 bool LangIDPackedTrie::write(const char *filename) const
 {
    Fr::COutputFile fp(filename,Fr::CFile::safe_rewrite) ;
-   //TODO: change LIPT::write to use CFile directly
-   bool success = fp ? this->write(fp.fp()) : false ;
-   return success ? fp.close() : false ;
+   return this->write(fp) ? fp.close() : false ;
 }
 
 //----------------------------------------------------------------------

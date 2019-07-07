@@ -5,9 +5,9 @@
 /*									*/
 /*  File: pstrie.h - packed simple word-frequency trie			*/
 /*  Version:  1.30				       			*/
-/*  LastEdit: 27jun2019							*/
+/*  LastEdit: 2019-07-07						*/
 /*									*/
-/*  (c) Copyright 2012,2013,2015,2019 Ralf Brown/CMU			*/
+/*  (c) Copyright 2012,2013,2015,2019 Carnegie Mellon University	*/
 /*      This program is free software; you can redistribute it and/or   */
 /*      modify it under the terms of the GNU General Public License as  */
 /*      published by the Free Software Foundation, version 3.           */
@@ -29,6 +29,7 @@
 #include "ptrie.h"
 #include "trie.h"
 #include "framepac/byteorder.h"
+#include "framepac/file.h"
 
 /************************************************************************/
 /*	Manifest Constants						*/
@@ -200,12 +201,12 @@ class LangIDPackedTrie
       // I/O
       static LangIDPackedTrie *load(FILE *fp, const char *filename) ;
       static LangIDPackedTrie *load(const char *filename) ;
-      bool write(FILE *fp) const ;
-      bool write(const char *filename) const ;
+      bool write(Fr::CFile& f) const ;
+      bool write(const char* filename) const ;
       bool dump(FILE *fp) const ;
    private:
       void init() ;
-      bool writeHeader(FILE *fp) const ;
+      bool writeHeader(Fr::CFile& f) const ;
       uint32_t allocateChildNodes(unsigned numchildren) ;
       uint32_t allocateTerminalNodes(unsigned numchildren) ;
       bool insertChildren(PackedSimpleTrieNode *parent, const NybbleTrie *trie,

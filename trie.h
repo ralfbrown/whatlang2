@@ -29,6 +29,7 @@
 #include <cstdio>
 #include <limits.h>
 #include <stdint.h>
+#include "framepac/file.h"
 
 using namespace std ;
 
@@ -177,7 +178,7 @@ class NybbleTrie
       uint32_t numFullNodes(uint32_t min_freq = 0) const ;
 
       // I/O
-      static NybbleTrie *load(FILE *fp) ;
+      static NybbleTrie *load(Fr::CFile& f) ;
       static NybbleTrie *load(const char *filename) ;
       bool write(FILE *fp) const ;
    private:

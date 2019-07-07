@@ -5,9 +5,9 @@
 /*									*/
 /*  File: mtrie.C - bit-slice-based Word-frequency multi-trie		*/
 /*  Version:  1.30				       			*/
-/*  LastEdit: 27jun2019							*/
+/*  LastEdit: 2019-07-07						*/
 /*									*/
-/*  (c) Copyright 2011,2012,2015,2019 Ralf Brown/CMU			*/
+/*  (c) Copyright 2011,2012,2015,2019 Carnegie Mellon University	*/
 /*      This program is free software; you can redistribute it and/or   */
 /*      modify it under the terms of the GNU General Public License as  */
 /*      published by the Free Software Foundation, version 3.           */
@@ -260,30 +260,19 @@ bool MultiTrieFrequency::readAll(FILE *fp)
 
 //----------------------------------------------------------------------
 
-bool MultiTrieFrequency::write(FILE *fp) const
+bool MultiTrieFrequency::write(Fr::CFile& f) const
 {
-   if (fp)
-      {
-      if (fwrite(this,sizeof(char),sizeof(*this),fp) != sizeof(*this))
-	 return false ;
-      return true ;
-      }
-   return false ;
+   return f && f.writeValue(*this) ;
 }
 
 //----------------------------------------------------------------------
 
-bool MultiTrieFrequency::writeAll(FILE *fp)
+bool MultiTrieFrequency::writeAll(Fr::CFile& f)
 {
-   if (fp)
-      {
-      Fr::UInt32 count(s_curr_alloc) ;
-      if (fwrite((char*)&count,sizeof(char),sizeof(count),fp) != sizeof(count))
-	 return false ;
-      return (fwrite(baseAddress(),sizeof(MultiTrieFrequency),s_curr_alloc,fp)
-	      == s_curr_alloc) ;
-      }
-   return false ;
+   Fr::UInt32 count(s_curr_alloc) ;
+   return (f &&
+           f.writeValue(count) &&
+           f.write(baseAddress(),s_curr_alloc,sizeof(MultiTrieFrequency)) == s_curr_alloc) ;
 }
 
 /************************************************************************/
@@ -680,11 +669,9 @@ bool MultiTrieNode::load(FILE *fp)
 
 //----------------------------------------------------------------------
 
-bool MultiTrieNode::write(FILE *fp) const
+bool MultiTrieNode::write(Fr::CFile& f) const
 {
-   if (fp && fwrite(this,sizeof(*this),1,fp) == 1)
-      return true ;
-   return false ;
+   return f && f.writeValue(*this) ;
 }
 
 /************************************************************************/
@@ -1182,7 +1169,6 @@ LangIDMultiTrie *LangIDMultiTrie::load(FILE *fp)
 	 delete trie ;
 	 return 0 ;
 	 }
-//FIXME
       return trie ;
       }
    return 0 ;
@@ -1198,57 +1184,50 @@ LangIDMultiTrie *LangIDMultiTrie::load(const char *filename)
 
 //----------------------------------------------------------------------
 
-bool LangIDMultiTrie::writeHeader(FILE *fp) const
+bool LangIDMultiTrie::writeHeader(Fr::CFile& f) const
 {
    // write the signature string
    const size_t siglen = sizeof(MULTITRIE_SIGNATURE) ;
-   if (fwrite(MULTITRIE_SIGNATURE,sizeof(char),siglen,fp) != siglen)
+   if (f.write(MULTITRIE_SIGNATURE,siglen,1) != siglen)
       return false; 
    // follow with the format version number
    unsigned char version = MULTITRIE_FORMAT_VERSION ;
-   if (fwrite(&version,sizeof(char),sizeof(version),fp) != sizeof(version))
-      return false ;
    unsigned char bits = MTRIE_BITS_PER_LEVEL ;
-   if (fwrite(&bits,sizeof(char),sizeof(bits),fp) != sizeof(bits))
+   if (!f.writeValue(version) ||
+      !f.writeValue(bits))
       return false ;
    // write out the size of the trie
    Fr::UInt32 val_used(size()), val_tokens(totalTokens()), val_keylen(longestKey()) ;
-   if (fwrite((char*)&val_used,sizeof(val_used),1,fp) != 1 || 
-      fwrite((char*)&val_tokens,sizeof(val_tokens),1,fp) != 1 ||
-      fwrite((char*)&val_keylen,sizeof(val_keylen),1,fp) != 1)
+   if (!f.writeValue(val_used) ||
+      !f.writeValue(val_tokens) ||
+      !f.writeValue(val_keylen))
       return false ;
    // pad the header with NULs for the unused reserved portion of the header
    for (size_t i = 0 ; i < MULTITRIE_PADBYTES_1 ; i++)
       {
-      if (fputc('\0',fp) == EOF)
-	 return false ;
+      f.putc('\0') ;
       }
    return true ;
 }
 
 //----------------------------------------------------------------------
 
-bool LangIDMultiTrie::write(FILE *fp) const
+bool LangIDMultiTrie::write(Fr::CFile& f) const
 {
-   if (fp)
+   if (!f || !writeHeader(f))
+      return false ;
+   // write the actual trie nodes
+   for (size_t i = 0 ; i < size() ; i++)
       {
-      if (writeHeader(fp))
-	 {
-	 // write the actual trie nodes
-	 for (size_t i = 0 ; i < size() ; i++)
-	    {
-	    const MultiTrieNode *n = node(i) ;
-	    if (!n->write(fp))
-	       return false ;
-	    }
-	 // write the frequency information
-	 if (!MultiTrieFrequency::writeAll(fp))
-	    return false ;
-//FIXME
-	 return true ;
-	 }
+      const MultiTrieNode *n = node(i) ;
+      if (!n->write(f))
+	 return false ;
       }
-   return false ;
+   // write the frequency information
+   if (!MultiTrieFrequency::writeAll(f))
+      return false ;
+   f.writeComplete() ;
+   return true ;
 }
 
 //----------------------------------------------------------------------
@@ -1256,9 +1235,7 @@ bool LangIDMultiTrie::write(FILE *fp) const
 bool LangIDMultiTrie::write(const char *filename) const
 {
    Fr::COutputFile fp(filename,Fr::CFile::safe_rewrite) ;
-   //TODO: change LIMT::write to use CFile directly
-   bool success = fp ? this->write(fp.fp()) : false ;
-   return success ? fp.close() : false ;
+   return this->write(fp) ? fp.close() : false ;
 }
 
 //----------------------------------------------------------------------

@@ -5,9 +5,9 @@
 /*									*/
 /*  File: mtrie.h - bit-slice-based Word-frequency multi-trie		*/
 /*  Version:  1.30				       			*/
-/*  LastEdit: 27jun2019							*/
+/*  LastEdit: 2019-07-07						*/
 /*									*/
-/*  (c) Copyright 2011,2012,2019 Ralf Brown/CMU				*/
+/*  (c) Copyright 2011,2012,2019 Carnegie Mellon University		*/
 /*      This program is free software; you can redistribute it and/or   */
 /*      modify it under the terms of the GNU General Public License as  */
 /*      published by the Free Software Foundation, version 3.           */
@@ -30,6 +30,7 @@
 #include <limits.h>
 #include <stdint.h>
 #include "framepac/byteorder.h"
+#include "framepac/file.h"
 #include "framepac/trie.h"
 
 using namespace std ;
@@ -110,8 +111,8 @@ class MultiTrieFrequency
       // I/O
       static MultiTrieFrequency *read(FILE *fp) ;
       static bool readAll(FILE *fp) ;
-      bool write(FILE *fp) const ;
-      static bool writeAll(FILE *fp) ;
+      bool write(Fr::CFile& f) const ;
+      static bool writeAll(Fr::CFile& f) ;
    } ;
 
 //----------------------------------------------------------------------
@@ -169,12 +170,12 @@ class LangIDMultiTrie //: public Fr::MultiTrie<Fr::UInt32>
       // I/O
       static LangIDMultiTrie *load(FILE *fp) ;
       static LangIDMultiTrie *load(const char *filename) ;
-      bool write(FILE *fp) const ;
+      bool write(Fr::CFile& f) const ;
       bool write(const char *filename) const ;
       bool dump(FILE *fp) const ;
    private:
       void init(uint32_t capacity) ;
-      bool writeHeader(FILE *fp) const ;
+      bool writeHeader(Fr::CFile& f) const ;
       bool extendNybble(uint32_t &nodeindex, uint8_t nybble) const ;
       uint32_t insertNybble(uint32_t nodeindex, uint8_t nybble) ;
    private:
@@ -233,7 +234,7 @@ class MultiTrieNode
 
       // I/O
       bool load(FILE *fp) ;
-      bool write(FILE *fp) const ;
+      bool write(Fr::CFile& f) const ;
    } ;
 
 //----------------------------------------------------------------------

@@ -1173,30 +1173,21 @@ uint32_t NybbleTrie::numFullNodes(uint32_t min_freq) const
 
 //----------------------------------------------------------------------
 
-NybbleTrie *NybbleTrie::load(FILE *fp)
+NybbleTrie *NybbleTrie::load(Fr::CFile& f)
 {
-   if (fp)
+   if (f)
       {
-//FIXME
+//TODO
       }
-   return 0 ;
+   return nullptr ;
 }
 
 //----------------------------------------------------------------------
 
 NybbleTrie *NybbleTrie::load(const char *filename)
 {
-   if (filename && *filename)
-      {
-      FILE *fp = fopen(filename,"rb") ;
-      if (fp)
-	 {
-	 NybbleTrie *trie = load(fp) ;
-	 fclose(fp) ;
-	 return trie ;
-	 }
-      }
-   return 0 ;
+   Fr::CInputFile fp(filename) ;
+   return load(fp) ;
 }
 
 //----------------------------------------------------------------------
@@ -1205,7 +1196,7 @@ bool NybbleTrie::write(FILE *fp) const
 {
    if (fp)
       {
-//FIXME
+//TODO
       }
    return false ;
 }

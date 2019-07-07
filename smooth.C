@@ -4,10 +4,10 @@
 /*	by Ralf Brown / Carnegie Mellon University			*/
 /*									*/
 /*  File:     smooth.C  inter-string score smoothing			*/
-/*  Version:  1.23							*/
-/*  LastEdit: 20aug2013 						*/
+/*  Version:  1.30							*/
+/*  LastEdit: 2019-07-07 						*/
 /*                                                                      */
-/*  (c) Copyright 2011,2012,2013 Ralf Brown/Carnegie Mellon University	*/
+/*  (c) Copyright 2011,2012,2013,2019 Carnegie Mellon University	*/
 /*      This program is free software; you can redistribute it and/or   */
 /*      modify it under the terms of the GNU General Public License as  */
 /*      published by the Free Software Foundation, version 3.           */
@@ -23,6 +23,7 @@
 /*                                                                      */
 /************************************************************************/
 
+#include <cmath>
 #include "langid.h"
 
 /************************************************************************/

@@ -2330,7 +2330,7 @@ static bool cluster_models(const char *cluster_db_name, double cluster_thresh)
       }
    else
       {
-//FIXME
+      //TODO: nonzero clustering thresholds
       cerr << "clustering thresholds other than 0.0 not implemented yet."
 	   << endl ;
       return false ;
@@ -2428,7 +2428,7 @@ static bool process_files(const char **filelist, unsigned num_files,
 			  bool skip_newlines, bool omit_bigrams,
 			  bool ignore_whitespace, NybbleTrie *stop_grams,
 			  const NybbleTrie *ngram_weights, bool no_save,
-			  bool /*check_script FIXME*/)
+			  bool /*check_script TODO*/)
 {
    LanguageID opts(base_opts) ;
    NybbleTrie *ngrams ;

@@ -5,9 +5,9 @@
 /*									*/
 /*  File: ptrie.h - packed Word-frequency multi-trie			*/
 /*  Version:  1.30				       			*/
-/*  LastEdit: 27jun2019							*/
+/*  LastEdit: 2019-07-07						*/
 /*									*/
-/*  (c) Copyright 2011,2012,2013,2015,2019 Ralf Brown/CMU		*/
+/*  (c) Copyright 2011,2012,2013,2015,2019 Carnegie Mellon University	*/
 /*      This program is free software; you can redistribute it and/or   */
 /*      modify it under the terms of the GNU General Public License as  */
 /*      published by the Free Software Foundation, version 3.           */
@@ -30,6 +30,7 @@
 #include <limits.h>
 #include <stdint.h>
 #include "framepac/byteorder.h"
+#include "framepac/file.h"
 #include "framepac/memory.h"
 #include "framepac/mmapfile.h"
 
@@ -149,7 +150,7 @@ class PackedTrieFreq
       // manipulators
       void isLast(bool last) ;
       static void initDataMapping(double (*mapfn)(uint32_t)) ;
-      static bool writeDataMapping(FILE *fp) ;
+      static bool writeDataMapping(Fr::CFile& f) ;
    } ;
 
 //----------------------------------------------------------------------
@@ -236,10 +237,10 @@ class LangIDPackedMultiTrie // : public Fr::PackedMultiTrie<...>
    public:
       LangIDPackedMultiTrie() { init() ; }
       LangIDPackedMultiTrie(const LangIDMultiTrie *trie) ;
-      LangIDPackedMultiTrie(FILE *fp, const char *filename) ;
+      LangIDPackedMultiTrie(Fr::CFile& f, const char *filename) ;
       ~LangIDPackedMultiTrie() ;
 
-      bool parseHeader(FILE *fp) ;
+      bool parseHeader(Fr::CFile& f) ;
 
       // modifiers
       void ignoreWhiteSpace(bool ignore = true) { m_ignorewhitespace = ignore ; }
@@ -273,14 +274,14 @@ class LangIDPackedMultiTrie // : public Fr::PackedMultiTrie<...>
 		     PackedTrieEnumFn *fn, void *user_data) const ;
 
       // I/O
-      static LangIDPackedMultiTrie *load(FILE *fp, const char *filename) ;
+      static LangIDPackedMultiTrie *load(Fr::CFile& f, const char *filename) ;
       static LangIDPackedMultiTrie *load(const char *filename) ;
-      bool write(FILE *fp) const ;
+      bool write(Fr::CFile& f) const ;
       bool write(const char *filename) const ;
       bool dump(FILE *fp) const ;
    private:
       void init() ;
-      bool writeHeader(FILE *fp) const ;
+      bool writeHeader(Fr::CFile& f) const ;
       uint32_t allocateChildNodes(unsigned numchildren) ;
       uint32_t allocateTerminalNodes(unsigned numchildren) ;
       bool insertChildren(PackedTrieNode *parent, const LangIDMultiTrie *mtrie,

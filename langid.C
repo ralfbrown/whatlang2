@@ -5,7 +5,7 @@
 /*									*/
 /*  File:     langid.C							*/
 /*  Version:  1.30							*/
-/*  LastEdit: 01jul2019							*/
+/*  LastEdit: 2019-07-07						*/
 /*                                                                      */
 /*  (c) Copyright 2010,2011,2012,2013,2014,2015,2019			*/
 /*		 Ralf Brown/Carnegie Mellon University			*/
@@ -37,6 +37,7 @@
 #include "framepac/byteorder.h"
 #include "framepac/config.h"
 #include "framepac/message.h"
+#include "framepac/texttransforms.h"
 
 using namespace Fr ;
 
@@ -103,48 +104,46 @@ static double stop_gram_penalty = -9.0 ;
 /*	Helper functions						*/
 /************************************************************************/
 
-static uint8_t read_byte(FILE *fp, uint32_t default_value = (uint8_t)~0)
+static uint8_t read_byte(Fr::CFile& f, uint32_t default_value = (uint8_t)~0)
 {
    uint8_t valbuf ;
-   if (fread(&valbuf,sizeof(valbuf),1,fp) != 1)
-      return default_value ;
-   return valbuf ;
+   return f.readValue(&valbuf) ? valbuf : default_value ;
 }
 
 //----------------------------------------------------------------------
 
-static bool write_uint8(FILE *fp, uint8_t value)
+static bool write_uint8(Fr::CFile& f, uint8_t value)
 {
    uint8_t valbuf = value ;
-   return fwrite(&valbuf,sizeof(valbuf),1,fp) == 1 ;
+   return f.writeValue(valbuf) ;
 }
 
 //----------------------------------------------------------------------
 
-static uint32_t read_uint32(FILE *fp, uint32_t default_value = (uint32_t)~0)
+static uint32_t read_uint32(Fr::CFile& f, uint32_t default_value = (uint32_t)~0)
 {
    UInt32 val ;
-   return (fread((char*)&val,sizeof(val),1,fp) == 1) ? val.load() : default_value ;
+   return f.readValue(&val) ? val.load() : default_value ;
 }
 
 //----------------------------------------------------------------------
 
-static bool write_uint32(FILE *fp, uint32_t value)
+static bool write_uint32(Fr::CFile& f, uint32_t value)
 {
    UInt32 val(value) ;
-   return fwrite((char*)&val,sizeof(val),1,fp) == 1 ;
+   return f.writeValue(val) ;
 }
 
 //----------------------------------------------------------------------
 
-static char *read_fixed_field(FILE *fp, size_t len)
+static char *read_fixed_field(Fr::CFile& f, size_t len)
 {
    if (len == 0)
       return 0 ;
-   char *buf = New<char>(len) ;
+   auto buf = New<char>(len) ;
    if (buf)
       {
-      if (fread(buf,sizeof(char),len,fp) < len)
+      if (f.read(buf,len) < len)
 	 {
 	 delete buf ;
 	 buf = nullptr ;
@@ -160,10 +159,10 @@ static char *read_fixed_field(FILE *fp, size_t len)
 
 //----------------------------------------------------------------------
 
-static bool read_uint64(FILE *fp, uint64_t &value)
+static bool read_uint64(Fr::CFile& f, uint64_t &value)
 {
    UInt64 val ;
-   if (fread((char*)&val,sizeof(val),1,fp) < 1)
+   if (f.readValue(&val))
       {
       value = 0 ;
       return false ;
@@ -177,28 +176,28 @@ static bool read_uint64(FILE *fp, uint64_t &value)
 
 //----------------------------------------------------------------------
 
-static bool write_fixed_field(FILE *fp, const char *s, size_t len)
+static bool write_fixed_field(Fr::CFile& f, const char *s, size_t len)
 {
+   if (len == 0)
+      return false ;
    size_t string_len = s ? strlen(s) : 0 ;
-   for (size_t i = 0 ; i+1 < len && i < string_len ; i++)
-      {
-      if (fputc(s[i],fp) == EOF)
-	 return false ;
-      }
+   size_t count = std::min(len-1,string_len) ;
+   if (f.write(s,count) < count)
+      return false ;
    for (size_t i = string_len ; i+1 < len ; i++)
       {
-      if (fputc('\0',fp) == EOF)
+      if (!f.putc('\0'))
 	 return false ;
       }
-   return fputc('\0',fp) != EOF ;
+   return f.putc('\0') ;
 }
 
 //----------------------------------------------------------------------
 
-static bool write_uint64(FILE *fp, uint64_t value)
+static bool write_uint64(Fr::CFile& f, uint64_t value)
 {
    UInt64 val(value) ;
-   return fwrite((char*)&val,sizeof(val),1,fp) == 1 ;
+   return f.writeValue(val) ;
 }
 
 //----------------------------------------------------------------------
@@ -800,12 +799,12 @@ bool LanguageID::guessScript()
 
 //----------------------------------------------------------------------
 
-LanguageID *LanguageID::read(FILE *fp, unsigned file_version)
+LanguageID *LanguageID::read(Fr::CFile& f, unsigned file_version)
 {
-   if (!fp)
-      return 0 ;
+   if (!f)
+      return nullptr ;
    LanguageID *langID = new LanguageID() ;
-   if (!read(fp,langID,file_version))
+   if (!read(f,langID,file_version))
       {
       delete langID ;
       langID = nullptr ;
@@ -901,32 +900,32 @@ bool LanguageID::operator == (const LanguageID &info) const
 
 //----------------------------------------------------------------------
 
-bool LanguageID::read(FILE *fp, LanguageID *langID, unsigned version)
+bool LanguageID::read(Fr::CFile& f, LanguageID *langID, unsigned version)
 {
    if (!langID)
       return false ;
-   langID->m_language = read_fixed_field(fp,LANGID_STRING_LENGTH) ;
-   langID->m_region = read_fixed_field(fp,LANGID_STRING_LENGTH) ;
-   langID->m_encoding = read_fixed_field(fp,LANGID_STRING_LENGTH) ;
-   langID->m_source = read_fixed_field(fp,LANGID_STRING_LENGTH) ;
-   langID->m_script = read_fixed_field(fp,LANGID_STRING_LENGTH) ;
-   (void)read_uint64(fp,langID->m_trainbytes ) ;
-   uint8_t align = read_byte(fp, 1) ;
+   langID->m_language = read_fixed_field(f,LANGID_STRING_LENGTH) ;
+   langID->m_region = read_fixed_field(f,LANGID_STRING_LENGTH) ;
+   langID->m_encoding = read_fixed_field(f,LANGID_STRING_LENGTH) ;
+   langID->m_source = read_fixed_field(f,LANGID_STRING_LENGTH) ;
+   langID->m_script = read_fixed_field(f,LANGID_STRING_LENGTH) ;
+   (void)read_uint64(f,langID->m_trainbytes ) ;
+   uint8_t align = read_byte(f, 1) ;
    if (align < 1) align = 1 ;
-   (void)read_byte(fp,0) ;
-   (void)read_byte(fp,0) ;
-   (void)read_byte(fp,0) ;
+   (void)read_byte(f,0) ;
+   (void)read_byte(f,0) ;
+   (void)read_byte(f,0) ;
    uint32_t cover = 0 ;
-   cover = read_uint32(fp,0) ;
+   cover = read_uint32(f,0) ;
    double cover_factor = ((double)cover) / (double)UINT32_MAX ;
    langID->setCoverageFactor(cover_factor) ;
    if (version > 4)
       {
-      cover = read_uint32(fp,0) ;
+      cover = read_uint32(f,0) ;
       langID->setCountedCoverage(cover * MAX_WEIGHTED_COVER / UINT32_MAX ) ;
-      cover = read_uint32(fp,0) ;
+      cover = read_uint32(f,0) ;
       langID->setFreqCoverage(cover * MAX_FREQ_COVER / UINT32_MAX ) ;
-      cover = read_uint32(fp,0) ;
+      cover = read_uint32(f,0) ;
       langID->setMatchFactor(cover * MAX_MATCH_FACTOR / UINT32_MAX ) ;
       }
    langID->m_friendlyname = langID->m_language ;
@@ -945,9 +944,9 @@ bool LanguageID::read(FILE *fp, LanguageID *langID, unsigned version)
 
 //----------------------------------------------------------------------
 
-bool LanguageID::write(FILE *fp) const
+bool LanguageID::write(Fr::CFile& f) const
 {
-   if (!fp)
+   if (!f)
       return false ;
    bool success = false ;
    if (m_friendlyname && m_friendlyname != m_language && 
@@ -959,20 +958,20 @@ bool LanguageID::write(FILE *fp) const
    double freq_cover = m_freqcover / MAX_FREQ_COVER ;
    double match_factor = matchFactor() / MAX_MATCH_FACTOR ;
    // to simplify the version 1-5 file formats, we'll use fixed-size fields
-   if (write_fixed_field(fp,m_language,LANGID_STRING_LENGTH) &&
-       write_fixed_field(fp,m_region,LANGID_STRING_LENGTH) &&
-       write_fixed_field(fp,m_encoding,LANGID_STRING_LENGTH) &&
-       write_fixed_field(fp,m_source,LANGID_STRING_LENGTH) &&
-       write_fixed_field(fp,m_script,LANGID_STRING_LENGTH) &&
-       write_uint64(fp,m_trainbytes) &&
-       write_uint8(fp,m_alignment) &&
-       write_uint8(fp,0) &&
-       write_uint8(fp,0) &&
-       write_uint8(fp,0) &&
-       write_uint32(fp,(uint32_t)(m_coverage * UINT32_MAX) ) &&
-       write_uint32(fp,(uint32_t)(count_cover * UINT32_MAX) ) &&
-       write_uint32(fp,(uint32_t)(freq_cover * UINT32_MAX) ) &&
-       write_uint32(fp,(uint32_t)(match_factor * UINT32_MAX) ))
+   if (write_fixed_field(f,m_language,LANGID_STRING_LENGTH) &&
+       write_fixed_field(f,m_region,LANGID_STRING_LENGTH) &&
+       write_fixed_field(f,m_encoding,LANGID_STRING_LENGTH) &&
+       write_fixed_field(f,m_source,LANGID_STRING_LENGTH) &&
+       write_fixed_field(f,m_script,LANGID_STRING_LENGTH) &&
+       write_uint64(f,m_trainbytes) &&
+       write_uint8(f,m_alignment) &&
+       write_uint8(f,0) &&
+       write_uint8(f,0) &&
+       write_uint8(f,0) &&
+       write_uint32(f,(uint32_t)(m_coverage * UINT32_MAX) ) &&
+       write_uint32(f,(uint32_t)(count_cover * UINT32_MAX) ) &&
+       write_uint32(f,(uint32_t)(freq_cover * UINT32_MAX) ) &&
+       write_uint32(f,(uint32_t)(match_factor * UINT32_MAX) ))
       success = true ;
    if (m_friendlyname && m_friendlyname != m_language && 
        m_friendlyname > m_language)
@@ -1569,7 +1568,7 @@ LanguageIdentifier::LanguageIdentifier(const char *language_data_file,
    runVerbosely(run_verbosely) ;
    if (language_data_file && *language_data_file)
       {
-      FILE *fp = fopen(language_data_file,"rb") ;
+      CInputFile fp(language_data_file,CFile::binary) ;
       if (fp)
 	 {
 	 unsigned version = 0 ;
@@ -1591,9 +1590,9 @@ LanguageIdentifier::LanguageIdentifier(const char *language_data_file,
 		  m_alloc_languages = numLanguages() ;
 		  }
 	       uint8_t have_bigrams = false ;
-	       (void)fread(&have_bigrams,sizeof(have_bigrams),1,fp) ;
+	       (void)fp.readValue(&have_bigrams) ;
 	       // skip the reserved padding
-	       fseek(fp,LANGID_PADBYTES_1,SEEK_CUR) ;
+	       fp.seek(LANGID_PADBYTES_1,SEEK_CUR) ;
 	       // read the language info records
 	       for (size_t i = 0 ; i < numLanguages() ; i++)
 		  {
@@ -1616,7 +1615,6 @@ LanguageIdentifier::LanguageIdentifier(const char *language_data_file,
 //FIXME
 	       }
 	    }
-	 fclose(fp) ;
 	 }
       }
    if (!PackedTrieFreq::dataMappingInitialized())
@@ -2203,13 +2201,13 @@ void LanguageIdentifier::incrStringCount(size_t langnum)
 
 //----------------------------------------------------------------------
 
-bool LanguageIdentifier::checkSignature(FILE *fp, unsigned *file_version)
+bool LanguageIdentifier::checkSignature(Fr::CFile& f, unsigned *file_version)
 {
    if (file_version)
       *file_version = 0 ;
    const unsigned siglen = sizeof(LANGID_FILE_SIGNATURE) ;
    char buffer[siglen] ;
-   if (fread(buffer,sizeof(char),siglen,fp) != siglen)
+   if (f.read(buffer,siglen,sizeof(char)) != siglen)
       {
       errno = EACCES ;
       return false ;
@@ -2220,8 +2218,7 @@ bool LanguageIdentifier::checkSignature(FILE *fp, unsigned *file_version)
       return false ;
       }
    unsigned char version ;
-   if (fread(&version,sizeof(version),1,fp) != 1 ||
-       version < LANGID_MIN_FILE_VERSION || version > LANGID_FILE_VERSION)
+   if (!f.readValue(&version) || version < LANGID_MIN_FILE_VERSION || version > LANGID_FILE_VERSION)
       {
       errno = EINVAL ;
       return false ;
@@ -2259,28 +2256,28 @@ bool LanguageIdentifier::writeStatistics(FILE *fp) const
 
 //----------------------------------------------------------------------
 
-bool LanguageIdentifier::writeHeader(FILE *fp) const
+bool LanguageIdentifier::writeHeader(Fr::CFile& f) const
 {
    // write the signature string
    const unsigned siglen = sizeof(LANGID_FILE_SIGNATURE) ;
-   if (fwrite(LANGID_FILE_SIGNATURE,siglen,1,fp) != 1)
+   if (f.write(LANGID_FILE_SIGNATURE,siglen) != siglen)
       return false ;
    // follow with the format version number
    unsigned char version = LANGID_FILE_VERSION ;
-   if (fwrite(&version,sizeof(version),1,fp) != 1)
+   if (f.write(&version,sizeof(version),1) != sizeof(version))
       return false ;
    // then the number of language info records
-   if (!write_uint32(fp,numLanguages()))
+   uint32_t n_lang = numLanguages() ;
+      if (!f.writeValue(n_lang))
       return false ;
    // set the flag for whether we have bigram models following the multi-trie
    uint8_t have_bigrams = 1 ;
-   if (fwrite(&have_bigrams,sizeof(have_bigrams),1,fp) != 1)
+   if (f.writeValue(have_bigrams))
       return false ;
    // pad the header with NULs for the unused reserved portion of the header
    for (size_t i = 0 ; i < LANGID_PADBYTES_1 ; i++)
       {
-      if (fputc('\0',fp) == EOF)
-	 return false ;
+      f.putc('\0') ;
       }
    return true ;
 }
@@ -2327,9 +2324,11 @@ static bool sort_frequencies(const MultiTrieNode *n, const uint8_t * /*key*/,
 
 //----------------------------------------------------------------------
 
-bool LanguageIdentifier::write(FILE *fp)
+bool LanguageIdentifier::write(Fr::CFile& f)
 {
-   bool success = writeHeader(fp) ;
+   if (!f)
+      return false ;
+   bool success = writeHeader(f) ;
    if (success)
       {
       // sort the frequency records for each leaf node so that stop-grams
@@ -2344,23 +2343,30 @@ bool LanguageIdentifier::write(FILE *fp)
       // write out the languageID records
       for (size_t i = 0 ; i < numLanguages() ; i++)
 	 {
-	 m_langinfo[i].write(fp) ;
+	 m_langinfo[i].write(f) ;
 	 }
       // now write out the trie
       auto ptrie = packedTrie() ;
-      if (!ptrie || !ptrie->write(fp))
+      if (!ptrie || !ptrie->write(f))
 	 {
 	 success = false ;
 	 }
-      write_uint32(fp,(uint32_t)~0) ;
+      uint32_t all_ones = (uint32_t)~0 ;
+      if (!f.writeValue(all_ones))
+	 success = false ;
       // finally, write out the mapping from stored frequency value to
       //   actual weighted value
-      auto dm_offset = ftell(fp) ;
-      if (PackedTrieFreq::writeDataMapping(fp))
+      uint64_t dm_offset = f.tell() ;
+      if (PackedTrieFreq::writeDataMapping(f))
 	 {
-	 fseek(fp,LANGID_FILE_DMOFFSET,SEEK_SET) ;
-	 write_uint64(fp,dm_offset) ;
+	 f.seek(LANGID_FILE_DMOFFSET) ;
+	 if (!f.writeValue(dm_offset))
+	    {
+	    success = false ;
+	    }
 	 }
+      if (success)
+	 f.writeComplete() ;
       }
    return success ;
 }
@@ -2370,8 +2376,7 @@ bool LanguageIdentifier::write(FILE *fp)
 bool LanguageIdentifier::write(const char *filename) const
 {
    COutputFile fp(filename,CFile::safe_rewrite) ;
-   //TODO: change LI::write to use CFile directly
-   bool success = fp ? const_cast<LanguageIdentifier*>(this)->write(fp.fp()) : false ;
+   bool success = const_cast<LanguageIdentifier*>(this)->write(fp) ;
    return success ? fp.close() : false ;
 }
 

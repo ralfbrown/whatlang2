@@ -4,10 +4,10 @@
 /*	by Ralf Brown / Carnegie Mellon University			*/
 /*									*/
 /*  File:     mklangid.C						*/
-/*  Version:  1.14							*/
-/*  LastEdit: 14mar2012							*/
+/*  Version:  1.30							*/
+/*  LastEdit: 2019-07-07						*/
 /*                                                                      */
-/*  (c) Copyright 2010,2011,2012 Ralf Brown/Carnegie Mellon University	*/
+/*  (c) Copyright 2010,2011,2012,2019 Carnegie Mellon University	*/
 /*      This program is free software; you can redistribute it and/or   */
 /*      modify it under the terms of the GNU General Public License as  */
 /*      published by the Free Software Foundation, version 3.           */
@@ -23,6 +23,7 @@
 /*                                                                      */
 /************************************************************************/
 
+#include <cmath>
 #include "langid.h"
 #include "trie.h"
 

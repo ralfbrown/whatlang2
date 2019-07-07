@@ -203,16 +203,10 @@ void PackedTrieFreq::initDataMapping(double (*mapfn)(uint32_t))
 
 //----------------------------------------------------------------------
 
-bool PackedTrieFreq::writeDataMapping(FILE *fp)
+bool PackedTrieFreq::writeDataMapping(Fr::CFile& f)
 {
-   if (fp)
-      {
-      Fr::UInt32 count(PACKED_TRIE_NUM_VALUES) ;
-      if (fwrite((char*)&count,sizeof(count),1,fp) != 1)
-	 return false ;
-      return fwrite(s_value_map,1,sizeof(s_value_map),fp) == sizeof(s_value_map) ;
-      }
-   return false ;
+   Fr::UInt32 count(PACKED_TRIE_NUM_VALUES) ;
+   return f && f.writeValue(count) && f.writeValue(*s_value_map) ;
 }
 
 /************************************************************************/
@@ -409,12 +403,12 @@ LangIDPackedMultiTrie::LangIDPackedMultiTrie(const LangIDMultiTrie *multrie)
 
 //----------------------------------------------------------------------
 
-LangIDPackedMultiTrie::LangIDPackedMultiTrie(FILE *fp, const char *filename)
+LangIDPackedMultiTrie::LangIDPackedMultiTrie(Fr::CFile& f, const char *filename)
 {
    init() ;
-   if (fp && parseHeader(fp))
+   if (f && parseHeader(f))
       {
-      size_t offset = ftell(fp) ;
+      size_t offset = f.tell() ;
       auto fmap = new Fr::MemMappedROFile(filename) ;
       if (fmap)
 	 {
@@ -435,9 +429,9 @@ LangIDPackedMultiTrie::LangIDPackedMultiTrie(FILE *fp, const char *filename)
 	 m_terminals_contiguous = true ;
 	 m_freq = Fr::New<PackedTrieFreq>(m_numfreq) ;
 	 if (!m_nodes || !m_freq ||
-	     fread(m_nodes,sizeof(PackedTrieNode),m_size,fp) != m_size ||
-	     fread(m_freq,sizeof(PackedTrieFreq),m_numfreq,fp) != m_numfreq ||
-	     fread(m_terminals,sizeof(PackedTrieTerminalNode),m_numterminals,fp) != m_numterminals)
+	    f.read(m_nodes,m_size,sizeof(PackedTrieNode)) != m_size ||
+	    f.read(m_freq,m_numfreq,sizeof(PackedTrieFreq)) != m_numfreq ||
+	    f.read(m_terminals,m_numterminals,sizeof(PackedTrieTerminalNode)) != m_numterminals)
 	    {
 	    Fr::Free(m_nodes) ;  m_nodes = 0 ;
 	    Fr::Free(m_freq) ;   m_freq = 0 ;
@@ -660,18 +654,18 @@ bool LangIDPackedMultiTrie::insertChildren(PackedTrieNode *parent,
 
 //----------------------------------------------------------------------
 
-bool LangIDPackedMultiTrie::parseHeader(FILE *fp)
+bool LangIDPackedMultiTrie::parseHeader(Fr::CFile& f)
 {
    const size_t siglen = sizeof(MULTITRIE_SIGNATURE) ;
    char signature[siglen] ;
-   if (fread(signature,sizeof(char),siglen,fp) != siglen ||
+   if (f.read(signature,siglen,sizeof(char)) != siglen ||
        memcmp(signature,MULTITRIE_SIGNATURE,siglen) != 0)
       {
       // error: wrong file type
       return false ;
       }
    unsigned char version ;
-   if (fread(&version,sizeof(char),sizeof(version),fp) != sizeof(version)
+   if (!f.readValue(&version)
        || version < MULTITRIE_FORMAT_MIN_VERSION
        || version > MULTITRIE_FORMAT_VERSION)
       {
@@ -679,8 +673,7 @@ bool LangIDPackedMultiTrie::parseHeader(FILE *fp)
       return false ;
       }
    unsigned char bits ;
-   if (fread(&bits,sizeof(char),sizeof(bits),fp) != sizeof(bits) ||
-       bits != PTRIE_BITS_PER_LEVEL)
+   if (f.readValue(&bits) || bits != PTRIE_BITS_PER_LEVEL)
       {
       // error: wrong type of trie
       return false ;
@@ -689,13 +682,13 @@ bool LangIDPackedMultiTrie::parseHeader(FILE *fp)
    char case_sens ;
    char padbuf[MULTITRIE_PADBYTES_1] ;
    Fr::UInt32 val_size, val_keylen, val_numfreq, val_numterm ;
-   if (fread((char*)&val_size,sizeof(val_size),1,fp) != 1 ||
-       fread((char*)&val_keylen,sizeof(val_keylen),1,fp) != 1 ||
-       fread((char*)&val_numfreq,sizeof(val_numfreq),1,fp) != 1 ||
-       fread((char*)&val_numterm,sizeof(val_numterm),1,fp) != 1 ||
-       fread(&ignore_white,sizeof(ignore_white),1,fp) != 1 ||
-       fread(&case_sens,sizeof(case_sens),1,fp) != 1 ||
-       fread(padbuf,1,sizeof(padbuf),fp) != sizeof(padbuf))
+   if (!f.readValue(&val_size) ||
+      !f.readValue(&val_keylen) ||
+      !f.readValue(&val_numfreq) ||
+      !f.readValue(&val_numterm) ||
+      !f.readValue(&ignore_white) ||
+      !f.readValue(&case_sens) ||
+      f.read(padbuf,sizeof(padbuf),1) != sizeof(padbuf))
       {
       // error reading header
       return false ;
@@ -802,94 +795,78 @@ bool LangIDPackedMultiTrie::enumerate(uint8_t *keybuf, unsigned maxkeylength,
 
 //----------------------------------------------------------------------
 
-LangIDPackedMultiTrie *LangIDPackedMultiTrie::load(FILE *fp, const char *filename)
+LangIDPackedMultiTrie *LangIDPackedMultiTrie::load(Fr::CFile& f, const char *filename)
 {
-   if (fp)
+   if (f)
       {
-      auto trie = new LangIDPackedMultiTrie(fp,filename) ;
+      auto trie = new LangIDPackedMultiTrie(f,filename) ;
       if (!trie || !trie->good())
 	 {
 	 delete trie ;
-	 return 0 ;
+	 return nullptr ;
 	 }
       return trie ;
       }
-   return 0 ;
+   return nullptr ;
 }
 
 //----------------------------------------------------------------------
 
 LangIDPackedMultiTrie *LangIDPackedMultiTrie::load(const char *filename)
 {
-   if (filename && *filename)
-      {
-      FILE *fp = fopen(filename,"rb") ;
-      if (fp)
-	 {
-	 auto trie = load(fp,filename) ;
-	 fclose(fp) ;
-	 return trie ;
-	 }
-      }
-   return 0 ;
+   Fr::CInputFile fp(filename,Fr::CFile::binary) ;
+   return fp ? load(fp,filename) : nullptr ;
 }
 
 //----------------------------------------------------------------------
 
-bool LangIDPackedMultiTrie::writeHeader(FILE *fp) const
+bool LangIDPackedMultiTrie::writeHeader(Fr::CFile& f) const
 {
    // write the signature string
    const size_t siglen = sizeof(MULTITRIE_SIGNATURE) ;
-   if (fwrite(MULTITRIE_SIGNATURE,sizeof(char),siglen,fp) != siglen)
+   if (f.write(MULTITRIE_SIGNATURE,siglen,sizeof(char)) != siglen)
       return false; 
    // follow with the format version number
    unsigned char version = MULTITRIE_FORMAT_VERSION ;
-   if (fwrite(&version,sizeof(char),sizeof(version),fp) != sizeof(version))
-      return false ;
    unsigned char bits = PTRIE_BITS_PER_LEVEL ;
-   if (fwrite(&bits,sizeof(char),sizeof(bits),fp) != sizeof(bits))
+   if (!f.writeValue(version) || !f.writeValue(bits))
       return false ;
    // write out the size of the trie
    Fr::UInt32 val_used(size()), val_keylen(longestKey()), val_numfreq(m_numfreq), val_numterm(m_numterminals) ;
    char case_sens = caseSensitivity() ;
-   if (fwrite((char*)&val_used,sizeof(val_used),1,fp) != 1 || 
-       fwrite((char*)&val_keylen,sizeof(val_keylen),1,fp) != 1 ||
-       fwrite((char*)&val_numfreq,sizeof(val_numfreq),1,fp) != 1 ||
-       fwrite((char*)&val_numterm,sizeof(val_numterm),1,fp) != 1 ||
-       fwrite(&m_ignorewhitespace,sizeof(m_ignorewhitespace),1,fp) != 1 ||
-       fwrite(&case_sens,sizeof(case_sens),1,fp) != 1)
+   if (!f.writeValue(val_used) ||
+      !f.writeValue(val_keylen) ||
+      !f.writeValue(val_numfreq) ||
+      !f.writeValue(val_numterm) ||
+      !f.writeValue(m_ignorewhitespace) ||
+      !f.writeValue(case_sens))
       return false ;
    // pad the header with NULs for the unused reserved portion of the header
    for (size_t i = 0 ; i < MULTITRIE_PADBYTES_1 ; i++)
       {
-      if (fputc('\0',fp) == EOF)
-	 return false ;
+      f.putc('\0') ;
       }
+   f.writeComplete() ;
    return true ;
 }
 
 //----------------------------------------------------------------------
 
-bool LangIDPackedMultiTrie::write(FILE *fp) const
+bool LangIDPackedMultiTrie::write(Fr::CFile& f) const
 {
-   if (fp)
-      {
-      if (writeHeader(fp))
-	 {
-	 // write the actual trie nodes
-	 if (fwrite(m_nodes,sizeof(PackedTrieNode),m_size,fp) != m_size)
-	    return false ;
-	 // write the frequency information
-	 if (fwrite(m_freq,sizeof(PackedTrieFreq),m_numfreq,fp) != m_numfreq)
-	    return false ;
-	 // write the terminals
-	 if (fwrite(m_terminals,sizeof(PackedTrieTerminalNode),
-		    m_numterminals,fp) != m_numterminals)
-	    return false ;
-	 return true ;
-	 }
-      }
-   return false ;
+   if (!f || !writeHeader(f))
+      return false ;
+   // write the actual trie nodes
+   if (f.write(m_nodes,m_size,sizeof(PackedTrieNode)) != m_size)
+      return false ;
+   // write the frequency information
+   if (f.write(m_freq,m_numfreq,sizeof(PackedTrieFreq)) != m_numfreq)
+      return false ;
+   // write the terminals
+   if (f.write(m_terminals,m_numterminals,sizeof(PackedTrieTerminalNode)) != m_numterminals)
+      return false ;
+   f.writeComplete() ;
+   return true ;
 }
 
 //----------------------------------------------------------------------
@@ -897,9 +874,7 @@ bool LangIDPackedMultiTrie::write(FILE *fp) const
 bool LangIDPackedMultiTrie::write(const char *filename) const
 {
    Fr::COutputFile fp(filename,Fr::CFile::safe_rewrite) ;
-   //TODO: change LIPMT::write to use CFile directly
-   bool success = fp ? this->write(fp.fp()) : false ;
-   return success ? fp.close() : false ;
+   return this->write(fp) ? fp.close() : false ;
 }
 
 //----------------------------------------------------------------------
