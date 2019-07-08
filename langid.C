@@ -103,6 +103,14 @@ static double stop_gram_penalty = -9.0 ;
 /*	Helper functions						*/
 /************************************************************************/
 
+// not in standard library until C++17
+inline double clamp(double v, double lo, double hi)
+{
+   return std::min(std::max(v,lo),hi) ;
+}
+
+//----------------------------------------------------------------------
+
 static uint8_t read_byte(Fr::CFile& f, uint32_t default_value = (uint8_t)~0)
 {
    uint8_t valbuf ;
@@ -138,7 +146,7 @@ static bool write_uint32(Fr::CFile& f, uint32_t value)
 static char *read_fixed_field(Fr::CFile& f, size_t len)
 {
    if (len == 0)
-      return 0 ;
+      return nullptr ;
    auto buf = New<char>(len) ;
    if (buf)
       {
@@ -386,8 +394,7 @@ void BigramCounts::copy(const BigramCounts *orig)
       }
    else
       {
-      for (size_t i = 0 ; i < lengthof(m_counts) ; i++)
-	 m_counts[i] = 0 ;
+      std::fill(m_counts,m_counts+lengthof(m_counts),0) ;
       m_total = 0 ;
       }
    return ;
@@ -659,11 +666,7 @@ void LanguageID::setCoverageFactor(double coverage)
 
 void LanguageID::setCountedCoverage(double coverage)
 {
-   if (coverage < 0.0)
-      coverage = 0.0 ;
-   if (coverage > MAX_WEIGHTED_COVER)
-      coverage = MAX_WEIGHTED_COVER ;
-   m_countcover = coverage ;
+   m_countcover = clamp(coverage,0.0,MAX_WEIGHTED_COVER) ;
    return ;
 }
 
@@ -671,11 +674,7 @@ void LanguageID::setCountedCoverage(double coverage)
 
 void LanguageID::setFreqCoverage(double coverage)
 {
-   if (coverage < 0.0)
-      coverage = 0.0 ;
-   if (coverage > MAX_FREQ_COVER)
-      coverage = MAX_FREQ_COVER ;
-   m_freqcover = coverage ;
+   m_freqcover = clamp(coverage,0.0,MAX_FREQ_COVER) ;
    return ;
 }
 
@@ -683,11 +682,7 @@ void LanguageID::setFreqCoverage(double coverage)
 
 void LanguageID::setMatchFactor(double match)
 {
-   if (match < 0.0)
-      match = 0.0 ;
-   if (match > MAX_MATCH_FACTOR)
-      match = MAX_MATCH_FACTOR ;
-   m_matchfactor = match ;
+   m_matchfactor = clamp(match,0.0,MAX_MATCH_FACTOR) ;
    return ;
 }
 
@@ -1064,20 +1059,18 @@ LanguageScores::~LanguageScores()
 
 double LanguageScores::highestScore() const
 {
+   size_t nlang = numLanguages() ;
    if (sorted())
       {
       return m_scores[0] ;
       }
+   else if (nlang == 0)
+      {
+      return 0.0 ;
+      }
    else
       {
-      double highest = 0.0 ;
-      size_t nlang = numLanguages() ;
-      for (size_t i = 0 ; i < nlang ; i++)
-	 {
-	 if (m_scores[i] > highest)
-	    highest = m_scores[i] ;
-	 }
-      return highest ;
+      return *std::max_element(m_scores,m_scores+nlang) ;
       }
 }
 
@@ -1522,7 +1515,7 @@ WeightedLanguageScores::WeightedLanguageScores(size_t num_languages,
 WeightedLanguageScores::~WeightedLanguageScores()
 {
    delete[] m_weights ;
-   m_weights = 0 ;
+   m_weights = nullptr ;
    return ;
 }
 
@@ -1546,14 +1539,9 @@ LanguageIdentifier::LanguageIdentifier(const char *language_data_file,
 {
    m_alloc_languages = 0 ;
    m_num_languages = 0 ;
-   m_langdata = nullptr ;
-   m_langinfo = nullptr ;
-   m_uncomplangdata = 0 ;
-   m_alignments = 0 ;
-   m_length_factors = 0 ;
    m_apply_cover_factor = true ;
    useFriendlyName(false) ;
-   charsetIdentifier(0) ;
+   charsetIdentifier(nullptr) ;
    setBigramWeight(DEFAULT_BIGRAM_WEIGHT) ;
    runVerbosely(run_verbosely) ;
    if (language_data_file && *language_data_file)
@@ -1611,7 +1599,7 @@ LanguageIdentifier::LanguageIdentifier(const char *language_data_file,
       {
       PackedTrieFreq::initDataMapping(scale_score) ;
       }
-   m_unaligned = 0 ;
+   m_unaligned = nullptr ;
    setAlignments() ;
    setAdjustmentFactors() ;
    if (!m_langdata)
@@ -1999,7 +1987,7 @@ LanguageScores *LanguageIdentifier::identify(const char *buffer,
 					     bool enforce_alignment) const
 {
    if (!buffer || !buflen || !m_langdata)
-      return 0 ;
+      return nullptr ;
    LanguageScores *scores = new LanguageScores(numLanguages()) ;
    const uint8_t *align = enforce_alignment ? m_alignments : 0 ;
    if (!identify(scores,buffer,buflen,align,ignore_whitespace,
@@ -2021,7 +2009,7 @@ LanguageScores *LanguageIdentifier::identify(LanguageScores *scores,
 					     bool enforce_alignment) const
 {
    if (!buffer || !buflen || !m_langdata)
-      return 0 ;
+      return nullptr ;
    if (scores && scores->maxLanguages() == numLanguages())
       {
       scores->clear() ;
@@ -2109,7 +2097,7 @@ static bool cosine_term(const PackedTrieNode *node, const uint8_t *,
 LanguageScores *LanguageIdentifier::similarity(unsigned langid) const
 {
    if (langid >= numLanguages() || !trie())
-      return 0 ;
+      return nullptr ;
    WeightedLanguageScores *scores
       = new WeightedLanguageScores(numLanguages(),0.0) ;
    if (scores && trie())
@@ -2400,11 +2388,10 @@ bool LanguageIdentifier::dump(Fr::CFile& f, bool show_ngrams) const
 /*	Procedural interface						*/
 /************************************************************************/
 
-static LanguageIdentifier *try_loading(const char *database_file,
-				       bool verbose)
+static LanguageIdentifier* try_loading(const char* database_file, bool verbose)
 {
    if (!database_file)
-      return 0 ;
+      return nullptr ;
    CharPtr db_filename ;
    if (database_file[0] == '~' && database_file[1] == '/')
       {
@@ -2426,14 +2413,14 @@ static LanguageIdentifier *try_loading(const char *database_file,
    if (!id)
       {
       SystemMessage::no_memory("loading language database") ;
-      return 0 ;
+      return nullptr ;
       }
    else if (id->numLanguages() == 0)
       {
       if (verbose)
 	 cerr << "Unsuccessfully tried to open " << database_file << endl ;
       delete id ;
-      return 0 ;
+      return nullptr ;
       }
    else if (verbose)
       {

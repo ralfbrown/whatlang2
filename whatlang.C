@@ -202,7 +202,7 @@ static void identify(const char *buf, int buflen,
 		  if (same_language(langid.languageName(scores->languageNumber(j)),
 				    langname))
 		     {
-		     langname = 0 ;
+		     langname = nullptr ;
 		     break ;
 		     }
 		  }
@@ -259,8 +259,7 @@ static void identify(const char *buf, int buflen,
 
 //----------------------------------------------------------------------
 
-static const char *locate_newline(const char *buf, int buflen,
-				  LineMode line_mode)
+static const char* locate_newline(const char *buf, int buflen, LineMode line_mode)
 {
    if (line_mode == LM_8bit)
       {
@@ -274,7 +273,7 @@ static const char *locate_newline(const char *buf, int buflen,
 	 if (buf[i] == '\0' && buf[i+1] == '\n')
 	    return buf + i + 2 ;
 	 }
-      return 0 ;
+      return nullptr ;
       }
    else // if (line_mode == LM_16littleendian)
       {
@@ -283,7 +282,7 @@ static const char *locate_newline(const char *buf, int buflen,
 	 if (buf[i+1] == '\0' && buf[i] == '\n')
 	    return buf + i + 2 ;
 	 }
-      return 0 ;
+      return nullptr ;
       }
 }
 
@@ -434,7 +433,7 @@ int main(int argc, char **argv)
    LineMode line_mode = LM_None ;
    LineMode line_type = LM_8bit ;
    const char *argv0 = argv[0] ;
-   const char *language_db = 0 ;
+   const char *language_db = nullptr ;
 
    while (argc > 1 && argv[1][0] == '-')
       {

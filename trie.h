@@ -209,7 +209,7 @@ class NybbleTriePointer
 	 { m_trie = t ; m_nodeindex = 0 ; m_keylength = 0 ; m_failed = false ; }
       NybbleTriePointer() { initPointer(0) ; } // for arrays
       NybbleTriePointer(const NybbleTrie *t) { initPointer(t) ; }
-      ~NybbleTriePointer() { m_trie = 0 ; m_nodeindex = 0 ; m_failed = true ; }
+      ~NybbleTriePointer() { m_trie = nullptr ; m_nodeindex = 0 ; m_failed = true ; }
 
       void resetKey() ;
       bool extendKey(uint8_t keybyte) ;
@@ -219,8 +219,8 @@ class NybbleTriePointer
       bool hasExtension(uint8_t keybyte) const ;
       bool hasChildren(uint32_t node_index, uint8_t nybble) const ;
       int keyLength() const { return m_keylength ; }
-      NybbleTrieNode *node() const
-         { return m_failed ? 0 : m_trie->node(m_nodeindex) ; }
+      NybbleTrieNode* node() const
+         { return m_failed ? nullptr : m_trie->node(m_nodeindex) ; }
    } ;
 
 /************************************************************************/

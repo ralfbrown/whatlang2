@@ -42,7 +42,7 @@
 /************************************************************************/
 
 static bool do_smoothing = true ;
-static LanguageScores *prior_language_scores = 0 ;
+static LanguageScores *prior_language_scores = nullptr ;
 
 /************************************************************************/
 /************************************************************************/

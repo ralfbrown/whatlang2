@@ -540,7 +540,7 @@ bool romanizable_codepoint(wchar_t codepoint)
 
 unsigned romanize_codepoint(wchar_t codepoint, wchar_t &romanized1, wchar_t &romanized2)
 {
-   const ISO9Element *table = 0 ;
+   const ISO9Element *table = nullptr ;
    if (in_ISO9_table(codepoint))
       {
       table = ISO9_table ;

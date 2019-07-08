@@ -69,7 +69,7 @@ typedef char LONGbuffer[4] ;
 /*	Global variables						*/
 /************************************************************************/
 
-MultiTrieFrequency *MultiTrieFrequency::s_base_address = 0 ;
+MultiTrieFrequency *MultiTrieFrequency::s_base_address = nullptr ;
 uint32_t MultiTrieFrequency::s_max_alloc = 0 ;
 uint32_t MultiTrieFrequency::s_curr_alloc = 0 ;
 
@@ -117,8 +117,7 @@ MultiTrieFrequency::~MultiTrieFrequency()
 
 //----------------------------------------------------------------------
 
-MultiTrieFrequency *MultiTrieFrequency::allocate(uint32_t freq, uint32_t lang,
-						 bool stopgram)
+MultiTrieFrequency* MultiTrieFrequency::allocate(uint32_t freq, uint32_t lang, bool stopgram)
 {
    if (s_curr_alloc >= s_max_alloc)
       {
@@ -131,7 +130,7 @@ MultiTrieFrequency *MultiTrieFrequency::allocate(uint32_t freq, uint32_t lang,
 	 s_max_alloc = new_alloc ;
 	 }
       else
-	 return 0 ;
+	 return nullptr ;
       }
    MultiTrieFrequency *freq_record = baseAddress() + s_curr_alloc ;
    s_curr_alloc++ ;
@@ -690,7 +689,7 @@ LangIDMultiTrie::~LangIDMultiTrie()
       Fr::Free(m_nodes[i]) ;
       }
    Fr::Free(m_nodes) ;
-   m_nodes = 0 ;
+   m_nodes = nullptr ;
    m_capacity = 0 ;
    m_used = 0 ;
    return ;
@@ -819,15 +818,15 @@ uint32_t LangIDMultiTrie::allocateNode()
 
 //----------------------------------------------------------------------
 
-MultiTrieNode *LangIDMultiTrie::node(uint32_t N) const
+MultiTrieNode* LangIDMultiTrie::node(uint32_t N) const
 {
    if (N < m_used)
       {
-      MultiTrieNode *bucket = m_nodes[N / BUCKET_SIZE] ;
+      MultiTrieNode* bucket = m_nodes[N / BUCKET_SIZE] ;
       return (bucket) ? &bucket[N % BUCKET_SIZE] : 0 ;
       }
    else
-      return 0 ;
+      return nullptr ;
 }
 
 //----------------------------------------------------------------------
@@ -923,14 +922,13 @@ uint32_t LangIDMultiTrie::find(const uint8_t *key, unsigned keylength) const
 
 //----------------------------------------------------------------------
 
-MultiTrieNode *LangIDMultiTrie::findNode(const uint8_t *key, unsigned keylength)
-   const
+MultiTrieNode* LangIDMultiTrie::findNode(const uint8_t *key, unsigned keylength) const
 {
    uint32_t cur_index = ROOT_INDEX ;
    while (keylength > 0)
       {
       if (!extendKey(cur_index,*key))
-	 return 0 ;
+	 return nullptr ;
       key++ ;
       keylength-- ;
       }

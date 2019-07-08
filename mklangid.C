@@ -2265,7 +2265,7 @@ static bool cluster_models_by_charset(LanguageIdentifier *clusterdb,
    unsigned maxkey = ptrie->longestKey() ;
    uint8_t keybuf[maxkey] ;
    ptrie->enumerate(keybuf,maxkey,merge_ngrams,merged) ;
-   base_frequency = 0 ;
+   base_frequency = nullptr ;
    // figure out the maximum size of an individual model for each encoding
    unsigned max_sizes[num_encs] ;
    memset(max_sizes,'\0',sizeof(max_sizes)) ;

@@ -396,8 +396,8 @@ LangIDPackedMultiTrie::LangIDPackedMultiTrie(const LangIDMultiTrie *multrie)
 	 {
 	 Fr::Free(m_nodes) ;
 	 Fr::Free(m_freq) ;
-	 m_nodes = 0 ; 
-	 m_freq = 0 ;
+	 m_nodes = nullptr ; 
+	 m_freq = nullptr ;
 	 m_size = 0 ;
 	 m_numfreq = 0 ;
 	 }
@@ -437,9 +437,9 @@ LangIDPackedMultiTrie::LangIDPackedMultiTrie(Fr::CFile& f, const char *filename)
 	    f.read(m_freq,m_numfreq,sizeof(PackedTrieFreq)) != m_numfreq ||
 	    f.read(m_terminals,m_numterminals,sizeof(PackedTrieTerminalNode)) != m_numterminals)
 	    {
-	    Fr::Free(m_nodes) ;  m_nodes = 0 ;
-	    Fr::Free(m_freq) ;   m_freq = 0 ;
-	    m_terminals = 0 ;
+	    Fr::Free(m_nodes) ;  m_nodes = nullptr ;
+	    Fr::Free(m_freq) ;   m_freq = nullptr ;
+	    m_terminals = nullptr ;
 	    m_size = 0 ; 
 	    m_numfreq = 0 ;
 	    m_numterminals = 0 ;
@@ -473,9 +473,9 @@ LangIDPackedMultiTrie::~LangIDPackedMultiTrie()
 
 void LangIDPackedMultiTrie::init()
 {
-   m_fmap = 0 ;
-   m_nodes = 0 ;
-   m_terminals = 0 ;
+   m_fmap = nullptr ;
+   m_nodes = nullptr ;
+   m_terminals = nullptr ;
    m_freq = 0 ;
    m_size = 0 ;
    m_used = 0 ;
@@ -706,14 +706,14 @@ bool LangIDPackedMultiTrie::parseHeader(Fr::CFile& f)
 
 //----------------------------------------------------------------------
 
-PackedTrieNode *LangIDPackedMultiTrie::findNode(const uint8_t *key,
+PackedTrieNode* LangIDPackedMultiTrie::findNode(const uint8_t *key,
 					  unsigned keylength) const
 {
    uint32_t cur_index = PTRIE_ROOT_INDEX ;
    while (keylength > 0)
       {
       if (!extendKey(cur_index,*key))
-	 return 0 ;
+	 return nullptr ;
       key++ ;
       keylength-- ;
       }
@@ -961,8 +961,8 @@ bool PackedMultiTriePointer::lookupSuccessful() const
 /************************************************************************/
 
 // note: these global variables make add_ngram non-reentrant
-static const PackedTrieFreq *frequency_base = 0 ;
-static const PackedTrieFreq *frequency_end = 0 ;
+static const PackedTrieFreq *frequency_base = nullptr ;
+static const PackedTrieFreq *frequency_end = nullptr ;
 
 static bool add_ngram(const PackedTrieNode *node, const uint8_t *key,
 		      unsigned keylen, void *user_data)
@@ -999,8 +999,8 @@ LangIDMultiTrie::LangIDMultiTrie(const class LangIDPackedMultiTrie *ptrie)
 	 frequency_base = ptrie->frequencyBaseAddress() ;
 	 frequency_end = frequency_base + ptrie->numFrequencies() ;
 	 ptrie->enumerate(keybuf,ptrie->longestKey(),add_ngram,this) ;
-	 frequency_base = 0 ;
-	 frequency_end = 0 ;
+	 frequency_base = nullptr ;
+	 frequency_end = nullptr ;
 	 }
       }
    else

@@ -179,16 +179,15 @@ uint32_t PackedSimpleTrieNode::childIndexIfPresent(unsigned int N) const
 
 //----------------------------------------------------------------------
 
-PackedSimpleTrieNode *PackedSimpleTrieNode::childNodeIfPresent(unsigned int N,
-							       const LangIDPackedTrie *trie)
+PackedSimpleTrieNode* PackedSimpleTrieNode::childNodeIfPresent(unsigned int N, const LangIDPackedTrie *trie)
    const
 {
    if (N >= PTRIE_CHILDREN_PER_NODE)
-      return 0 ;
+      return nullptr ;
    uint32_t mask = (1U << (N % 32)) ;
    uint32_t children = m_children[N/32].load() ;
    if ((children & mask) == 0)
-      return 0 ;
+      return nullptr ;
    mask-- ;
    return trie->node(firstChild() + m_popcounts[N/32] + Fr::popcount(children & mask)) ;
 }
@@ -601,8 +600,8 @@ LangIDPackedTrie::LangIDPackedTrie(const NybbleTrie *trie, uint32_t min_freq,
 	 {
 	 Fr::Free(m_nodes) ;
 	 Fr::Free(m_terminals) ;
-	 m_nodes = 0 ; 
-	 m_terminals = 0 ;
+	 m_nodes = nullptr ; 
+	 m_terminals = nullptr ;
 	 m_size = 0 ;
 	 m_numterminals = 0 ;
 	 }
@@ -672,9 +671,9 @@ LangIDPackedTrie::~LangIDPackedTrie()
 
 void LangIDPackedTrie::init()
 {
-   m_fmap = 0 ;
-   m_nodes = 0 ;
-   m_terminals = 0 ;
+   m_fmap = nullptr ;
+   m_nodes = nullptr ;
+   m_terminals = nullptr ;
    m_size = 0 ;
    m_used = 0 ;
    m_numterminals = 0 ;
@@ -873,14 +872,13 @@ bool LangIDPackedTrie::parseHeader(Fr::CFile& f)
 
 //----------------------------------------------------------------------
 
-PackedSimpleTrieNode *LangIDPackedTrie::findNode(const uint8_t *key,
-					   unsigned keylength) const
+PackedSimpleTrieNode* LangIDPackedTrie::findNode(const uint8_t *key, unsigned keylength) const
 {
    uint32_t cur_index = PTRIE_ROOT_INDEX ;
    while (keylength > 0)
       {
       if (!extendKey(cur_index,*key))
-	 return 0 ;
+	 return nullptr ;
       key++ ;
       keylength-- ;
       }

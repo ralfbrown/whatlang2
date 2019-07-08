@@ -72,7 +72,7 @@ class StringList
 
 StringList::StringList(const char *strng)
 {
-   m_next = 0 ;
+   m_next = nullptr ;
    if (strng)
       {
       m_length = strlen(strng) ;
@@ -85,7 +85,7 @@ StringList::StringList(const char *strng)
    else
       {
       m_length = 0 ;
-      m_string = 0 ;
+      m_string = nullptr ;
       }
    return ;
 }
@@ -95,9 +95,9 @@ StringList::StringList(const char *strng)
 StringList::~StringList()
 {
    free(m_string) ;
-   m_string = 0 ;
+   m_string = nullptr ;
    m_length = 0 ;
-   m_next = 0 ;
+   m_next = nullptr ;
    return ;
 }
 
@@ -169,13 +169,13 @@ size_t random_number(size_t range)
 
 //----------------------------------------------------------------------
 
-char *random_sample(size_t total_size, size_t sample_size)
+char* random_sample(size_t total_size, size_t sample_size)
 {
    char *selected = (char*)calloc(total_size+1,sizeof(char)) ;
    if (!selected)
       {
       fprintf(stderr,"Out of memory while generating random sampling") ;
-      return 0 ;
+      return nullptr ;
       }
    // seed random number gen from time
 #ifdef FrHAVE_SRAND48
@@ -400,9 +400,9 @@ int main(int argc, char **argv)
       {
       sample_size = atoi(argv[1]) ;
       }
-   StringList *lines = 0 ;
+   StringList *lines = nullptr ;
    StringList **lastline = &lines ;
-   FILE *rejectfp = 0 ;
+   FILE *rejectfp = nullptr ;
    if (reject_file && *reject_file)
       {
       rejectfp = fopen(reject_file,"w") ;
@@ -435,7 +435,7 @@ int main(int argc, char **argv)
          }
       numlines++ ;
       }
-   *lastline = 0 ;			// terminate list of lines
+   *lastline = nullptr ;		// terminate list of lines
    if (use_bytes)
       {
       take_uniform_bytes(lines,sample_size,rejectfp) ;

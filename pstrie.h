@@ -163,7 +163,7 @@ class LangIDPackedTrie
          { return (n < m_nodes) || (n >= m_nodes + m_size) ; }
       uint32_t size() const { return m_size ; }
       unsigned longestKey() const { return m_maxkeylen ; }
-      PackedSimpleTrieNode *node(uint32_t N) const
+      PackedSimpleTrieNode* node(uint32_t N) const
 	 { if (N < m_size) return &m_nodes[N] ;
 	   if ((N & PTRIE_TERMINAL_MASK) != 0)
 	      {
@@ -171,7 +171,7 @@ class LangIDPackedTrie
 	      if (termindex < m_numterminals)
 		 return (PackedSimpleTrieNode*)&m_terminals[termindex] ; 
 	      }
-	   return 0 ;
+	   return nullptr ;
 	 }
       static bool isTerminalNode(uint32_t N)
 	 { return (N & PTRIE_TERMINAL_MASK) != 0 ; }

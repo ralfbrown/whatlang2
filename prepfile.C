@@ -141,14 +141,14 @@ Fr::CFile* PreprocessedInputFile::open_sampled_input_file(const char *filename,
    if (interval >= 0.98)
       {
       m_buffered_lines = lines->reverse() ;
-      lines = 0 ;
+      lines = Fr::List::emptyList() ;
       sampled = total_bytes ;
       }
    else
       {
       double avgline = total_bytes / (double)numlines ;
       double count = interval / 2.0 ;
-      m_buffered_lines = 0 ;
+      m_buffered_lines = Fr::List::emptyList() ;
       while (lines)
 	 {
 	 auto line = reinterpret_cast<String*>(poplist(lines)) ;

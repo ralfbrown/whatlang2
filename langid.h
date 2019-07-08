@@ -361,23 +361,6 @@ class MultiTrie ;
 
 class LanguageIdentifier
    {
-   private:
-      LangIDPackedMultiTrie *m_langdata ;
-      LangIDMultiTrie       *m_uncomplangdata ;
-      LanguageID      *m_langinfo ;
-      uint8_t 	      *m_alignments ;
-      uint8_t	      *m_unaligned ;
-      size_t	      *m_string_counts ;
-      double	      *m_length_factors ;
-      double	      *m_adjustments ;
-      Fr::CharPtr      m_directory ;
-      LanguageIdentifier *m_charsetident ;
-      double 	       m_bigram_weight ;
-      size_t	       m_alloc_languages ;
-      size_t 	       m_num_languages ;
-      bool   	       m_friendly_name ;
-      bool	       m_apply_cover_factor ;
-      bool             m_verbose ;
    public:
       static const uint32_t unknown_lang = (uint32_t)~0 ;
 
@@ -454,6 +437,24 @@ class LanguageIdentifier
       bool write(Fr::CFile& f) ;
       bool write(const char* filename) const ;
       bool dump(Fr::CFile& f, bool show_ngrams = false) const ;
+
+   private:
+      LangIDPackedMultiTrie *m_langdata { nullptr } ;
+      LangIDMultiTrie       *m_uncomplangdata { nullptr } ;
+      LanguageID      *m_langinfo { nullptr } ;
+      uint8_t 	      *m_alignments { nullptr } ;
+      double	      *m_length_factors { nullptr } ;
+      uint8_t	      *m_unaligned ;
+      size_t	      *m_string_counts ;
+      double	      *m_adjustments ;
+      Fr::CharPtr      m_directory ;
+      LanguageIdentifier *m_charsetident ;
+      double 	       m_bigram_weight ;
+      size_t	       m_alloc_languages ;
+      size_t 	       m_num_languages ;
+      bool   	       m_friendly_name ;
+      bool	       m_apply_cover_factor ;
+      bool             m_verbose ;
    } ;
 
 /************************************************************************/

@@ -74,7 +74,7 @@ class MultiTrieFrequency
       MultiTrieFrequency() {} // only for internal use by readAll()
       MultiTrieFrequency(uint32_t freq, uint32_t langID,
 			 bool stopgram = false,
-			 MultiTrieFrequency *nxt = 0)
+			 MultiTrieFrequency *nxt = nullptr)
 	 { m_frequency = freq ;
 	   m_langID = (langID & LID_LANGID_MASK) | (stopgram * LID_STOPGRAM_MASK) ;
 	   setNext(nxt) ; }
