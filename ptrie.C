@@ -73,6 +73,10 @@ using namespace std ;
 double PackedTrieFreq::s_value_map[PACKED_TRIE_NUM_VALUES] ;
 bool PackedTrieFreq::s_value_map_initialized = false ;
 
+//----------------------------------------------------------------------
+
+void write_escaped_char(uint8_t c, Fr::CFile& f) ;
+
 /************************************************************************/
 /*	Helper functions						*/
 /************************************************************************/
@@ -879,68 +883,39 @@ bool LangIDPackedMultiTrie::write(const char *filename) const
 
 //----------------------------------------------------------------------
 
-static const char hexdigit[] = "0123456789ABCDEF" ;
-
-static void write_escaped_char(uint8_t c, FILE *fp)
-{
-   switch (c)
-      {
-      case '\\':
-	 fputs("\\\\",fp) ;
-	 break ;
-      case ' ':
-	 fputs("\\ ",fp) ;
-	 break ;
-      default:
-	 if (c < ' ')
-	    {
-	    fputc('\\',fp) ;
-	    fputc(hexdigit[(c>>4)&0xF],fp) ;
-	    fputc(hexdigit[c&0xF],fp) ;
-	    }
-	 else
-	    fputc(c,fp) ;
-	 break ;
-      }
-   return ;
-}
-
-//----------------------------------------------------------------------
-
 static const PackedTrieFreq *base_frequency ;
 
 static bool dump_ngram(const PackedTrieNode *node, const uint8_t *key,
 		       unsigned keylen, void *user_data)
 {
-   FILE *fp = (FILE*)user_data ;
-   if (fp && node)
+   Fr::CFile& f = *((Fr::CFile*)user_data) ;
+   if (f && node)
       {
-      fprintf(fp,"   ") ;
+      f.printf("   ") ;
       for (size_t i = 0 ; i < keylen ; i++)
 	 {
-	 write_escaped_char(key[i],fp) ;
+	 write_escaped_char(key[i],f) ;
 	 }
-      fprintf(fp,"  ::") ;
+      f.printf("  ::") ;
       const PackedTrieFreq *freq = node->frequencies(base_frequency) ;
       for ( ; freq ; freq++)
 	 {
-	 fprintf(fp," %lu=%g",(unsigned long)freq->languageID(),
-		 freq->probability()) ;
+	 f.printf(" %lu=%g",(unsigned long)freq->languageID(),freq->probability()) ;
 	 if (freq->isLast())
 	    break ;
 	 }
-      fprintf(fp,"\n") ;
+      f.printf("\n") ;
       }
    return true ;
 }
 
 //----------------------------------------------------------------------
 
-bool LangIDPackedMultiTrie::dump(FILE *fp) const
+bool LangIDPackedMultiTrie::dump(Fr::CFile& f) const
 {
    Fr::LocalAlloc<uint8_t,10000> keybuf(longestKey()) ;
    base_frequency = m_freq ;
-   return keybuf ? enumerate(keybuf,longestKey(),dump_ngram,fp) : false ;
+   return keybuf ? enumerate(keybuf,longestKey(),dump_ngram,&f) : false ;
 }
 
 /************************************************************************/

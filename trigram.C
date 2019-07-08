@@ -216,40 +216,30 @@ void TrigramCounts::filter(unsigned topK, unsigned max_len, bool verbose)
 
 //----------------------------------------------------------------------
 
-TrigramCounts *TrigramCounts::load(FILE *fp)
+TrigramCounts *TrigramCounts::load(Fr::CFile& f)
 {
-   if (fp)
+   if (f)
       {
       TrigramCounts *model = new TrigramCounts ;
-      if (model->read(fp))
+      if (model->read(f))
 	 return model ;
       delete model ;
       }
-   return 0 ;
+   return nullptr ;
 }
 
 //----------------------------------------------------------------------
 
-bool TrigramCounts::read(FILE *fp)
+bool TrigramCounts::read(Fr::CFile& f)
 {
-   if (fp)
-      {
-      return (fread(m_counts,sizeof(m_counts[0]),lengthof(m_counts),fp)
-	      == lengthof(m_counts)) ;
-      }
-   return false ;
+   return f && f.read(m_counts,lengthof(m_counts),sizeof(m_counts[0])) == lengthof(m_counts) ;
 }
 
 //----------------------------------------------------------------------
 
-bool TrigramCounts::save(FILE *fp) const
+bool TrigramCounts::save(Fr::CFile& f) const
 {
-   if (fp)
-      {
-      return (fwrite(m_counts,sizeof(m_counts[0]),lengthof(m_counts),fp)
-	      == lengthof(m_counts)) ;
-      }
-   return false ;
+   return f && f.write(m_counts,lengthof(m_counts),sizeof(m_counts[0])) == lengthof(m_counts) ;
 }
 
 // end of file trigram.C //

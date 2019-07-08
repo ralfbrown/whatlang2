@@ -5,7 +5,7 @@
 /*									*/
 /*  File:     mklangid.C	build language-id model database	*/
 /*  Version:  1.30							*/
-/*  LastEdit: 27jun2019							*/
+/*  LastEdit: 2019-07-07						*/
 /*                                                                      */
 /*  (c) Copyright 2010,2011,2012,2013,2014,2015,2019			*/
 /*		 Ralf Brown/Carnegie Mellon University			*/
@@ -38,8 +38,7 @@
 #include "trie.h"
 #include "mtrie.h"
 #include "ptrie.h"
-#include "FramepaC.h"
-
+#include "framepac/bitvector.h"
 #include "framepac/init.h"
 #include "framepac/message.h"
 #include "framepac/texttransforms.h"
@@ -307,18 +306,18 @@ static const char *get_arg(int &argc, const char **&argv)
 
 //----------------------------------------------------------------------
 
-static void print_quoted_char(FILE *fp, uint8_t ch)
+static void print_quoted_char(Fr::CFile& f, uint8_t ch)
 {
    switch (ch)
       {
-      case '\0': fputs("\\0",fp) ;		break ;
-      case '\f': fputs("\\f",fp) ;		break ;
-      case '\n': fputs("\\n",fp) ;		break ;
-      case '\r': fputs("\\r",fp) ;		break ;
-      case '\t': fputs("\\t",fp) ;		break ;
-      case ' ': fputs("\\ ",fp) ;		break ;
-      case '\\': fputs("\\\\",fp) ;		break ;
-      default:	 fputc(ch,fp) ;			break ;
+      case '\0': f.puts("\\0") ;		break ;
+      case '\f': f.puts("\\f") ;		break ;
+      case '\n': f.puts("\\n") ;		break ;
+      case '\r': f.puts("\\r") ;		break ;
+      case '\t': f.puts("\\t") ;		break ;
+      case ' ':  f.puts("\\ ") ;		break ;
+      case '\\': f.puts("\\\\") ;		break ;
+      default:	 f.putc(ch) ;			break ;
       }
    return ;
 }
@@ -924,8 +923,9 @@ static bool save_database(const char *database_file)
       {
       if (do_dump_trie)
 	 {
-	 fprintf(stdout,"=======================\n") ;
-	 language_identifier->dump(stdout,verbose) ;
+	 CFile f(stdout) ;
+	 f.printf("=======================\n") ;
+	 language_identifier->dump(f,verbose) ;
 	 }
       unsigned num_languages
 	 = count_languages(language_identifier,compare_langcode) ;
@@ -946,18 +946,18 @@ static bool save_database(const char *database_file)
 static bool dump_ngrams(const NybbleTrieNode *node, const uint8_t *key,
 			unsigned keylen, void *user_data)
 {
-   FILE *fp = (FILE*)user_data ;
+   Fr::CFile& f = *((Fr::CFile*)user_data) ;
    if (node->leaf())
       {
       uint32_t freq = node->frequency() ;
       if (node->isStopgram() && freq > 0)
-	 fputc('-',fp) ;
-      fprintf(fp,"%u\t",freq) ;
+	 f.putc('-') ;
+      f.printf("%u\t",freq) ;
       for (size_t i = 0 ; i < keylen ; i++)
 	 {
-	 print_quoted_char(fp,key[i]) ;
+	 print_quoted_char(f,key[i]) ;
 	 }
-      fprintf(fp,"\n") ;
+      f.printf("\n") ;
       }
    return true ;
 }
@@ -971,19 +971,19 @@ static bool dump_ngrams_scaled(const NybbleTrieNode *node,
 			       const uint8_t *key,
 			       unsigned keylen, void *user_data)
 {
-   FILE *fp = (FILE*)user_data ;
+   Fr::CFile& f = *((Fr::CFile*)user_data) ;
    if (node->leaf())
       {
       uint32_t freq = node->frequency() ;
       if (node->isStopgram() && freq > 0)
-	 fputc('-',fp) ;
+	 f.putc('-') ;
       double unscaled = (unscale_frequency(freq,smoothing_power) * dump_total_bytes / 100.0) + 0.99 ;
-      fprintf(fp,"%u\t",(unsigned)unscaled) ;
+      f.printf("%u\t",(unsigned)unscaled) ;
       for (size_t i = 0 ; i < keylen ; i++)
 	 {
-	 print_quoted_char(fp,key[i]) ;
+	 print_quoted_char(f,key[i]) ;
 	 }
-      fprintf(fp,"\n") ;
+      f.printf("\n") ;
       }
    return true ;
 }
@@ -994,45 +994,42 @@ static void dump_vocabulary(const NybbleTrie *ngrams, bool scaled,
 			    const char *vocab_file, unsigned max_length,
 			    uint64_t total_bytes, const LanguageID &opts)
 {
-   FILE *fp = fopen(vocab_file,"w") ;
-   if (fp)
-      {
-      if (total_bytes)
-	 fprintf(fp,"TotalCount: %llu\n", (unsigned long long)total_bytes) ;
-      fprintf(fp,"Lang: %s",opts.language()) ;
-      if (opts.friendlyName() != opts.language())
-	 fprintf(fp,"=%s",opts.friendlyName()) ;
-      fprintf(fp,"\nScript: %s\nRegion: %s\nEncoding: %s\nSource: %s\n",
-	      opts.script(),opts.region(),opts.encoding(),opts.source()) ;
-      if (alignment > 1)
-	 fprintf(fp,"Alignment: %d\n",alignment) ;
-      if (discount_factor > 1.0)
-	 fprintf(fp,"Discount: %g\n",discount_factor) ;
-      if (ngrams->ignoringWhiteSpace())
-	 fprintf(fp,"IgnoreBlanks: yes\n") ;
-      if (opts.coverageFactor() > 0.0 && opts.coverageFactor() != 1.0)
-	 fprintf(fp,"Coverage: %g\n",opts.coverageFactor()) ;
-      if (opts.countedCoverage() > 0.0 && opts.countedCoverage() != 1.0)
-	 fprintf(fp,"WeightedCoverage: %g\n",opts.countedCoverage()) ;
-      if (opts.freqCoverage() > 0.0)
-	 fprintf(fp,"FreqCoverage: %g\n",opts.freqCoverage()) ;
-      if (opts.matchFactor() > 0.0)
-	 fprintf(fp,"MatchFactor: %g\n",opts.matchFactor()) ;
-      uint8_t keybuf[max_length+1] ;
-      if (scaled)
-	 {
-	 dump_total_bytes = total_bytes ;
-	 (void)ngrams->enumerate(keybuf,max_length,dump_ngrams_scaled,fp) ;
-	 }
-      else
-	 (void)ngrams->enumerate(keybuf,max_length,dump_ngrams,fp) ;
-      fclose(fp) ;
-      }
-   else
+   Fr::COutputFile f(vocab_file) ;
+   if (!f)
       {
       cerr << "Unable to open '" << vocab_file << "' to write vocabulary"
 	   << endl ;
+      return ;
       }
+   if (total_bytes)
+      f.printf("TotalCount: %llu\n", (unsigned long long)total_bytes) ;
+   f.printf("Lang: %s",opts.language()) ;
+   if (opts.friendlyName() != opts.language())
+      f.printf("=%s",opts.friendlyName()) ;
+   f.printf("\nScript: %s\nRegion: %s\nEncoding: %s\nSource: %s\n",
+      opts.script(),opts.region(),opts.encoding(),opts.source()) ;
+   if (alignment > 1)
+      f.printf("Alignment: %d\n",alignment) ;
+   if (discount_factor > 1.0)
+      f.printf("Discount: %g\n",discount_factor) ;
+   if (ngrams->ignoringWhiteSpace())
+      f.printf("IgnoreBlanks: yes\n") ;
+   if (opts.coverageFactor() > 0.0 && opts.coverageFactor() != 1.0)
+      f.printf("Coverage: %g\n",opts.coverageFactor()) ;
+   if (opts.countedCoverage() > 0.0 && opts.countedCoverage() != 1.0)
+      f.printf("WeightedCoverage: %g\n",opts.countedCoverage()) ;
+   if (opts.freqCoverage() > 0.0)
+      f.printf("FreqCoverage: %g\n",opts.freqCoverage()) ;
+   if (opts.matchFactor() > 0.0)
+      f.printf("MatchFactor: %g\n",opts.matchFactor()) ;
+   uint8_t keybuf[max_length+1] ;
+   if (scaled)
+      {
+      dump_total_bytes = total_bytes ;
+      (void)ngrams->enumerate(keybuf,max_length,dump_ngrams_scaled,&f) ;
+      }
+   else
+      (void)ngrams->enumerate(keybuf,max_length,dump_ngrams,&f) ;
    return ;
 }
 
@@ -1836,13 +1833,13 @@ static void compute_coverage(LanguageID &lang_info,
 
 //----------------------------------------------------------------------
 
-static bool load_frequencies(Fr::CFile& fp, NybbleTrie *ngrams,
+static bool load_frequencies(Fr::CFile& f, NybbleTrie *ngrams,
 			     uint64_t &total_bytes, bool textcat_format,
 			     LanguageID &opts,
 			     BigramCounts *&bigrams, bool &scaled)
 {
    scaled = false ;
-   if (!fp)
+   if (!f)
       return false ;
    bool have_total_bytes = false ;
    bool first_line = true ;
@@ -1854,7 +1851,7 @@ static bool load_frequencies(Fr::CFile& fp, NybbleTrie *ngrams,
    bool have_script = false ;
    bool try_guessing_script = false ;
    opts.setCoverageFactor(1.0) ;
-   while (CharPtr buffer = fp.getCLine())
+   while (CharPtr buffer = f.getCLine())
       {
       char *endptr ;
       if (textcat_format)
@@ -2080,7 +2077,7 @@ static bool load_frequencies(Fr::CFile& fp, NybbleTrie *ngrams,
       {
       delete crubadan_bigrams ;
       bigrams = new BigramCounts ;
-      if (!bigrams->read(fp.fp()))
+      if (!bigrams->read(f))
 	 {
 	 cerr << "Error reading bigram counts in vocabulary file" << endl ;
 	 delete bigrams ;

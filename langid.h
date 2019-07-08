@@ -5,7 +5,7 @@
 /*									*/
 /*  File:     langid.h							*/
 /*  Version:  1.30							*/
-/*  LastEdit: 27jun2019							*/
+/*  LastEdit: 2019-07-07						*/
 /*                                                                      */
 /*  (c) Copyright 2010,2011,2012,2013,2014,2015,2019			*/
 /*		 Ralf Brown/Carnegie Mellon University			*/
@@ -28,10 +28,7 @@
 #define __LANGID_H_INCLUDED
 
 #include "ptrie.h"
-//#include "FramepaC.h"
-
 #include "framepac/cstring.h"
-#include "framepac/file.h"
 
 using namespace std ;
 using namespace Fr ;
@@ -144,9 +141,9 @@ class TrigramCounts
       void filter(int32_t threshold) ;
 
       // I/O
-      static TrigramCounts *load(FILE *fp) ;
-      bool read(FILE *fp) ;
-      bool save(FILE *fp) const ;
+      static TrigramCounts *load(Fr::CFile& f) ;
+      bool read(Fr::CFile& f) ;
+      bool save(Fr::CFile& f) const ;
    } ;
 
 //----------------------------------------------------------------------
@@ -158,7 +155,7 @@ class BigramCounts
       uint32_t m_counts[256 * 256] ;
    public:
       BigramCounts() { memset(m_counts,'\0',sizeof(m_counts)) ; m_total = 0 ; }
-      BigramCounts(FILE *fp) ;
+      BigramCounts(Fr::CFile& f) ;
       BigramCounts(const BigramCounts *) ;
       BigramCounts(const TrigramCounts &) ;
       BigramCounts(const TrigramCounts *) ;
@@ -183,11 +180,11 @@ class BigramCounts
       void scaleTotal(unsigned factor) { m_total *= factor ; }
 
       // I/O
-      static BigramCounts *load(FILE *fp) ;
-      bool read(FILE *fp) ;
-      bool readBinary(FILE *fp) ;
-      bool dumpCounts(FILE *fp) const ;
-      bool save(FILE *fp) const ;
+      static BigramCounts *load(Fr::CFile& f) ;
+      bool read(Fr::CFile& f) ;
+      bool readBinary(Fr::CFile& f) ;
+      bool dumpCounts(Fr::CFile& f) const ;
+      bool save(Fr::CFile& f) const ;
    } ;
 
 //----------------------------------------------------------------------
@@ -452,11 +449,11 @@ class LanguageIdentifier
 
       // I/O
       static bool checkSignature(Fr::CFile& f, unsigned *version = nullptr) ;
-      bool writeStatistics(FILE *fp) const ;
+      bool writeStatistics(Fr::CFile& f) const ;
       bool writeHeader(Fr::CFile& f) const ;
       bool write(Fr::CFile& f) ;
       bool write(const char* filename) const ;
-      bool dump(FILE *fp, bool show_ngrams = false) const ;
+      bool dump(Fr::CFile& f, bool show_ngrams = false) const ;
    } ;
 
 /************************************************************************/

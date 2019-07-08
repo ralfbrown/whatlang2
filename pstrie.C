@@ -109,6 +109,10 @@ class EnumerationInfo
 //FrAllocator PackedTriePointer::allocator("PackedTriePtr",
 //					 sizeof(PackedTriePointer)) ;
 
+//----------------------------------------------------------------------
+
+void write_escaped_char(uint8_t c, Fr::CFile& f) ;
+
 /************************************************************************/
 /*	Helper functions						*/
 /************************************************************************/
@@ -608,12 +612,12 @@ LangIDPackedTrie::LangIDPackedTrie(const NybbleTrie *trie, uint32_t min_freq,
 
 //----------------------------------------------------------------------
 
-LangIDPackedTrie::LangIDPackedTrie(FILE *fp, const char *filename)
+LangIDPackedTrie::LangIDPackedTrie(Fr::CFile& f, const char *filename)
 {
    init() ;
-   if (fp && parseHeader(fp))
+   if (f && parseHeader(f))
       {
-      size_t offset = ftell(fp) ;
+      size_t offset = f.tell() ;
       Fr::MemMappedFile *fmap = new MemMappedROFile(filename) ;
       if (fmap)
 	 {
@@ -632,8 +636,8 @@ LangIDPackedTrie::LangIDPackedTrie(FILE *fp, const char *filename)
 	 m_terminals = (PackedTrieTerminalNode*)(m_nodes + m_size) ;
 	 m_terminals_contiguous = true ;
 	 if (!m_nodes ||
-	     fread(m_nodes,sizeof(PackedSimpleTrieNode),m_size,fp) != m_size ||
-	     fread(m_terminals,sizeof(PackedTrieTerminalNode),m_numterminals,fp) != m_numterminals)
+	     f.read(m_nodes,m_size,sizeof(PackedSimpleTrieNode)) != m_size ||
+	     f.read(m_terminals,m_numterminals,sizeof(PackedTrieTerminalNode)) != m_numterminals)
 	    {
 	    Fr::Free(m_nodes) ;  m_nodes = 0 ;
 	    m_terminals = 0 ;
@@ -827,18 +831,18 @@ bool LangIDPackedTrie::insertChildren(PackedSimpleTrieNode *parent,
 
 //----------------------------------------------------------------------
 
-bool LangIDPackedTrie::parseHeader(FILE *fp)
+bool LangIDPackedTrie::parseHeader(Fr::CFile& f)
 {
    const size_t siglen = sizeof(PACKEDTRIE_SIGNATURE) ;
    char signature[siglen] ;
-   if (fread(signature,sizeof(char),siglen,fp) != siglen ||
+   if (f.read(signature,siglen,sizeof(char)) != siglen ||
        memcmp(signature,PACKEDTRIE_SIGNATURE,siglen) != 0)
       {
       // error: wrong file type
       return false ;
       }
    unsigned char version ;
-   if (fread(&version,sizeof(char),sizeof(version),fp) != sizeof(version)
+   if (!f.readValue(&version)
        || version < PACKEDTRIE_FORMAT_MIN_VERSION
        || version > PACKEDTRIE_FORMAT_VERSION)
       {
@@ -846,18 +850,17 @@ bool LangIDPackedTrie::parseHeader(FILE *fp)
       return false ;
       }
    unsigned char bits ;
-   if (fread(&bits,sizeof(char),sizeof(bits),fp) != sizeof(bits) ||
-       bits != PTRIE_BITS_PER_LEVEL)
+   if (!f.readValue(&bits) || bits != PTRIE_BITS_PER_LEVEL)
       {
       // error: wrong type of trie
       return false ;
       }
    UInt32 val_size, val_keylen, val_numterm ;
    char padbuf[PACKEDTRIE_PADBYTES_1] ;
-   if (fread((char*)&val_size,sizeof(val_size),1,fp) != 1 ||
-      fread((char*)&val_keylen,sizeof(val_keylen),1,fp) != 1 ||
-      fread((char*)&val_numterm,sizeof(val_numterm),1,fp) != 1 ||
-       fread(padbuf,1,sizeof(padbuf),fp) != sizeof(padbuf))
+   if (!f.readValue(&val_size) ||
+      !f.readValue(&val_keylen) ||
+      !f.readValue(&val_numterm) ||
+      f.read(padbuf,sizeof(padbuf),1) != sizeof(padbuf))
       {
       // error reading header
       return false ;
@@ -977,36 +980,25 @@ unsigned LangIDPackedTrie::enumerate(uint8_t *keybuf, unsigned keylength,
 
 //----------------------------------------------------------------------
 
-LangIDPackedTrie *LangIDPackedTrie::load(FILE *fp, const char *filename)
+LangIDPackedTrie *LangIDPackedTrie::load(Fr::CFile& f, const char *filename)
 {
-   if (fp)
+   if (!f)
+      return nullptr ;
+   auto trie = new LangIDPackedTrie(f,filename) ;
+   if (!trie || !trie->good())
       {
-      auto trie = new LangIDPackedTrie(fp,filename) ;
-      if (!trie || !trie->good())
-	 {
-	 delete trie ;
-	 return nullptr ;
-	 }
-      return trie ;
+      delete trie ;
+      return nullptr ;
       }
-   return nullptr ;
+   return trie ;
 }
 
 //----------------------------------------------------------------------
 
 LangIDPackedTrie *LangIDPackedTrie::load(const char *filename)
 {
-   if (filename && *filename)
-      {
-      FILE *fp = fopen(filename,"rb") ;
-      if (fp)
-	 {
-	 LangIDPackedTrie *trie = load(fp,filename) ;
-	 fclose(fp) ;
-	 return trie ;
-	 }
-      }
-   return nullptr ;
+   Fr::CInputFile fp(filename,Fr::CFile::binary) ;
+   return load(fp,filename) ;
 }
 
 //----------------------------------------------------------------------
@@ -1062,56 +1054,28 @@ bool LangIDPackedTrie::write(const char *filename) const
 
 //----------------------------------------------------------------------
 
-static const char hexdigit[] = "0123456789ABCDEF" ;
-
-static void write_escaped_char(uint8_t c, FILE *fp)
-{
-   switch (c)
-      {
-      case '\\':
-	 fputs("\\\\",fp) ;
-	 break ;
-      case ' ':
-	 fputs("\\ ",fp) ;
-	 break ;
-      default:
-	 if (c < ' ')
-	    {
-	    fputc('\\',fp) ;
-	    fputc(hexdigit[(c>>4)&0xF],fp) ;
-	    fputc(hexdigit[c&0xF],fp) ;
-	    }
-	 else
-	    fputc(c,fp) ;
-	 break ;
-      }
-   return ;
-}
-
-//----------------------------------------------------------------------
-
 static bool dump_ngram(const uint8_t *key, unsigned keylen,
 		       uint32_t frequency, void *user_data)
 {
-   FILE *fp = (FILE*)user_data ;
-   if (fp && frequency != INVALID_FREQ)
+   Fr::CFile& f = *((Fr::CFile*)user_data) ;
+   if (f && frequency != INVALID_FREQ)
       {
-      fprintf(fp,"   ") ;
+      f.printf("   ") ;
       for (size_t i = 0 ; i < keylen ; i++)
 	 {
-	 write_escaped_char(key[i],fp) ;
+	 write_escaped_char(key[i],f) ;
 	 }
-      fprintf(fp," :: %lu\n",(unsigned long)frequency) ;
+      f.printf(" :: %lu\n",(unsigned long)frequency) ;
       }
    return true ;
 }
 
 //----------------------------------------------------------------------
 
-bool LangIDPackedTrie::dump(FILE *fp) const
+bool LangIDPackedTrie::dump(Fr::CFile& f) const
 {
    Fr::LocalAlloc<uint8_t,10000> keybuf(longestKey()) ;
-   return keybuf ? enumerate(keybuf,longestKey(),dump_ngram,fp) : false ;
+   return keybuf ? enumerate(keybuf,longestKey(),dump_ngram,&f) : false ;
 }
 
 /************************************************************************/

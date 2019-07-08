@@ -23,8 +23,9 @@
 /*                                                                      */
 /************************************************************************/
 
-#include <FramepaC.h>
+#include <cstdint>
 #include "wildcard.h"
+#include "framepac/utility.h"
 
 /************************************************************************/
 /*	Methods for class WildcardSet					*/

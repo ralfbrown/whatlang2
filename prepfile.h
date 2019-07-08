@@ -24,7 +24,6 @@
 /*                                                                      */
 /************************************************************************/
 
-//#include "FramepaC.h"
 #include "framepac/file.h"
 #ifndef NO_ICONV
 # include <iconv.h>

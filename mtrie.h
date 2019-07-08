@@ -71,6 +71,7 @@ class MultiTrieFrequency
       uint32_t m_frequency ;
       uint32_t m_langID ;
    public:
+      MultiTrieFrequency() {} // only for internal use by readAll()
       MultiTrieFrequency(uint32_t freq, uint32_t langID,
 			 bool stopgram = false,
 			 MultiTrieFrequency *nxt = 0)
@@ -109,8 +110,8 @@ class MultiTrieFrequency
       void scaleFrequency(uint64_t total_count, uint32_t ID) ;
 
       // I/O
-      static MultiTrieFrequency *read(FILE *fp) ;
-      static bool readAll(FILE *fp) ;
+      static MultiTrieFrequency *read(Fr::CFile& f) ;
+      static bool readAll(Fr::CFile& f) ;
       bool write(Fr::CFile& f) const ;
       static bool writeAll(Fr::CFile& f) ;
    } ;
@@ -168,11 +169,11 @@ class LangIDMultiTrie //: public Fr::MultiTrie<Fr::UInt32>
       uint32_t numTerminalNodes() const ;
 
       // I/O
-      static LangIDMultiTrie *load(FILE *fp) ;
+      static LangIDMultiTrie *load(Fr::CFile& f) ;
       static LangIDMultiTrie *load(const char *filename) ;
       bool write(Fr::CFile& f) const ;
       bool write(const char *filename) const ;
-      bool dump(FILE *fp) const ;
+      bool dump(Fr::CFile& f) const ;
    private:
       void init(uint32_t capacity) ;
       bool writeHeader(Fr::CFile& f) const ;
@@ -233,7 +234,7 @@ class MultiTrieNode
       bool insertChild(unsigned int N, LangIDMultiTrie *trie) ;
 
       // I/O
-      bool load(FILE *fp) ;
+      bool load(Fr::CFile& f) ;
       bool write(Fr::CFile& f) const ;
    } ;
 

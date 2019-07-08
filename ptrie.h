@@ -278,7 +278,7 @@ class LangIDPackedMultiTrie // : public Fr::PackedMultiTrie<...>
       static LangIDPackedMultiTrie *load(const char *filename) ;
       bool write(Fr::CFile& f) const ;
       bool write(const char *filename) const ;
-      bool dump(FILE *fp) const ;
+      bool dump(Fr::CFile& f) const ;
    private:
       void init() ;
       bool writeHeader(Fr::CFile& f) const ;

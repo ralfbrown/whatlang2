@@ -4,10 +4,10 @@
 /*	by Ralf Brown / Carnegie Mellon University			*/
 /*									*/
 /*  File: trie.h - Word-frequency trie					*/
-/*  Version:  1.24				       			*/
-/*  LastEdit: 08aug2014							*/
+/*  Version:  1.30				       			*/
+/*  LastEdit: 2019-07-07						*/
 /*									*/
-/*  (c) Copyright 2011,2012,2014 Ralf Brown/CMU				*/
+/*  (c) Copyright 2011,2012,2014,2019 Carnegie Mellon University	*/
 /*      This program is free software; you can redistribute it and/or   */
 /*      modify it under the terms of the GNU General Public License as  */
 /*      published by the Free Software Foundation, version 3.           */
@@ -122,8 +122,8 @@ class NybbleTrieNode
       bool insertChild(unsigned int N, NybbleTrie *trie) ;
 
       // I/O
-      static NybbleTrieNode *read(FILE *fp) ;
-      bool write(FILE *fp) const ;
+      static NybbleTrieNode *read(Fr::CFile& f) ;
+      bool write(Fr::CFile& f) const ;
    } ;
 
 // backward compatibility
@@ -180,7 +180,7 @@ class NybbleTrie
       // I/O
       static NybbleTrie *load(Fr::CFile& f) ;
       static NybbleTrie *load(const char *filename) ;
-      bool write(FILE *fp) const ;
+      bool write(Fr::CFile& f) const ;
    private:
       void init(uint32_t capacity) ;
       bool extendNybble(uint32_t &nodeindex, uint8_t nybble) const ;

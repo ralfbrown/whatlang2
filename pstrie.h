@@ -149,10 +149,10 @@ class LangIDPackedTrie
       LangIDPackedTrie() { init() ; }
       LangIDPackedTrie(const NybbleTrie *trie, uint32_t min_freq = 1,
 		 bool show_conversion = true) ;
-      LangIDPackedTrie(FILE *fp, const char *filename) ;
+      LangIDPackedTrie(Fr::CFile& f, const char *filename) ;
       ~LangIDPackedTrie() ;
 
-      bool parseHeader(FILE *fp) ;
+      bool parseHeader(Fr::CFile& f) ;
 
       // modifiers
 
@@ -199,11 +199,11 @@ class LangIDPackedTrie
 			 bool require_extensible_match) const ;
 
       // I/O
-      static LangIDPackedTrie *load(FILE *fp, const char *filename) ;
+      static LangIDPackedTrie *load(Fr::CFile& f, const char *filename) ;
       static LangIDPackedTrie *load(const char *filename) ;
       bool write(Fr::CFile& f) const ;
       bool write(const char* filename) const ;
-      bool dump(FILE *fp) const ;
+      bool dump(Fr::CFile& f) const ;
    private:
       void init() ;
       bool writeHeader(Fr::CFile& f) const ;

@@ -732,23 +732,16 @@ bool NybbleTrie::loadWords(const char *filename, bool verbose)
 {
    if (!filename || !*filename)
       return false ;
-   FILE *fp = fopen(filename,"rb") ;
+   Fr::CInputFile fp(filename) ;
    bool warned = false;
    unsigned linenumber = 0 ;
    if (fp)
       {
       unsigned wc = 0 ;
-      char line[16384] ;
-      memset(line,'\0',sizeof(line)) ;
-      while (!feof(fp))
+      while (Fr::CharPtr line = fp.getTrimmedLine())
 	 {
-	 if (!fgets(line,sizeof(line),fp))
-	    break ;
 	 linenumber++ ;
-	 char *lineptr = line ;
-	 // start by trimming leading whitespace
-	 while (*lineptr == ' ' || *lineptr == '\t')
-	    lineptr++ ;
+	 char *lineptr = (char*)line ;
 	 // check if blank or comment line
 	 if (!*lineptr || *lineptr == ';' || *lineptr == '#')
 	    continue ;
@@ -779,7 +772,6 @@ bool NybbleTrie::loadWords(const char *filename, bool verbose)
 	 insert((uint8_t*)lineptr,len,freq,false) ;
 	 wc++ ;
 	 }
-      fclose(fp) ;
       if (verbose)
 	 cerr << "Read " << wc << " words from '" << filename << "'" << endl ;
       return true ;
@@ -1192,9 +1184,9 @@ NybbleTrie *NybbleTrie::load(const char *filename)
 
 //----------------------------------------------------------------------
 
-bool NybbleTrie::write(FILE *fp) const
+bool NybbleTrie::write(Fr::CFile& f) const
 {
-   if (fp)
+   if (f)
       {
 //TODO
       }

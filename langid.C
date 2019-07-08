@@ -33,7 +33,6 @@
 #include <stdint.h>
 #include "langid.h"
 #include "mtrie.h"
-#include "ptrie.h"
 #include "framepac/byteorder.h"
 #include "framepac/config.h"
 #include "framepac/message.h"
@@ -359,9 +358,9 @@ BigramCounts::BigramCounts(const BigramCounts *orig)
 
 //----------------------------------------------------------------------
 
-BigramCounts::BigramCounts(FILE *fp)
+BigramCounts::BigramCounts(Fr::CFile& f)
 {
-   if (!fp || fread(m_counts,1,sizeof(m_counts),fp) < sizeof(m_counts))
+   if (!f || f.read(m_counts,sizeof(m_counts),1) < sizeof(m_counts))
       {
       // we could not read the data, so clear all the counts, effectively
       //   removing this bigram model from consideration
@@ -414,21 +413,21 @@ const
 
 //----------------------------------------------------------------------
 
-BigramCounts *BigramCounts::load(FILE *fp)
+BigramCounts *BigramCounts::load(Fr::CFile& f)
 {
-   if (fp)
+   if (f)
       {
       BigramCounts *model = new BigramCounts ;
-      if (model->read(fp))
+      if (model->read(f))
 	 return model ;
       delete model ;
       }
-   return 0 ;
+   return nullptr ;
 }
 
 //----------------------------------------------------------------------
 
-bool BigramCounts::read(FILE *fp)
+bool BigramCounts::read(Fr::CFile& f)
 {
    memset(m_counts,'\0',sizeof(m_counts)) ;
    m_total = 0 ;
@@ -437,7 +436,7 @@ bool BigramCounts::read(FILE *fp)
       for (size_t c2 = 0 ; c2 <= 0xFF ; c2++)
 	 {
 	 char line[FrMAX_LINE] ;
-	 if (!fgets(line,sizeof(line),fp))
+	 if (!f.gets(line,sizeof(line)))
 	    return false ;
 	 char *end ;
 	 char *lineptr = skip_whitespace(line) ;
@@ -456,27 +455,22 @@ bool BigramCounts::read(FILE *fp)
 
 //----------------------------------------------------------------------
 
-bool BigramCounts::readBinary(FILE *fp)
+bool BigramCounts::readBinary(Fr::CFile& f)
 {
-   if (fp)
-      {
-      return (fread(m_counts,sizeof(m_counts[0]),lengthof(m_counts),fp)
-	      == lengthof(m_counts)) ;
-      }
-   return false ;
+   return f && f.read(m_counts,lengthof(m_counts),sizeof(m_counts[0])) == lengthof(m_counts) ;
 }
 
 //----------------------------------------------------------------------
 
-bool BigramCounts::dumpCounts(FILE *fp) const
+bool BigramCounts::dumpCounts(Fr::CFile& f) const
 {
-   if (!fp)
+   if (!f)
       return false ;
    for (size_t c1 = 0 ; c1 <= 0xFF ; c1++)
       {
       for (size_t c2 = 0 ; c2 <= 0xFF ; c2++)
 	 {
-	 fprintf(fp,"%lu\n",(unsigned long)count(c1,c2)) ;
+	 f << (size_t)count(c1,c2) ;
 	 }
       }
    return true ;
@@ -484,13 +478,9 @@ bool BigramCounts::dumpCounts(FILE *fp) const
 
 //----------------------------------------------------------------------
 
-bool BigramCounts::save(FILE *fp) const
+bool BigramCounts::save(Fr::CFile& f) const
 {
-   if (fp)
-      {
-      return fwrite(m_counts,1,sizeof(m_counts),fp) == sizeof(m_counts) ;
-      }
-   return false ;
+   return f && f.write(m_counts,sizeof(m_counts),1) == sizeof(m_counts) ;
 }
 
 /************************************************************************/
@@ -2230,12 +2220,12 @@ bool LanguageIdentifier::checkSignature(Fr::CFile& f, unsigned *file_version)
 
 //----------------------------------------------------------------------
 
-bool LanguageIdentifier::writeStatistics(FILE *fp) const
+bool LanguageIdentifier::writeStatistics(Fr::CFile& f) const
 {
-   if (!fp || !m_string_counts)
+   if (!f || !m_string_counts)
       return false ;
-   fprintf(fp,"===================\n") ;
-   fprintf(fp,"Number of strings extracted, by language:\n") ;
+   f.printf("===================\n") ;
+   f.printf("Number of strings extracted, by language:\n") ;
    LanguageScores counts(numLanguages()) ;
    for (size_t i = 0 ; i < numLanguages() ; i++)
       {
@@ -2248,9 +2238,9 @@ bool LanguageIdentifier::writeStatistics(FILE *fp) const
       if (count <= 0.0)
 	 break ;
       unsigned langnum = counts.languageNumber(i) ;
-      fprintf(fp," %7lu\t%s\n",(unsigned long)count,languageName(langnum)) ;
+      f.printf(" %7lu\t%s\n",(unsigned long)count,languageName(langnum)) ;
       }
-   fprintf(fp,"===================\n") ;
+   f.printf("===================\n") ;
    return true ;
 }
 
@@ -2382,27 +2372,27 @@ bool LanguageIdentifier::write(const char *filename) const
 
 //----------------------------------------------------------------------
 
-bool LanguageIdentifier::dump(FILE *fp, bool show_ngrams) const
+bool LanguageIdentifier::dump(Fr::CFile& f, bool show_ngrams) const
 {
-   fprintf(fp,"LanguageIdentifier Begin\n") ;
+   f.printf("LanguageIdentifier Begin\n") ;
    for (size_t i = 0 ; i < numLanguages() ; i++)
       {
       const LanguageID *info = &m_langinfo[i] ;
-      fprintf(fp,"  Lang %2u: %s_%s-%s / %s\n",(unsigned)i,
+      f.printf("  Lang %2u: %s_%s-%s / %s\n",(unsigned)i,
 	      info->language(),info->region(),info->encoding(),info->source());
       }
    bool success = true ;
    if (m_langdata && show_ngrams)
       {
-      fprintf(fp,"LanguageIdentifier Trie\n") ;
-      success = m_langdata->dump(fp) ;
+      f.printf("LanguageIdentifier Trie\n") ;
+      success = m_langdata->dump(f) ;
       }
    else if (m_uncomplangdata && show_ngrams)
       {
-      fprintf(fp,"LanguageIdentifier Trie\n") ;
-      success = m_uncomplangdata->dump(fp) ;
+      f.printf("LanguageIdentifier Trie\n") ;
+      success = m_uncomplangdata->dump(f) ;
       }
-   fprintf(fp,"LanguageIdentifier End\n") ;
+   f.printf("LanguageIdentifier End\n") ;
    return success ;
 }
 
