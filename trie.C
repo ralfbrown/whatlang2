@@ -181,8 +181,7 @@ double unscale_frequency(uint32_t freq, double power)
 
 NybbleTrieNode::NybbleTrieNode()
 {
-   for (unsigned i = 0 ; i < lengthof(m_children) ; i++)
-      m_children[i] = NybbleTrie::NULL_INDEX ;
+   std::fill_n(m_children,lengthof(m_children),NybbleTrie::NULL_INDEX) ;
    m_frequency = 0 ;
    m_leaf = false ;
    m_stopgram = false ;

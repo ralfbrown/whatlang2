@@ -116,7 +116,7 @@ void TrigramCounts::copy(const TrigramCounts *orig)
       }
    else
       {
-      std::fill(m_counts,m_counts+lengthof(m_counts),0) ;
+      std::fill_n(m_counts,lengthof(m_counts),0) ;
       }
    return ;
 }

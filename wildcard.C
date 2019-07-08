@@ -124,10 +124,7 @@ void WildcardSet::add(uint8_t value)
 
 void WildcardSet::addAll()
 {
-   for (size_t i = 0 ; i < lengthof(m_values) ; i++)
-      {
-      m_values[i] = (uint32_t)~0 ;
-      }
+   std::fill_n(m_values,lengthof(m_values),(uint32_t)~0) ;
    m_count = 256 ;
    return ;
 }
@@ -155,10 +152,7 @@ void WildcardSet::removeRange(uint8_t first, uint8_t last)
 
 void WildcardSet::removeAll()
 {
-   for (size_t i = 0 ; i < lengthof(m_values) ; i++)
-      {
-      m_values[i] = 0 ;
-      }
+   std::fill_n(m_values,lengthof(m_values),0) ;
    m_count = 0 ;
    return ;
 }

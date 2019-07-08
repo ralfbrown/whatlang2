@@ -30,6 +30,7 @@
 #include <cstring>
 #include <errno.h>
 #include <float.h>
+#include <numeric>
 #include <stdint.h>
 #include "langid.h"
 #include "mtrie.h"
@@ -372,13 +373,9 @@ BigramCounts::BigramCounts(Fr::CFile& f)
       {
       // we could not read the data, so clear all the counts, effectively
       //   removing this bigram model from consideration
-      memset(m_counts,'\0',sizeof(m_counts)) ;
+      std::fill_n(m_counts,lengthof(m_counts),0) ;
       }
-   m_total = 0 ;
-   for (size_t i = 0 ; i < lengthof(m_counts) ; i++)
-      {
-      m_total += m_counts[i] ;
-      }
+   m_total = std::accumulate(m_counts,m_counts+lengthof(m_counts),0) ;
    return ;
 }
 
@@ -394,7 +391,7 @@ void BigramCounts::copy(const BigramCounts *orig)
       }
    else
       {
-      std::fill(m_counts,m_counts+lengthof(m_counts),0) ;
+      std::fill_n(m_counts,lengthof(m_counts),0) ;
       m_total = 0 ;
       }
    return ;
@@ -1078,23 +1075,17 @@ double LanguageScores::highestScore() const
 
 unsigned LanguageScores::highestLangID() const
 {
+   auto nlang = numLanguages() ;
    if (sorted())
       {
       return m_lang_ids[0] ;
       }
+   else if (nlang == 0)
+      return (unsigned)~0 ;
    else
       {
-      double highest = 0.0 ;
-      unsigned langid = (unsigned)~0 ;
-      for (size_t i = 0 ; i < numLanguages() ; i++)
-	 {
-	 if (m_scores[i] > highest)
-	    {
-	    highest = m_scores[i] ;
-	    langid = i ;
-	    }
-	 }
-      return langid ;
+      double* highest = std::max_element(m_scores,m_scores+nlang) ;
+      return (highest - m_scores) ;
       }
 }
 
@@ -1123,10 +1114,7 @@ unsigned LanguageScores::nonzeroScores() const
 void LanguageScores::clear()
 {
    m_num_languages = maxLanguages() ;
-   for (size_t i = 0 ; i < numLanguages() ; i++)
-      {
-      m_scores[i] = 0.0 ;
-      }
+   std::fill_n(m_scores,numLanguages(),0.0) ;
    m_sorted = false ;
    return ;
 }
@@ -1146,10 +1134,7 @@ void LanguageScores::scaleScores(double scale_factor)
 
 void LanguageScores::sqrtScores()
 {
-   for (size_t i = 0 ; i < numLanguages() ; i++)
-      {
-      m_scores[i] = ::sqrt(m_scores[i]) ;
-      }
+   std::transform(m_scores,m_scores+numLanguages(),m_scores,::sqrt) ;
    return ;
 }
 
@@ -1260,7 +1245,6 @@ void LanguageScores::sort(double cutoff_ratio)
 	 if (num_scores > 1)
 	    {
 	    std::sort(scores_and_ids,scores_and_ids+num_scores) ;
-//            FrSmoothSort(scores_and_ids,numLanguages()) ;
 	    }
 	 for (unsigned i = 0 ; i < num_scores ; i++)
 	    {
@@ -1498,10 +1482,7 @@ WeightedLanguageScores::WeightedLanguageScores(size_t num_languages,
    m_weights = new double[numLanguages()] ;
    if (m_weights)
       {
-      for (size_t i = 0 ; i < numLanguages() ; i++)
-	 {
-	 m_weights[i] = default_weight ;
-	 }
+      std::fill_n(m_weights,numLanguages(),default_weight) ;
       }
    else
       {
@@ -1523,10 +1504,7 @@ WeightedLanguageScores::~WeightedLanguageScores()
 
 void WeightedLanguageScores::sqrtWeights()
 {
-   for (size_t i = 0 ; i < numLanguages() ; i++)
-      {
-      m_weights[i] = ::sqrt(m_weights[i]) ;
-      }
+   std::transform(m_weights,m_weights+numLanguages(),m_weights,::sqrt) ;
    return ;
 }
 
@@ -1641,8 +1619,7 @@ void LanguageIdentifier::setAlignments()
    m_alignments = New<uint8_t>(PACKED_TRIE_LANGID_MASK + 1) ;
    for (size_t i = 0 ; i < numLanguages() ; i++)
       {
-      uint8_t align = languageInfo(i)->alignment() ;
-      m_alignments[i] = align ;
+      m_alignments[i] = languageInfo(i)->alignment() ;
       }
    for (size_t i = numLanguages() ; i <= PACKED_TRIE_LANGID_MASK ; i++)
       {
@@ -1651,10 +1628,7 @@ void LanguageIdentifier::setAlignments()
    if (!m_unaligned)
       {
       m_unaligned = New<uint8_t>(PACKED_TRIE_LANGID_MASK + 1) ;
-      for (size_t i = 0 ; i < numLanguages() ; i++)
-	 {
-	 m_unaligned[i] = 1 ;
-	 }
+      std::fill_n(m_unaligned,numLanguages(),1) ;
       for (size_t i = numLanguages() ; i <= PACKED_TRIE_LANGID_MASK ; i++)
 	 {
 	 m_unaligned[i] = (uint8_t)~0 ;
@@ -1798,11 +1772,11 @@ unsigned LanguageIdentifier::languageNumber(const LanguageID *lang_info)
 	    {
 	    if (modelnum != (unsigned)~0)
 	       {
+	       modelnum = (unsigned)~0 ;
 	       if (verbose())
 		  {
 		  cerr << "Multiple models match language specifier" << endl ;
 		  }
-	       modelnum = (unsigned)~0 ;
 	       break ;
 	       }
 	    modelnum = i ;
@@ -2253,11 +2227,7 @@ bool LanguageIdentifier::writeHeader(Fr::CFile& f) const
    if (f.writeValue(have_bigrams))
       return false ;
    // pad the header with NULs for the unused reserved portion of the header
-   for (size_t i = 0 ; i < LANGID_PADBYTES_1 ; i++)
-      {
-      f.putc('\0') ;
-      }
-   return true ;
+   return f.putNulls(LANGID_PADBYTES_1) ;
 }
 
 //----------------------------------------------------------------------

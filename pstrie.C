@@ -111,7 +111,7 @@ class EnumerationInfo
 
 //----------------------------------------------------------------------
 
-void write_escaped_char(uint8_t c, Fr::CFile& f) ;
+void write_escaped_key(Fr::CFile& f, const uint8_t* key, unsigned keylen) ;
 
 /************************************************************************/
 /*	Helper functions						*/
@@ -1019,11 +1019,7 @@ bool LangIDPackedTrie::writeHeader(Fr::CFile& f) const
       !f.writeValue(val_numterm))
       return false ;
    // pad the header with NULs for the unused reserved portion of the header
-   for (size_t i = 0 ; i < PACKEDTRIE_PADBYTES_1 ; i++)
-      {
-      f.putc('\0') ;
-      }
-   return true ;
+   return f.putNulls(PACKEDTRIE_PADBYTES_1) ;
 }
 
 //----------------------------------------------------------------------
@@ -1059,10 +1055,7 @@ static bool dump_ngram(const uint8_t *key, unsigned keylen,
    if (f && frequency != INVALID_FREQ)
       {
       f.printf("   ") ;
-      for (size_t i = 0 ; i < keylen ; i++)
-	 {
-	 write_escaped_char(key[i],f) ;
-	 }
+      write_escaped_key(f,key,keylen) ;
       f.printf(" :: %lu\n",(unsigned long)frequency) ;
       }
    return true ;

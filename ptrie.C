@@ -38,9 +38,6 @@ using namespace std ;
 /*	Manifest Constants						*/
 /************************************************************************/
 
-// should we use a lookup table instead of the default Fr::popcount() ?
-#define USE_POPCOUNT_TABLE
-
 // since no node will ever point at the root, we can re-use the root
 //   index as the null pointer
 #define NOCHILD_INDEX 0
@@ -51,13 +48,6 @@ using namespace std ;
 
 // reserve some space for future additions to the file format
 #define MULTITRIE_PADBYTES_1  58
-
-/************************************************************************/
-
-#if defined(__GNUC__) && defined(__SSE4_2__)
-// we have a popcnt instruction, so use that instead of a table
-# undef USE_POPCOUNT_TABLE
-#endif /* __SSE4_2__ */
 
 /************************************************************************/
 /*	Types								*/
@@ -75,7 +65,7 @@ bool PackedTrieFreq::s_value_map_initialized = false ;
 
 //----------------------------------------------------------------------
 
-void write_escaped_char(uint8_t c, Fr::CFile& f) ;
+void write_escaped_key(Fr::CFile& f, const uint8_t* key, unsigned keylen) ;
 
 /************************************************************************/
 /*	Helper functions						*/
@@ -84,29 +74,6 @@ void write_escaped_char(uint8_t c, Fr::CFile& f) ;
 #ifndef lengthof
 #  define lengthof(x) (sizeof(x)/sizeof((x)[0]))
 #endif /* lengthof */
-
-//----------------------------------------------------------------------
-
-#ifdef USE_POPCOUNT_TABLE
-static uint8_t popcount16[65536] ;
-static bool popcount16_initialized = false ;
-#endif
-
-static void initialize_popcount32()
-{
-#ifdef USE_POPCOUNT_TABLE
-   if (!popcount16_initialized)
-      {
-      for (size_t i = 0 ; i < lengthof(popcount16) ; i++)
-	 {
-	 popcount16[i] = (uint8_t)Fr::popcount(i) ;
-	 }
-      popcount16_initialized = true ;
-      }
-#  define Fr::popcount(x) (popcount16[((x)>>16)&0xFFFF]+popcount16[(x)&0xFFFF])
-#endif
-   return ;
-}
 
 /************************************************************************/
 /*	Methods for class PackedTrieFreq				*/
@@ -487,7 +454,6 @@ void LangIDPackedMultiTrie::init()
    m_casesensitivity = CS_Full ;
    m_ignorewhitespace = false ;
    m_terminals_contiguous = false ;
-   initialize_popcount32() ;
    return ;
 }
 
@@ -846,11 +812,8 @@ bool LangIDPackedMultiTrie::writeHeader(Fr::CFile& f) const
       !f.writeValue(case_sens))
       return false ;
    // pad the header with NULs for the unused reserved portion of the header
-   for (size_t i = 0 ; i < MULTITRIE_PADBYTES_1 ; i++)
-      {
-      f.putc('\0') ;
-      }
-   f.writeComplete() ;
+   if (f.putNulls(MULTITRIE_PADBYTES_1))
+      f.writeComplete() ;
    return true ;
 }
 
@@ -892,10 +855,7 @@ static bool dump_ngram(const PackedTrieNode *node, const uint8_t *key,
    if (f && node)
       {
       f.printf("   ") ;
-      for (size_t i = 0 ; i < keylen ; i++)
-	 {
-	 write_escaped_char(key[i],f) ;
-	 }
+      write_escaped_key(f,key,keylen) ;
       f.printf("  ::") ;
       const PackedTrieFreq *freq = node->frequencies(base_frequency) ;
       for ( ; freq ; freq++)

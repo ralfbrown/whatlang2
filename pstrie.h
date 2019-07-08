@@ -73,9 +73,7 @@ class PackedTrieMatch
 	 { m_key = buffer ; m_keylen = len ; } 
       void setKey(uint8_t *newkey, unsigned len)
 	 { if (key())
-	       { if (len < m_keylen) m_keylen = len ;
-	       for (unsigned i = 0 ; i < keyLength() ; i++)
-		  m_key[i] = newkey[i] ;
+	       { m_keylen = std::min(len,m_keylen) ; std::copy(newkey,newkey+len,m_key) ;
 	       }
 	 }
    } ;

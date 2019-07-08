@@ -274,8 +274,7 @@ MultiTrieNode::MultiTrieNode()
 {
    m_frequency_info = INVALID_FREQ ;
    m_isleaf = false ;
-   for (unsigned i = 0 ; i < lengthof(m_children) ; i++)
-      m_children[i] = LangIDMultiTrie::NULL_INDEX ;
+   std::fill_n(m_children,lengthof(m_children),LangIDMultiTrie::NULL_INDEX) ;
    return ;
 }
 
@@ -1176,11 +1175,7 @@ bool LangIDMultiTrie::writeHeader(Fr::CFile& f) const
       !f.writeValue(val_keylen))
       return false ;
    // pad the header with NULs for the unused reserved portion of the header
-   for (size_t i = 0 ; i < MULTITRIE_PADBYTES_1 ; i++)
-      {
-      f.putc('\0') ;
-      }
-   return true ;
+   return f.putNulls(MULTITRIE_PADBYTES_1) ;
 }
 
 //----------------------------------------------------------------------
@@ -1241,6 +1236,17 @@ void write_escaped_char(uint8_t c, Fr::CFile& f)
 
 //----------------------------------------------------------------------
 
+void write_escaped_key(Fr::CFile& f, const uint8_t* key, unsigned keylen)
+{
+   for (size_t i = 0 ; i < keylen ; i++)
+      {
+      write_escaped_char(key[i],f) ;
+      }
+   return ;
+}
+
+//----------------------------------------------------------------------
+
 static bool dump_ngram(const MultiTrieNode *node, const uint8_t *key,
 		       unsigned keylen, void *user_data)
 {
@@ -1248,10 +1254,7 @@ static bool dump_ngram(const MultiTrieNode *node, const uint8_t *key,
    if (f && node)
       {
       f.printf("   ") ;
-      for (size_t i = 0 ; i < keylen ; i++)
-	 {
-	 write_escaped_char(key[i],f) ;
-	 }
+      write_escaped_key(f,key,keylen) ;
       f.printf("  ::") ;
       MultiTrieFrequency *freq = node->frequencies() ;
       for ( ; freq ; freq = freq->next())
