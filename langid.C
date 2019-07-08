@@ -144,24 +144,17 @@ static bool write_uint32(Fr::CFile& f, uint32_t value)
 
 //----------------------------------------------------------------------
 
-static char *read_fixed_field(Fr::CFile& f, size_t len)
+static CharPtr read_fixed_field(Fr::CFile& f, size_t len)
 {
    if (len == 0)
       return nullptr ;
-   auto buf = New<char>(len) ;
-   if (buf)
+   CharPtr buf(len) ;
+   if (!buf || f.read(*buf,len) < len)
       {
-      if (f.read(buf,len) < len)
-	 {
-	 delete buf ;
-	 buf = nullptr ;
-	 }
-      else
-	 {
-	 // ensure proper string termination if the file didn't have a NUL
-	 buf[len-1] = '\0' ;
-	 }
+      return nullptr ;
       }
+   // ensure proper string termination if the file didn't have a NUL
+   buf[len-1] = '\0' ;
    return buf ;
 }
 
@@ -1219,7 +1212,7 @@ void LanguageScores::sort(double cutoff_ratio)
 {
    if (!sorted() && numLanguages() > 0)
       {
-      ScoreAndID *scores_and_ids = new ScoreAndID[numLanguages()] ;
+      ScopedPtr<ScoreAndID> scores_and_ids(numLanguages()) ;
       if (!scores_and_ids)
 	 {
 	 //!!!
@@ -1244,7 +1237,7 @@ void LanguageScores::sort(double cutoff_ratio)
 	 {
 	 if (num_scores > 1)
 	    {
-	    std::sort(scores_and_ids,scores_and_ids+num_scores) ;
+	    std::sort(*scores_and_ids,(*scores_and_ids)+num_scores) ;
 	    }
 	 for (unsigned i = 0 ; i < num_scores ; i++)
 	    {
@@ -1267,7 +1260,6 @@ void LanguageScores::sort(double cutoff_ratio)
 	    }
 	 m_num_languages = 1 ;
 	 }
-      delete [] scores_and_ids ;
       m_sorted = true ;
       }
    return ;
@@ -1310,7 +1302,7 @@ void LanguageScores::sort(double cutoff_ratio, unsigned max_langs)
       sort(cutoff_ratio) ;
    else if (!sorted() && numLanguages() > 0)
       {
-      ScoreAndID *scores_and_ids = new ScoreAndID[max_langs] ;
+      ScopedPtr<ScoreAndID> scores_and_ids(max_langs) ;
       if (!scores_and_ids)
 	 {
 	 //!!!
@@ -1322,8 +1314,7 @@ void LanguageScores::sort(double cutoff_ratio, unsigned max_langs)
 	 {
 	 if (m_scores[i] >= cutoff)
 	    {
-	    insert(m_scores[i],m_lang_ids[i],scores_and_ids,
-		   num_scores,max_langs) ;
+	    insert(m_scores[i],m_lang_ids[i],*scores_and_ids,num_scores,max_langs) ;
 	    double threshold = scores_and_ids[0].score() * cutoff_ratio ;
 	    if (threshold > cutoff)
 	       {
@@ -1354,7 +1345,6 @@ void LanguageScores::sort(double cutoff_ratio, unsigned max_langs)
 	    }
 	 m_num_languages = 1 ;
 	 }
-      delete [] scores_and_ids ;
       m_sorted = true ;
       }
    return ;
@@ -1388,7 +1378,7 @@ void LanguageScores::sortByName(const LanguageID *langinfo)
 {
    if (numLanguages() > 0 && langinfo != nullptr)
       {
-      ScoreAndID *scores_and_ids = new ScoreAndID[numLanguages()] ;
+      ScopedPtr<ScoreAndID> scores_and_ids(numLanguages()) ;
       if (!scores_and_ids)
 	 {
 	 //!!!
@@ -1401,14 +1391,13 @@ void LanguageScores::sortByName(const LanguageID *langinfo)
 	    scores_and_ids[num_scores++].init(m_scores[i],m_lang_ids[i]) ;
 	 }
       sort_langinfo = langinfo ;
-      std::sort(scores_and_ids,scores_and_ids+num_scores,compare_names) ;
+      std::sort(*scores_and_ids,(*scores_and_ids)+num_scores,compare_names) ;
       for (unsigned i = 0 ; i < num_scores ; i++)
 	 {
 	 m_scores[i] = scores_and_ids[i].score() ;
 	 m_lang_ids[i] = scores_and_ids[i].id() ;
 	 }
       m_num_languages = num_scores ;
-      delete [] scores_and_ids ;
       }
    return ;
 }
@@ -1477,12 +1466,11 @@ void LanguageScores::filterDuplicates(const LanguageIdentifier *langid,
 
 WeightedLanguageScores::WeightedLanguageScores(size_t num_languages,
 					       double default_weight)
-   : LanguageScores(num_languages)
+   : LanguageScores(num_languages), m_weights(num_languages)
 {
-   m_weights = new double[numLanguages()] ;
    if (m_weights)
       {
-      std::fill_n(m_weights,numLanguages(),default_weight) ;
+      std::fill_n(*m_weights,numLanguages(),default_weight) ;
       }
    else
       {
@@ -1493,18 +1481,9 @@ WeightedLanguageScores::WeightedLanguageScores(size_t num_languages,
 
 //----------------------------------------------------------------------
 
-WeightedLanguageScores::~WeightedLanguageScores()
-{
-   delete[] m_weights ;
-   m_weights = nullptr ;
-   return ;
-}
-
-//----------------------------------------------------------------------
-
 void WeightedLanguageScores::sqrtWeights()
 {
-   std::transform(m_weights,m_weights+numLanguages(),m_weights,::sqrt) ;
+   std::transform(*m_weights,*m_weights+numLanguages(),*m_weights,::sqrt) ;
    return ;
 }
 
@@ -2079,9 +2058,8 @@ LanguageScores *LanguageIdentifier::similarity(unsigned langid) const
       scores->setLanguage(langid) ;
       scores->setUserData((void*)trie()->frequencyBaseAddress()) ;
       unsigned maxkey = trie()->longestKey() ;
-      uint8_t *keybuf = new uint8_t[maxkey+1] ;
+      LocalAlloc<uint8_t,512> keybuf(maxkey+1) ;
       trie()->enumerate(keybuf,maxkey,cosine_term,scores) ;
-      delete[] keybuf ;
       scores->sqrtWeights() ;
       for (size_t i = 0 ; i < numLanguages() ; i++)
 	 {

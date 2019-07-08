@@ -155,105 +155,103 @@ static void identify(const char *buf, int buflen,
    LanguageScores *rawscores = langid.identify(buf,buflen) ;
    langid.finishIdentification(rawscores) ;
    LanguageScores *scores = smoothed_language_scores(rawscores,buflen) ;
+   if (!scores)
+      return ;
    unsigned num_scores = langid.numLanguages() ;
    bool echo_text = (line_mode != LM_None) ;
    if (topN > num_scores)
       topN = num_scores ;
-   if (scores)
+   scores->sort(cutoff_ratio,2*topN) ;
+   if (!separate_sources && !(terse_language && echo_text))
+      scores->filterDuplicates(&langid) ;
+   double highest_score = scores->score(0) ;
+   if (highest_score > LANGID_ZERO_SCORE)
       {
-      scores->sort(cutoff_ratio,2*topN) ;
-      if (!separate_sources && !(terse_language && echo_text))
-	 scores->filterDuplicates(&langid) ;
-      double highest_score = scores->score(0) ;
-      if (highest_score > LANGID_ZERO_SCORE)
+      if (!full_file && !echo_text)
+	 fprintf(stdout,"@ %8.08lX-%8.08lX ",offset,offset+buflen-1) ;
+      unsigned shown = 0 ;
+      double threshold = highest_score * cutoff_ratio ;
+      for (size_t i = 0 ; i < scores->numLanguages() && shown < topN ; i++)
 	 {
-	 if (!full_file && !echo_text)
-	    fprintf(stdout,"@ %8.08lX-%8.08lX ",offset,offset+buflen-1) ;
-	 unsigned shown = 0 ;
-	 double threshold = highest_score * cutoff_ratio ;
-	 for (size_t i = 0 ; i < scores->numLanguages() && shown < topN ; i++)
+	 double sc = scores->score(i) ;
+	 if (sc <= LANGID_ZERO_SCORE || sc < threshold)
+	    break ;
+	 unsigned langnum = scores->languageNumber(i) ;
+	 Fr::CharPtr langdesc ;
+	 if (terse_language)
+	    langdesc = Fr::dup_string(langid.languageName(langnum)) ;
+	 else
+	    langdesc = langid.languageDescriptor(langnum) ;
+	 const char *sep = "" ;
+	 const char *source = "" ;
+	 if (separate_sources)
 	    {
-	    double sc = scores->score(i) ;
-	    if (sc <= LANGID_ZERO_SCORE || sc < threshold)
-	       break ;
-	    unsigned langnum = scores->languageNumber(i) ;
-	    Fr::CharPtr langdesc ;
-	    if (terse_language)
-	       langdesc = Fr::dup_string(langid.languageName(langnum)) ;
-	    else
-	       langdesc = langid.languageDescriptor(langnum) ;
-	    const char *sep = "" ;
-	    const char *source = "" ;
-	    if (separate_sources)
+	    const char *src = langid.languageSource(langnum) ;
+	    if (src && *src)
 	       {
-	       const char *src = langid.languageSource(langnum) ;
-	       if (src && *src)
+	       sep = "/" ;
+	       source = src ;
+	       }
+	    }
+	 if (terse_language && echo_text)
+	    {
+	    const char *langname
+	       = langid.languageName(scores->languageNumber(i)) ;
+	    for (size_t j = 0 ; j < i ; j++)
+	       {
+	       if (same_language(langid.languageName(scores->languageNumber(j)),
+		     langname))
 		  {
-		  sep = "/" ;
-		  source = src ;
+		  langname = nullptr ;
+		  break ;
 		  }
 	       }
-	    if (terse_language && echo_text)
-	       {
-	       const char *langname
-		  = langid.languageName(scores->languageNumber(i)) ;
-	       for (size_t j = 0 ; j < i ; j++)
-		  {
-		  if (same_language(langid.languageName(scores->languageNumber(j)),
-				    langname))
-		     {
-		     langname = nullptr ;
-		     break ;
-		     }
-		  }
-	       if (langname)
-		  {
-		  if (shown > 0)
-		     {
-		     fprintf(stdout,",") ;
-		     }
-		  if (show_script)
-		     fprintf(stdout,"%s@%s",*langdesc,langid.languageScript(langnum)) ;
-		  else
-		     fprintf(stdout,"%s",*langdesc) ;
-		  shown++ ;
-		  }
-	       }
-	    else
+	    if (langname)
 	       {
 	       if (shown > 0)
 		  {
-		  fprintf(stdout," ") ;
+		  fprintf(stdout,",") ;
 		  }
 	       if (show_script)
-		  fprintf(stdout,"%s%s%s@%s:%f",*langdesc,sep,source,
-			  langid.languageScript(langnum),sc) ;
+		  fprintf(stdout,"%s@%s",*langdesc,langid.languageScript(langnum)) ;
 	       else
-		  fprintf(stdout,"%s%s%s:%f",*langdesc,sep,source,sc) ;
+		  fprintf(stdout,"%s",*langdesc) ;
 	       shown++ ;
 	       }
 	    }
-	 if (echo_text)
-	    {
-	    fputc('\t',stdout) ;
-	    write_as_UTF8(buf,buflen,stdout,line_mode) ;
-	    }
 	 else
-	    fprintf(stdout,"\n") ;
-	 fflush(stdout) ;
+	    {
+	    if (shown > 0)
+	       {
+	       fprintf(stdout," ") ;
+	       }
+	    if (show_script)
+	       fprintf(stdout,"%s%s%s@%s:%f",*langdesc,sep,source,
+		  langid.languageScript(langnum),sc) ;
+	    else
+	       fprintf(stdout,"%s%s%s:%f",*langdesc,sep,source,sc) ;
+	    shown++ ;
+	    }
 	 }
-      else if (echo_text)
+      if (echo_text)
 	 {
-	 fputs("??\t",stdout) ;
+	 fputc('\t',stdout) ;
 	 write_as_UTF8(buf,buflen,stdout,line_mode) ;
 	 }
-      else if (verbose)
-	 {
-	 fprintf(stdout,"@ %8.08lX-%8.08lX: no languages detected\n",
-		 offset,offset+buflen-1) ;
-	 }
-      delete scores ;
+      else
+	 fprintf(stdout,"\n") ;
+      fflush(stdout) ;
       }
+   else if (echo_text)
+      {
+      fputs("??\t",stdout) ;
+      write_as_UTF8(buf,buflen,stdout,line_mode) ;
+      }
+   else if (verbose)
+      {
+      fprintf(stdout,"@ %8.08lX-%8.08lX: no languages detected\n", offset,offset+buflen-1) ;
+      }
+   delete scores ;
    return ;
 }
 
@@ -296,17 +294,17 @@ static void identify_languages(FILE *fp,
 {
    int overlap = blocksize / 4 ;
    int bufsize = blocksize < FULL_FILE_BLOCKSIZE ? 2*blocksize : blocksize ;
-   char *bufbase = new char[bufsize] ;
-   char *highwater = (bufsize > blocksize
-		      ? bufbase + bufsize - blocksize
-		      : bufbase + bufsize) ;
-   char *buf = bufbase ;
-   if (!buf)
+   CharPtr bufbase(bufsize) ;
+   if (!bufbase)
       {
       fprintf(stderr,"Out of memory\n") ;
       return ;
       }
-   int buflen = fread(buf,sizeof(char),bufsize,fp) ;
+   char *highwater = (bufsize > blocksize
+		      ? *bufbase + bufsize - blocksize
+		      : *bufbase + bufsize) ;
+   int buflen = fread(*bufbase,sizeof(char),bufsize,fp) ;
+   char *buf = *bufbase ;
    size_t offset = 0 ;
    while (buflen > 0)
       {
@@ -331,8 +329,8 @@ static void identify_languages(FILE *fp,
 	 {
 	 unsigned to_read = (buf - bufbase) ;
 	 offset += to_read ;
-	 memcpy(bufbase,buf,buflen) ;
-	 buf = bufbase ;
+	 memcpy(*bufbase,buf,buflen) ;
+	 buf = *bufbase ;
 	 int additional = fread(buf + buflen,sizeof(char),to_read,fp) ;
 	 // stop if we've already identified up to the end of the file, to
 	 //   prevent a small orphan block with inaccurate identification
@@ -341,7 +339,6 @@ static void identify_languages(FILE *fp,
 	 buflen += additional ;
 	 }
       }
-   delete [] bufbase ;
    return ;
 }
 

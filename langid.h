@@ -335,22 +335,22 @@ class WeightedLanguageScores : public LanguageScores
    {
    private:
 //      static Fr::Allocator  allocator ;
-      double		 *m_weights ;
+      Fr::NewPtr<double>	m_weights ;
    public:
 //      void *operator new(size_t) { return allocator.allocate() ; }
 //      void operator delete(void *blk) { allocator.release(blk) ; }
       WeightedLanguageScores(size_t num_languages,
 			     double def_weight = 1.0) ;
-      ~WeightedLanguageScores() ;
+      ~WeightedLanguageScores() = default ;
 
       // accessors
       double weight(size_t N) const
 	 { return (N < numLanguages()) ? m_weights[N] : 0.0 ; }
 
       // manipulators
-      void setWeight(size_t N, double wt) const
+      void setWeight(size_t N, double wt)
 	 { if (N < numLanguages()) m_weights[N] = wt ; }
-      void incrWeight(size_t N, double wt) const
+      void incrWeight(size_t N, double wt)
 	 { if (N < numLanguages()) m_weights[N] += wt ; }
       void sqrtWeights() ;
    } ;

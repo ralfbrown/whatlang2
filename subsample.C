@@ -4,10 +4,10 @@
 /*	by Ralf Brown / Carnegie Mellon University			*/
 /*									*/
 /*  File:     subsample.C  utility program to sample lines of text	*/
-/*  Version:  1.24							*/
-/*  LastEdit: 04aug2014 						*/
+/*  Version:  1.30							*/
+/*  LastEdit: 2019-07-07 						*/
 /*                                                                      */
-/*  (c) Copyright 2012,2013,2014 Ralf Brown/Carnegie Mellon University	*/
+/*  (c) Copyright 2012,2013,2014,2019 Carnegie Mellon University	*/
 /*      This program is free software; you can redistribute it and/or   */
 /*      modify it under the terms of the GNU General Public License as  */
 /*      published by the Free Software Foundation, version 3.           */
@@ -28,7 +28,6 @@
 #include <iostream>
 #include <memory.h>
 #include <stdlib.h>
-//#include <time.h>
 using namespace std ;
 #define FrHAVE_SRAND48
 
@@ -324,6 +323,7 @@ static void take_random_sample(StringList *lines, size_t sample_size, FILE *reje
 	    fputs(line->string(),rejectfp) ;
 	 delete line ;
 	 }
+      free(selected) ;
       }
    return ;
 }
