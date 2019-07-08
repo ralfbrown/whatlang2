@@ -85,8 +85,6 @@ class ScoreAndID
       bool operator< (const ScoreAndID& other) const { return compare(*this,other) < 0 ; }
    } ;
 
-typedef unsigned char LONG64buffer[8] ;
-
 /************************************************************************/
 /*	Global variables						*/
 /************************************************************************/
@@ -97,7 +95,6 @@ typedef unsigned char LONG64buffer[8] ;
 
 //Fr::Allocator WeightedLanguageScores::allocator("WtLanguageScores", sizeof(WeightedLanguageScores)) ;
 
-//static double stop_gram_penalty = -15.0 ;
 static double stop_gram_penalty = -9.0 ;
 
 /************************************************************************/
@@ -378,8 +375,7 @@ void BigramCounts::copy(const BigramCounts *orig)
 {
    if (orig)
       {
-      for (size_t i = 0 ; i < lengthof(m_counts) ; i++)
-	 m_counts[i] = orig->m_counts[i] ;
+      std::copy_n(orig->m_counts,lengthof(m_counts),m_counts) ;
       m_total = orig->m_total ;
       }
    else
@@ -970,11 +966,8 @@ LanguageScores::LanguageScores(size_t num_languages)
       m_lang_ids = (unsigned short*)(m_scores + num_languages) ;
       m_num_languages = num_languages ;
       m_max_languages = num_languages ;
-      for (size_t i = 0 ; i < num_languages ; i++)
-	 {
-	 m_scores[i] = 0.0 ;
-	 m_lang_ids[i] = (unsigned short)i ;
-	 }
+      std::fill_n(m_scores,num_languages,0.0) ;
+      std::iota(m_lang_ids,m_lang_ids+num_languages,0) ;
       }
    else
       {
@@ -997,11 +990,8 @@ LanguageScores::LanguageScores(const LanguageScores *orig)
 	 m_scores = (double*)buffer ;
 	 m_lang_ids = (unsigned short*)(m_scores + nlang) ;
 	 m_sorted = orig->m_sorted ;
-	 for (size_t i = 0 ; i < nlang ; i++)
-	    {
-	    m_scores[i] = orig->score(i) ;
-	    m_lang_ids[i] = (unsigned short)orig->languageNumber(i) ;
-	    }
+	 std::copy_n(orig->m_scores,nlang,m_scores) ;
+	 std::copy_n(orig->m_lang_ids,nlang,m_lang_ids) ;
 	 return ;
 	 }
       }

@@ -23,6 +23,7 @@
 /*                                                                      */
 /************************************************************************/
 
+#include <algorithm>
 #include <cstdint>
 #include "wildcard.h"
 #include "framepac/utility.h"
@@ -48,10 +49,7 @@ WildcardSet::WildcardSet(bool allow_all)
 
 WildcardSet::WildcardSet(const WildcardSet &orig)
 {
-   for (size_t i = 0 ; i < lengthof(m_values) ; i++)
-      {
-      m_values[i] = orig.m_values[i] ;
-      }
+   std::copy_n(orig.m_values,lengthof(m_values),m_values) ;
    m_count = orig.setSize() ;
    return ;
 }
