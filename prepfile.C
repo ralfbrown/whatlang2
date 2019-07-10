@@ -119,7 +119,7 @@ Fr::CFile* PreprocessedInputFile::open_sampled_input_file(const char *filename,
 						     size_t max_bytes)
 {
    // load in the entire input file
-   Fr::CInputFile* fp = new Fr::CInputFile(filename) ;
+   auto fp = new Fr::CInputFile(filename) ;
    if (!fp || !*fp)
       return fp ;
    ListBuilder lb ;

@@ -118,7 +118,7 @@ void StringList::append(const char *strng, StringList **&last_string)
 {
    if (!last_string)
       return ;				// no list, so we can't do anything
-   StringList *str = new StringList(strng) ;
+   auto str = new StringList(strng) ;
    if (!str)
       return ;				// Out of memory!  Ignore line
    *last_string = str ;

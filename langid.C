@@ -410,7 +410,7 @@ BigramCounts *BigramCounts::load(Fr::CFile& f)
 {
    if (f)
       {
-      BigramCounts *model = new BigramCounts ;
+      auto model = new BigramCounts ;
       if (model->read(f))
 	 return model ;
       delete model ;
@@ -774,7 +774,7 @@ LanguageID *LanguageID::read(Fr::CFile& f, unsigned file_version)
 {
    if (!f)
       return nullptr ;
-   LanguageID *langID = new LanguageID() ;
+   auto langID = new LanguageID() ;
    if (!read(f,langID,file_version))
       {
       delete langID ;
@@ -1931,7 +1931,7 @@ LanguageScores *LanguageIdentifier::identify(const char *buffer,
 {
    if (!buffer || !buflen || !m_langdata)
       return nullptr ;
-   LanguageScores *scores = new LanguageScores(numLanguages()) ;
+   auto scores = new LanguageScores(numLanguages()) ;
    const uint8_t *align = enforce_alignment ? m_alignments : 0 ;
    if (!identify(scores,buffer,buflen,align,ignore_whitespace,
 		 apply_stop_grams,0))
@@ -2041,13 +2041,12 @@ LanguageScores *LanguageIdentifier::similarity(unsigned langid) const
 {
    if (langid >= numLanguages() || !trie())
       return nullptr ;
-   WeightedLanguageScores *scores
-      = new WeightedLanguageScores(numLanguages(),0.0) ;
+   auto scores = new WeightedLanguageScores(numLanguages(),0.0) ;
    if (scores && trie())
       {
       scores->setLanguage(langid) ;
       scores->setUserData((void*)trie()->frequencyBaseAddress()) ;
-      unsigned maxkey = trie()->longestKey() ;
+      auto maxkey = trie()->longestKey() ;
       LocalAlloc<uint8_t,512> keybuf(maxkey+1) ;
       trie()->enumerate(keybuf,maxkey,cosine_term,scores) ;
       scores->sqrtWeights() ;
@@ -2347,7 +2346,7 @@ static LanguageIdentifier* try_loading(const char* database_file, bool verbose)
       }
    if (!db_filename)
       db_filename = dup_string(database_file) ;
-   LanguageIdentifier *id = new LanguageIdentifier(db_filename,verbose) ;
+   auto id = new LanguageIdentifier(db_filename,verbose) ;
    if (!id)
       {
       SystemMessage::no_memory("loading language database") ;

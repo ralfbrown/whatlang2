@@ -612,7 +612,7 @@ LangIDPackedTrie::LangIDPackedTrie(Fr::CFile& f, const char *filename)
    if (f && parseHeader(f))
       {
       size_t offset = f.tell() ;
-      Fr::MemMappedFile *fmap = new MemMappedROFile(filename) ;
+      auto fmap = new MemMappedROFile(filename) ;
       if (fmap)
 	 {
 	 // we can memory-map the file, so just point our member variables

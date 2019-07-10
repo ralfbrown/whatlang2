@@ -653,7 +653,7 @@ static NybbleTrie *load_stop_grams_selected(unsigned langid,
    unsigned maxkey = ptrie->longestKey() ;
    if (maxkey > sizeof(key))
       maxkey = sizeof(key) ;
-   NybbleTrie *stop_grams = new NybbleTrie ;
+   auto stop_grams = new NybbleTrie ;
    curr_ngrams = new NybbleTrie ;
    ngram_weights = new NybbleTrie ;
    auto freq_base = ptrie->frequencyBaseAddress() ;
@@ -1430,8 +1430,8 @@ static NybbleTrie *restrict_ngrams(NybbleTrie *ngrams, unsigned top_K,
    if (minlen > max_length)
       minlen = max_length ;
    uint32_t top_frequencies[top_K] ;
-   memset(top_frequencies,'\0',top_K*sizeof(uint32_t)) ;
-   NybbleTrie *new_ngrams = new NybbleTrie ;
+   std::fill_n(top_frequencies,top_K,0) ;
+   auto new_ngrams = new NybbleTrie ;
    NgramEnumerationData enum_data(have_max_length) ;
    enum_data.m_oldngrams = ngrams ;
    enum_data.m_ngrams = new_ngrams ;
@@ -1494,8 +1494,8 @@ static NybbleTrie *count_ngrams(const char **filelist, unsigned num_files,
       minlen = max_length ;
    unsigned top_K = set_oversampling(topK,min_length,minimum_length,aligned) ;
    uint32_t top_frequencies[top_K] ;
-   memset(top_frequencies,'\0',top_K*sizeof(uint32_t)) ;
-   NybbleTrie *new_ngrams = new NybbleTrie ;
+   std::fill_n(top_frequencies,top_K,0) ;
+   auto new_ngrams = new NybbleTrie ;
    NgramEnumerationData enum_data(have_max_length) ;
    enum_data.m_oldngrams = ngrams ;
    enum_data.m_ngrams = new_ngrams ;
@@ -2106,7 +2106,7 @@ static bool load_frequencies(const char **filelist, unsigned num_files,
       cout << "(Crubadan format)" << endl ;
    else
       cout << "(MkLangID format)" << endl ;
-   NybbleTrie *ngrams = new NybbleTrie ;
+   auto ngrams = new NybbleTrie ;
    if (!ngrams)
       {
       SystemMessage::no_memory("while loading frequency lists") ;
@@ -2307,7 +2307,7 @@ static bool cluster_models(const char *cluster_db_name, double cluster_thresh)
 {
    if (cluster_thresh < 0.0 || cluster_thresh > 1.0)
       return false ;
-   LanguageIdentifier *clusterdb = new LanguageIdentifier(cluster_db_name) ;
+   auto clusterdb = new LanguageIdentifier(cluster_db_name) ;
    if (!clusterdb)
       {
       cerr << "Unable to create clustered language database " 
@@ -2350,7 +2350,7 @@ static bool compute_ngrams(const char **filelist, unsigned num_files,
    //   4. filtering down the result of step 3 to the K most frequent overall
    // since we get bigrams counts essentially for free after step 1, also
    // add in the complete set of nonzero bigram counts while we're at it
-   TrigramCounts *counts = new TrigramCounts ;
+   auto counts = new TrigramCounts ;
    ngrams = nullptr ;
    if (!counts)
       return false ;

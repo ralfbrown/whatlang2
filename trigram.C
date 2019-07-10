@@ -219,7 +219,7 @@ TrigramCounts *TrigramCounts::load(Fr::CFile& f)
 {
    if (f)
       {
-      TrigramCounts *model = new TrigramCounts ;
+      auto model = new TrigramCounts ;
       if (model->read(f))
 	 return model ;
       delete model ;

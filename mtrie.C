@@ -194,7 +194,7 @@ void MultiTrieFrequency::incrFrequency(uint32_t ID, uint32_t incr)
    else
       {
       // add a record with the new ID
-      MultiTrieFrequency *f = allocate(incr,ID) ;
+      auto f = allocate(incr,ID) ;
       setNext(f) ;
       }
    return ;
