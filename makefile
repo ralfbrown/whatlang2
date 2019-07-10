@@ -8,7 +8,7 @@ SHAREDLIB=
 
 OBJS = 	build/langid.o build/scan_langid.o \
 	build/mtrie.o build/prepfile.o \
-	build/pstrie.o build/ptrie.o \
+	build/ptrie.o \
 	build/roman.o build/smooth.o \
 	build/trie.o build/trigram.o \
 	build/wildcard.o
@@ -286,8 +286,6 @@ build/mtrie.o: mtrie.C mtrie.h
 
 build/prepfile.o: prepfile.C prepfile.h
 
-build/pstrie.o: pstrie.C pstrie.h mtrie.h wildcard.h
-
 build/ptrie.o: ptrie.C ptrie.h mtrie.h
 
 build/roman.o: roman.C roman.h
@@ -307,9 +305,6 @@ build/wildcard.o: wildcard.C wildcard.h
 
 langid.h:	mtrie.h
 	touch langid.h
-
-pstrie.h:	ptrie.h trie.h
-	touch pstrie.h
 
 #########################################################################
 ## library

@@ -5,7 +5,7 @@
 /*									*/
 /*  File: ptrie.C - packed Word-frequency multi-trie			*/
 /*  Version:  1.30				       			*/
-/*  LastEdit: 27jun2019							*/
+/*  LastEdit: 2019-07-09						*/
 /*									*/
 /*  (c) Copyright 2011,2012,2015,2019 Ralf Brown/CMU			*/
 /*      This program is free software; you can redistribute it and/or   */
@@ -308,7 +308,7 @@ bool PackedTrieNode::enumerateChildren(const LangIDPackedMultiTrie *trie,
 	 uint32_t child = childIndexIfPresent(i) ;
 	 if (child != LangIDPackedMultiTrie::NULL_INDEX)
 	    {
-	    PackedTrieNode *childnode = trie->node(child) ;
+	    auto childnode = trie->node(child) ;
 	    if (childnode)
 	       {
 	       unsigned byte = curr_keylength_bits / 8 ;
@@ -342,8 +342,8 @@ LangIDPackedMultiTrie::LangIDPackedMultiTrie(const LangIDMultiTrie *multrie)
       m_freq = Fr::New<PackedTrieFreq>(m_numfreq) ;
       if (m_nodes && m_freq)
 	 {
-	 const MultiTrieNode *mroot = multrie->rootNode() ;
-	 PackedTrieNode *proot = &m_nodes[PTRIE_ROOT_INDEX] ;
+	 const auto mroot = multrie->rootNode() ;
+	 auto proot = &m_nodes[PTRIE_ROOT_INDEX] ;
 	 new (proot) PackedTrieNode ;
 	 m_used = 1 ;
 	 if (!insertChildren(proot,multrie,mroot,PTRIE_ROOT_INDEX))
@@ -524,16 +524,16 @@ bool LangIDPackedMultiTrie::insertTerminals(PackedTrieNode *parent,
 	 // set the appropriate bit in the child array
 	 parent->setChild(i) ;
 	 // add frequency info to the child node
-	 PackedTrieNode *pchild = node(firstchild + index) ;
+	 auto pchild = node(firstchild + index) ;
 	 index++ ;
-	 const MultiTrieNode *mchild = mtrie->node(nodeindex) ;
-	 unsigned numfreq = mchild->numFrequencies() ;
+	 const auto mchild = mtrie->node(nodeindex) ;
+	 auto numfreq = mchild->numFrequencies() ;
 	 if (numfreq > 0)
 	    {
 	    uint32_t freq_index = m_freqused ;
 	    m_freqused += numfreq ;
 	    pchild->setFrequencies(freq_index) ;
-	    const MultiTrieFrequency *mfreq = mchild->frequencies() ;
+	    auto mfreq = mchild->frequencies() ;
 	    while (mfreq && numfreq > 0)
 	       {
 	       (void)new (m_freq + freq_index) PackedTrieFreq
@@ -586,16 +586,16 @@ bool LangIDPackedMultiTrie::insertChildren(PackedTrieNode *parent,
 	 // set the appropriate bit in the child array
 	 parent->setChild(i) ;
 	 // add frequency info to the child node
-	 PackedTrieNode *pchild = node(firstchild + index) ;
+	 auto pchild = node(firstchild + index) ;
 	 index++ ;
-	 const MultiTrieNode *mchild = mtrie->node(nodeindex) ;
-	 unsigned numfreq = mchild->numFrequencies() ;
+	 const auto mchild = mtrie->node(nodeindex) ;
+	 auto numfreq = mchild->numFrequencies() ;
 	 if (numfreq > 0)
 	    {
 	    uint32_t freq_index = m_freqused ;
 	    m_freqused += numfreq ;
 	    pchild->setFrequencies(freq_index) ;
-	    const MultiTrieFrequency *mfreq = mchild->frequencies() ;
+	    auto mfreq = mchild->frequencies() ;
 	    while (mfreq && numfreq > 0)
 	       {
 	       bool is_stop = (mfreq->isStopgram() || mfreq->frequency() == 0);
@@ -710,8 +710,8 @@ bool LangIDPackedMultiTrie::extendKey(uint32_t &nodeindex, uint8_t keybyte) cons
 	 break ;
       }
 #endif
-   PackedTrieNode *n = node(nodeindex) ;
-   uint32_t index = n->childIndexIfPresent(keybyte) ;
+   auto n = node(nodeindex) ;
+   auto  index = n->childIndexIfPresent(keybyte) ;
    nodeindex = index ;
    return (index != LangIDPackedMultiTrie::NULL_INDEX) ;
 }
@@ -742,7 +742,7 @@ uint32_t LangIDPackedMultiTrie::extendKey(uint8_t keybyte, uint32_t nodeindex) c
 	 break ;
       }
 #endif
-   PackedTrieNode *n = node(nodeindex) ;
+   auto n = node(nodeindex) ;
    return n->childIndexIfPresent(keybyte) ;
 }
 

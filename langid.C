@@ -1833,17 +1833,15 @@ static void identify_languages(const char *buffer, size_t buflen,
       for (size_t i = index + minhist ; i < buflen ; i++)
 	 {
 	 uint8_t keybyte = (uint8_t)buffer[i] ;
-	 if ((nodeindex = langdata->extendKey(keybyte,nodeindex))
-	    == LangIDPackedMultiTrie::NULL_INDEX)
+	 if ((nodeindex = langdata->extendKey(keybyte,nodeindex)) == LangIDPackedMultiTrie::NULL_INDEX)
 	    break ;
 	 // check whether we're at a leaf node; if so, add all of the
 	 //   frequencies to the scores
-	 PackedTrieNode *node = langdata->node(nodeindex) ;
+	 auto node = langdata->node(nodeindex) ;
 	 if (node->leaf())
 	    {
 	    double len_factor = length_factors[i - index + 1] ;
-	    const PackedTrieFreq *f
-	       = node->frequencies(langdata->frequencyBaseAddress()) ;
+	    const PackedTrieFreq *f = node->frequencies(langdata->frequencyBaseAddress()) ;
 	    // normalize by text length so that scores are
 	    //   comparable between different buffer sizes
 	    len_factor /= normalizer ;
@@ -2225,12 +2223,12 @@ static int compare_frequencies(const MultiTrieFrequency &f1,
 static bool sort_frequencies(const MultiTrieNode *n, const uint8_t * /*key*/,
 			     unsigned /*keylen*/, void * /*user_data*/)
 {
-   MultiTrieFrequency *f = n->frequencies() ;
+   auto f = n->frequencies() ;
    if (f)
       {
       // sort the frequency records
 //FIXME      f = std::stable_sort(f,compare_frequencies) ;
-      MultiTrieNode *node = ((MultiTrieNode*)n) ;
+      auto node = const_cast<MultiTrieNode*>(n) ;
       if (!node->setFrequencies(f))
 	 return false ;
       }

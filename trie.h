@@ -136,7 +136,6 @@ class NybbleTrie
    public:
       NybbleTrie(uint32_t capacity = 0) ;
       NybbleTrie(const char *filename, bool verbose) ;
-      NybbleTrie(const class LangIDPackedTrie* ptrie) ;
       ~NybbleTrie() ;
 
       bool loadWords(const char *filename, bool verbose) ;
