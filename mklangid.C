@@ -721,7 +721,7 @@ static NybbleTrie *load_stop_grams(const LanguageID *lang_info,
 
 static void accumulate_confusible_ngrams(PreprocessedInputFile *infile,
 					 NybbleTrie *confusible,
-					 NybbleTriePointer **states)
+					 NybbleTriePointer *states)
 {
    unsigned maxkey = confusible->longestKey() ;
    while (infile->moreData())
@@ -729,17 +729,16 @@ static void accumulate_confusible_ngrams(PreprocessedInputFile *infile,
       int keybyte = infile->getByte() ;
       if (keybyte == EOF)
 	 break ;
-      delete states[maxkey] ;
-      states[maxkey] = nullptr ;
-      states[0] = new NybbleTriePointer(confusible) ;
+      states[maxkey].invalidate() ;
+      states[0].resetKey() ;
       for (size_t i = maxkey ; i > 0 ; i--)
 	 {
 	 if (!states[i-1])
 	    continue ;
-	 if (states[i-1]->extendKey((uint8_t)(keybyte&0xFF)))
+	 if (states[i-1].extendKey((uint8_t)(keybyte&0xFF)))
 	    {
 	    // check whether we're at a leaf node; if so, increment its frequency
-	    NybbleTrieNode *node = states[i-1]->node() ;
+	    NybbleTrieNode *node = states[i-1].node() ;
 	    if (node && node->leaf())
 	       {
 	       node->incrFrequency() ;
@@ -748,10 +747,9 @@ static void accumulate_confusible_ngrams(PreprocessedInputFile *infile,
 	    }
 	 else
 	    {
-	    delete states[i-1] ;
-	    states[i] = nullptr ;
+	    states[i].invalidate() ;
 	    }
-	 states[i-1] = nullptr ;
+	 states[i-1].invalidate() ;
 	 }
       }
    return ;
@@ -766,16 +764,14 @@ static bool accumulate_confusible_ngrams(PreprocessedInputFile *infile, va_list 
    if (!infile || !infile->good() || !confusible)
       return false ;
    unsigned maxkey = confusible->longestKey() ;
-   NybbleTriePointer **states = NewC<NybbleTriePointer*>(maxkey+2) ;
+   NybbleTriePointer *states = new NybbleTriePointer[maxkey+2] ;
    if (states)
       {
+      for (size_t i = 0 ; i < maxkey+2 ; ++i)
+	 states[i].setTrie(confusible) ;
       accumulate_confusible_ngrams(infile,confusible,states) ;
-      for (size_t i = 0 ; i <= maxkey ; i++)
-	 {
-	 delete states[i] ;
-	 }
-      Fr::Free(states) ;
       }
+   delete[] states ;
    return true ;
 }
 
