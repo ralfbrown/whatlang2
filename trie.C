@@ -5,7 +5,7 @@
 /*									*/
 /*  File: trie.C - Word-frequency trie					*/
 /*  Version:  1.30				       			*/
-/*  LastEdit: 27jun2019							*/
+/*  LastEdit: 2019-07-09						*/
 /*									*/
 /*  (c) Copyright 2011,2012,2014,2015,2019 Ralf Brown/CMU		*/
 /*      This program is free software; you can redistribute it and/or   */
@@ -32,6 +32,7 @@
 #include "trie.h"
 #include "wildcard.h"
 #include "framepac/config.h"
+#include "framepac/texttransforms.h"
 
 using namespace std ;
 
@@ -756,15 +757,7 @@ bool NybbleTrie::loadWords(const char *filename, bool verbose)
 	    continue ;
 	    }
 	 // trim leading and trailing whitespace from rest of line
-	 lineptr = freq_end ;
-	 while (*lineptr == ' ' || *lineptr == '\t')
-	    lineptr++ ;
-	 if (!*lineptr)
-	    continue ;
-	 char *lineend = strchr(lineptr,'\0') ;
-	 while (lineend > lineptr && 
-		(lineend[-1] <= ' ' || lineend[-1] == '\t'))
-	    *--lineend = '\0' ;
+	 lineptr = Fr::trim_whitespace(freq_end) ;
 	 unsigned len = strlen(lineptr) ;
 	 insert((uint8_t*)lineptr,len,freq,false) ;
 	 wc++ ;

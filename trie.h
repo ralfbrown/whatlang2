@@ -229,7 +229,7 @@ class TriePointer
    private:
       T*  	 m_trie ;
       uint32_t	 m_index ;
-      unsigned	 m_keylen ;
+      uint16_t	 m_keylen ;
       bool	 m_failed ;
    } ;
 
