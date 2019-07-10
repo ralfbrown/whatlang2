@@ -723,7 +723,7 @@ static void accumulate_confusible_ngrams(PreprocessedInputFile *infile,
 					 NybbleTrie *confusible,
 					 NybbleTriePointer *states)
 {
-   unsigned maxkey = confusible->longestKey() ;
+   auto maxkey = confusible->longestKey() ;
    while (infile->moreData())
       {
       int keybyte = infile->getByte() ;
@@ -731,14 +731,14 @@ static void accumulate_confusible_ngrams(PreprocessedInputFile *infile,
 	 break ;
       states[maxkey].invalidate() ;
       states[0].resetKey() ;
-      for (size_t i = maxkey ; i > 0 ; i--)
+      for (auto i = maxkey ; i > 0 ; i--)
 	 {
 	 if (!states[i-1])
 	    continue ;
 	 if (states[i-1].extendKey((uint8_t)(keybyte&0xFF)))
 	    {
 	    // check whether we're at a leaf node; if so, increment its frequency
-	    NybbleTrieNode *node = states[i-1].node() ;
+	    auto node = states[i-1].node() ;
 	    if (node && node->leaf())
 	       {
 	       node->incrFrequency() ;
@@ -786,9 +786,9 @@ static bool add_stop_gram(const NybbleTrieNode *node,
       return true ;
    if (node->frequency() == 0 || node->isStopgram())
       {
-      NybbleTrie *ngrams = (NybbleTrie*)user_data ;
-      StopGramWeight *weights = (StopGramWeight*)ngrams->userData() ;
-      uint32_t weight = weights->weight(key,keylen) ;
+      auto ngrams = reinterpret_cast<NybbleTrie*>(user_data) ;
+      auto weights = reinterpret_cast<StopGramWeight*>(ngrams->userData()) ;
+      auto weight = weights->weight(key,keylen) ;
       ngrams->insert(key,keylen,weight,true) ;
       }
    else if (confusibility_thresh > 0.0)
@@ -808,28 +808,27 @@ static bool boost_unique_ngram(const NybbleTrieNode *node,
 			       const uint8_t *key, unsigned keylen,
 			       void *user_data)
 {
-   NybbleTrie *stop_grams = (NybbleTrie*)user_data ;
+   auto stop_grams = reinterpret_cast<NybbleTrie*>(user_data) ;
    if (node && node->leaf() && node->frequency() > 0 && !node->isStopgram())
       {
-      NybbleTrieNode *sgnode = stop_grams->findNode(key,keylen) ;
+      auto sgnode = stop_grams->findNode(key,keylen) ;
       if (!sgnode || !sgnode->leaf())
 	 {
-	 uint32_t freq = node->frequency() ;
+	 auto freq = node->frequency() ;
 	 // boost the weight of this node
-	 double boost = scale_frequency(unique_boost,smoothing_power,
+	 auto boost = scale_frequency(unique_boost,smoothing_power,
 					log_smoothing_power) ;
-	 uint32_t boosted = (uint32_t)(freq * boost + 0.9) ;
+	 auto boosted = (uint32_t)(freq * boost + 0.9) ;
 	 if (boosted < node->frequency()) // did we roll over?
 	    boosted = 0xFFFFFFFF ;
-	 NybbleTrieNode *n = (NybbleTrieNode*)node ;
+	 auto n = const_cast<NybbleTrieNode*>(node) ;
 	 n->setFrequency(boosted) ;
 	 }
       else if (0)
 	 {
-	 StopGramWeight *weights = (StopGramWeight*)stop_grams->userData() ;
-	 uint32_t freq = node->frequency() ;
-	 uint32_t sgfreq
-	    = scaled_frequency(sgnode->frequency(),weights->totalBytes(),
+	 auto weights = reinterpret_cast<StopGramWeight*>(stop_grams->userData()) ;
+	 auto freq = node->frequency() ;
+	 auto sgfreq = scaled_frequency(sgnode->frequency(),weights->totalBytes(),
 			       smoothing_power,log_smoothing_power) ;
 	 if (freq > 2 * sgfreq)
 	    {
@@ -923,10 +922,8 @@ static bool save_database(const char *database_file)
 	 f.printf("=======================\n") ;
 	 language_identifier->dump(f,verbose) ;
 	 }
-      unsigned num_languages
-	 = count_languages(language_identifier,compare_langcode) ;
-      unsigned num_pairs
-	 = count_languages(language_identifier,compare_codepair) ;
+      unsigned num_languages = count_languages(language_identifier,compare_langcode) ;
+      unsigned num_pairs = count_languages(language_identifier,compare_codepair) ;
       cout << "Database contains " << language_identifier->numLanguages()
 	   << " models, " << num_languages
 	   << " distinct language codes,\n\tand " << num_pairs
@@ -1038,8 +1035,7 @@ static unsigned set_oversampling(unsigned top_K, unsigned abs_min_len,
    if (abs_min_len < min_len)
       {
       double base = aligned ? 2.0 : 1.0 ;
-      double oversample
-	 = ::pow(2,base+(min_len-abs_min_len)/5.0) ;
+      double oversample = ::pow(2,base+(min_len-abs_min_len)/5.0) ;
       if (oversample > max_oversample)
 	 oversample = max_oversample ;
       return (unsigned)(top_K * oversample) ;
@@ -1322,12 +1318,12 @@ static bool count_ngrams(PreprocessedInputFile *infile, va_list args)
 static bool remove_suffix(const NybbleTrieNode *node, const uint8_t *key, unsigned keylen,
 			  void *user_data)
 {
-   NgramEnumerationData *enum_data = (NgramEnumerationData*)user_data ;
-   unsigned align = enum_data->m_alignment ;
+   auto enum_data = reinterpret_cast<NgramEnumerationData*>(user_data) ;
+   auto align = enum_data->m_alignment ;
    if (keylen == enum_data->m_desired_length && keylen >= align + enum_data->m_min_length)
       {
-      NybbleTrie *trie = enum_data->m_oldngrams ;
-      NybbleTrieNode *suffix = trie->findNode(key+align,keylen-align) ;
+      auto trie = enum_data->m_oldngrams ;
+      auto suffix = trie->findNode(key+align,keylen-align) ;
       if (suffix && node->frequency() >= affix_ratio * suffix->frequency())
 	 suffix->setFrequency(0) ;
       }
@@ -1339,8 +1335,8 @@ static bool remove_suffix(const NybbleTrieNode *node, const uint8_t *key, unsign
 static bool find_max_frequency(const NybbleTrieNode *node, const uint8_t * /*key*/,
 			       unsigned /*keylen*/, void *user_data)
 {
-   uint32_t *freqptr = (uint32_t*)user_data ;
-   uint32_t freq = node->frequency() ;
+   auto freqptr = reinterpret_cast<uint32_t*>(user_data) ;
+   auto freq = node->frequency() ;
    if (*freqptr == (uint32_t)~0) // parent node?
       *freqptr = 0 ;
    else if (freq > *freqptr)
@@ -1354,12 +1350,12 @@ static bool find_ngram_cutoff(const NybbleTrieNode *node,
 			      const uint8_t * key, unsigned keylen,
 			      void *user_data)
 {
-   NgramEnumerationData *enum_data = (NgramEnumerationData*)user_data ;
+   auto enum_data = reinterpret_cast<NgramEnumerationData*>(user_data) ;
    if (keylen >= minimum_length ||
        (enum_data->m_max_length < minimum_length &&
 	keylen >= enum_data->m_max_length))
       {
-      uint32_t freq = node->frequency() ;
+      auto freq = node->frequency() ;
       if (freq > 0 && freq > enum_data->m_frequencies[0])
 	 {
 	 // an optimization to eliminate extraneous n-grams: if the
@@ -1390,12 +1386,12 @@ static bool find_ngram_cutoff(const NybbleTrieNode *node,
 static bool filter_ngrams(const NybbleTrieNode *node, const uint8_t *key,
 			  unsigned keylen, void *user_data)
 {
-   NgramEnumerationData *enum_data = (NgramEnumerationData*)user_data ;
+   auto enum_data = reinterpret_cast<NgramEnumerationData*>(user_data) ;
    if (keylen >= minimum_length ||
        (enum_data->m_max_length < minimum_length &&
 	keylen >= enum_data->m_max_length))
       {
-      uint32_t freq = node->frequency() ;
+      auto freq = node->frequency() ;
       uint32_t max_freq = (uint32_t)~0 ;
       if (freq >= enum_data->m_min_freq &&
 	  node->enumerateChildren(enum_data->m_oldngrams,(uint8_t*)key,
@@ -1583,7 +1579,7 @@ static void merge_bigrams(NybbleTrie *ngrams, const BigramCounts *bigrams,
 static bool add_ngram(const NybbleTrieNode *node, const uint8_t *key,
 		      unsigned keylen, void *user_data)
 {
-   LangIDMultiTrie *trie = (LangIDMultiTrie*)user_data ;
+   auto trie = reinterpret_cast<LangIDMultiTrie*>(user_data) ;
    if (trie && node)
       {
       uint32_t freq = node->frequency() ;
@@ -1600,9 +1596,9 @@ static void add_ngrams(const NybbleTrie *ngrams, uint64_t total_bytes,
 {
    if (ngrams)
       {
-      uint32_t num_langs = language_identifier->numLanguages() ;
+      auto num_langs = language_identifier->numLanguages() ;
       // add the new language ID to the global database
-      uint32_t langID = language_identifier->addLanguage(opts,total_bytes) ;
+      auto langID = language_identifier->addLanguage(opts,total_bytes) ;
       if (langID < num_langs)
 	 {
 	 Fr::CharPtr spec = language_identifier->languageDescriptor(langID) ;
@@ -2169,7 +2165,7 @@ static bool merge_ngrams(const PackedTrieNode *node, const uint8_t *key,
 			 unsigned keylen, void *user_data)
 {
    NybbleTrie **merged = (NybbleTrie**)user_data ;
-   const PackedTrieFreq *freqlist = node->frequencies(base_frequency) ;
+   auto freqlist = node->frequencies(base_frequency) ;
    for ( ; freqlist ; freqlist = freqlist->next())
       {
       if (!freqlist->isStopgram())
