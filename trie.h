@@ -54,7 +54,6 @@ using namespace std ;
 
 class NybbleTrie ;
 class NybbleTrieNode ;
-class NybbleTriePointer ;
 
 class WildcardSet ;
 class WildcardCollection ;
@@ -126,15 +125,14 @@ class NybbleTrieNode
       bool write(Fr::CFile& f) const ;
    } ;
 
-// backward compatibility
-typedef NybbleTrieNode NybbleTrieNodeSingle ;
-
 //----------------------------------------------------------------------
 
 class NybbleTrie
    {
    public:
+      static constexpr uint32_t ROOT_INDEX = 0U ;
       static constexpr uint32_t NULL_INDEX = 0U ;
+      typedef NybbleTrieNode Node ;
    public:
       NybbleTrie(uint32_t capacity = 0) ;
       NybbleTrie(const char *filename, bool verbose) ;
@@ -197,31 +195,45 @@ class NybbleTrie
 
 //----------------------------------------------------------------------
 
-class NybbleTriePointer
+template <class T>
+class TriePointer
    {
-   private:
-      const NybbleTrie	*m_trie ;
-      uint32_t		 m_nodeindex ;
-      int		 m_keylength ;
-      bool		 m_failed ;
    public:
-      void initPointer(const NybbleTrie *t)
-	 { m_trie = t ; m_nodeindex = 0 ; m_keylength = 0 ; m_failed = false ; }
-      NybbleTriePointer() { initPointer(0) ; } // for arrays
-      NybbleTriePointer(const NybbleTrie *t) { initPointer(t) ; }
-      ~NybbleTriePointer() { m_trie = nullptr ; m_nodeindex = 0 ; m_failed = true ; }
+      TriePointer(T* t) : m_trie(t) { this->resetKey() ; }
+      TriePointer(const T* t) : m_trie(const_cast<T*>(t)) { this->resetKey() ; }
+      ~TriePointer() { m_trie = nullptr ; m_index = 0 ; }
 
-      void resetKey() ;
-      bool extendKey(uint8_t keybyte) ;
-
+      // manipulators
+      void resetKey() { m_index = T::ROOT_INDEX ; m_keylen = 0 ; m_failed = false ; }
+      bool extendKey(uint8_t keybyte)
+	 {
+	    if (m_failed) return false ;
+	    bool success = m_trie->extendKey(m_index,keybyte) ;
+	    if (success)
+	       ++m_keylen ;
+	    else
+	       m_failed = true ;
+	    return success ;
+	 }
+	 
       // accessors
-      bool lookupSuccessful() const ;
-      bool hasExtension(uint8_t keybyte) const ;
-      bool hasChildren(uint32_t node_index, uint8_t nybble) const ;
-      int keyLength() const { return m_keylength ; }
-      NybbleTrieNode* node() const
-         { return m_failed ? nullptr : m_trie->node(m_nodeindex) ; }
+      bool OK() const
+	 {
+	    if (m_failed) return false ;
+	    auto n = m_trie->node(m_index) ;
+	    return n && n->leaf() ;
+	 }
+      unsigned keyLength() const { return m_keylen ; }
+      typename T::Node* node() const { return m_failed ? nullptr : m_trie->node(m_index) ; }
+
+   private:
+      T*  	 m_trie ;
+      uint32_t	 m_index ;
+      unsigned	 m_keylen ;
+      bool	 m_failed ;
    } ;
+
+typedef TriePointer<NybbleTrie> NybbleTriePointer ;
 
 /************************************************************************/
 /************************************************************************/
@@ -229,7 +241,7 @@ class NybbleTriePointer
 double scaling_log_power(double power) ;
 double scale_frequency(double freq, double power, double log_power) ;
 double unscale_frequency(uint32_t scaled, double power) ;
-uint32_t scaled_frequency(uint32_t raw_freq, uint64_t total_count) ;
+//uint32_t scaled_frequency(uint32_t raw_freq, uint64_t total_count) ;
 uint32_t scaled_frequency(uint32_t raw_freq, uint64_t total_count,
 			  double power, double log_power) ;
 

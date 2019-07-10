@@ -40,7 +40,6 @@ using namespace std ;
 /************************************************************************/
 
 #define BUCKET_SIZE 65536	// must be power of 2
-#define ROOT_INDEX 0
 
 // we want to store percentages for entries in the trie in 32 bits.  Since
 //   it is very unlikely that any ngram in the trie will have a probability
@@ -719,7 +718,7 @@ void LangIDMultiTrie::init(uint32_t cap)
 	 }
       m_used = 1 ;
       // initialize the root node
-      new (node(ROOT_INDEX)) MultiTrieNode ;
+      new (node(LangIDMultiTrie::ROOT_INDEX)) MultiTrieNode ;
       }
    return ;
 }
@@ -832,7 +831,7 @@ MultiTrieNode* LangIDMultiTrie::node(uint32_t N) const
 
 MultiTrieNode *LangIDMultiTrie::rootNode() const
 {
-   return node(ROOT_INDEX) ;
+   return node(LangIDMultiTrie::ROOT_INDEX) ;
 }
 
 //----------------------------------------------------------------------
@@ -881,7 +880,7 @@ bool LangIDMultiTrie::insert(const uint8_t *key, unsigned keylength,
 {
    if (keylength > m_maxkeylen)
       m_maxkeylen = keylength ;
-   uint32_t cur_index = ROOT_INDEX ;
+   uint32_t cur_index = LangIDMultiTrie::ROOT_INDEX ;
    while (keylength > 0)
       {
       this->insertChild(cur_index,*key) ;
@@ -1273,49 +1272,6 @@ bool LangIDMultiTrie::dump(Fr::CFile& f) const
 {
    Fr::LocalAlloc<uint8_t,10000> keybuf(longestKey()) ;
    return keybuf ? enumerate(keybuf,longestKey(),dump_ngram,&f) : false ;
-}
-
-/************************************************************************/
-/*	Methods for class MultiTriePointer				*/
-/************************************************************************/
-
-void MultiTriePointer::resetKey()
-{
-   m_nodeindex = ROOT_INDEX ;
-   m_keylength = 0 ;
-   m_failed = false ;
-   return ;
-}
-
-//----------------------------------------------------------------------
-
-bool MultiTriePointer::hasChildren(uint32_t node_index,
-				   uint8_t nybble) const
-{
-   MultiTrieNode *n = m_trie->node(node_index) ;
-   return n->childPresent(nybble) ;
-}
-
-//----------------------------------------------------------------------
-
-bool MultiTriePointer::extendKey(uint8_t keybyte)
-{
-   if (m_failed)
-      return false ;
-   bool success = m_trie->extendKey(m_nodeindex,keybyte) ;
-   if (success)
-      m_keylength++ ;
-   else
-      m_failed = true ;
-   return success ;
-}
-
-//----------------------------------------------------------------------
-
-bool MultiTriePointer::lookupSuccessful() const
-{
-   MultiTrieNode *n = node() ;
-   return n && n->leaf() ;
 }
 
 // end of file mtrie.C //

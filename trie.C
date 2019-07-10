@@ -39,8 +39,6 @@ using namespace std ;
 /*	Manifest Constants						*/
 /************************************************************************/
 
-#define ROOT_INDEX 0
-
 #if BITS_PER_LEVEL == 2
 # define BUCKET_SIZE 65536	// must be power of 2
 #else
@@ -718,7 +716,7 @@ void NybbleTrie::init(uint32_t cap)
 	 }
       m_used = 1 ;
       // initialize the root node
-      new (node(ROOT_INDEX)) NybbleTrieNode ;
+      new (node(NybbleTrie::ROOT_INDEX)) NybbleTrieNode ;
       }
    return ;
 }
@@ -832,7 +830,7 @@ NybbleTrieNode* NybbleTrie::node(uint32_t N) const
 
 NybbleTrieNode *NybbleTrie::rootNode() const
 {
-   return node(ROOT_INDEX) ;
+   return node(NybbleTrie::ROOT_INDEX) ;
 }
 
 //----------------------------------------------------------------------
@@ -882,7 +880,7 @@ bool NybbleTrie::insert(const uint8_t *key, unsigned keylength,
 {
    if (keylength > m_maxkeylen)
       m_maxkeylen = keylength ;
-   uint32_t cur_index = ROOT_INDEX ;
+   uint32_t cur_index = NybbleTrie::ROOT_INDEX ;
    while (keylength > 0)
       {
       this->insertChild(cur_index,*key) ;
@@ -908,7 +906,7 @@ bool NybbleTrie::insertMax(const uint8_t *key, unsigned keylength,
 {
    if (keylength > m_maxkeylen)
       m_maxkeylen = keylength ;
-   uint32_t cur_index = ROOT_INDEX ;
+   uint32_t cur_index = NybbleTrie::ROOT_INDEX ;
    while (keylength > 0)
       {
       this->insertChild(cur_index,*key) ;
@@ -933,7 +931,7 @@ bool NybbleTrie::insertMax(const uint8_t *key, unsigned keylength,
 
 uint32_t NybbleTrie::find(const uint8_t *key, unsigned keylength) const
 {
-   uint32_t cur_index = ROOT_INDEX ;
+   uint32_t cur_index = NybbleTrie::ROOT_INDEX ;
    while (keylength > 0)
       {
       if (!extendKey(cur_index,*key))
@@ -950,7 +948,7 @@ uint32_t NybbleTrie::find(const uint8_t *key, unsigned keylength) const
 NybbleTrieNode* NybbleTrie::findNode(const uint8_t *key, unsigned keylength)
    const
 {
-   uint32_t cur_index = ROOT_INDEX ;
+   uint32_t cur_index = NybbleTrie::ROOT_INDEX ;
    while (keylength > 0)
       {
       if (!extendKey(cur_index,*key))
@@ -966,7 +964,7 @@ NybbleTrieNode* NybbleTrie::findNode(const uint8_t *key, unsigned keylength)
 uint32_t NybbleTrie::increment(const uint8_t *key, unsigned keylength,
 			       uint32_t incr, bool stopgram)
 {
-   uint32_t cur_index = ROOT_INDEX ;
+   uint32_t cur_index = NybbleTrie::ROOT_INDEX ;
    for (size_t i = 0 ; i < keylength ; i++)
       {
       if (!extendKey(cur_index,key[i]))
@@ -997,7 +995,7 @@ bool NybbleTrie::incrementExtensions(const uint8_t *key,
 				     unsigned keylength,
 				     uint32_t incr)
 {
-   uint32_t cur_index = ROOT_INDEX ;
+   uint32_t cur_index = NybbleTrie::ROOT_INDEX ;
    // check whether the prevlength prefix is present in the trie
    for (size_t i = 0 ; i < prevlength ; i++)
       {
@@ -1192,58 +1190,5 @@ bool NybbleTrie::write(Fr::CFile& f) const
    return false ;
 }
 
-/************************************************************************/
-/*	Methods for class NybbleTriePointer				*/
-/************************************************************************/
-
-void NybbleTriePointer::resetKey()
-{
-   m_nodeindex = ROOT_INDEX ;
-   m_keylength = 0 ;
-   m_failed = false ;
-   return ;
-}
-
-//----------------------------------------------------------------------
-
-bool NybbleTriePointer::hasChildren(uint32_t node_index,
-				    uint8_t nybble) const
-{
-   NybbleTrieNode *n = m_trie->node(node_index) ;
-   return n->childPresent(nybble) ;
-}
-
-//----------------------------------------------------------------------
-
-bool NybbleTriePointer::hasExtension(uint8_t keybyte) const
-{
-   uint32_t node_index = m_nodeindex ;
-   bool success = m_trie->extendKey(node_index,keybyte) ;
-   return success ;
-}
-
-//----------------------------------------------------------------------
-
-bool NybbleTriePointer::extendKey(uint8_t keybyte)
-{
-   if (m_failed)
-      return false ;
-   bool success = m_trie->extendKey(m_nodeindex,keybyte) ;
-   if (success)
-      m_keylength++ ;
-   else
-      m_failed = true ;
-   return success ;
-}
-
-//----------------------------------------------------------------------
-
-bool NybbleTriePointer::lookupSuccessful() const
-{
-   if (m_failed)
-      return false ;
-   NybbleTrieNode *n = m_trie->node(m_nodeindex) ;
-   return n && n->leaf() ;
-}
 
 // end of file trie.C //

@@ -5,7 +5,7 @@
 /*									*/
 /*  File: ptrie.h - packed Word-frequency multi-trie			*/
 /*  Version:  1.30				       			*/
-/*  LastEdit: 2019-07-07						*/
+/*  LastEdit: 2019-07-09						*/
 /*									*/
 /*  (c) Copyright 2011,2012,2013,2015,2019 Carnegie Mellon University	*/
 /*      This program is free software; you can redistribute it and/or   */
@@ -29,6 +29,7 @@
 #include <cstdio>
 #include <limits.h>
 #include <stdint.h>
+#include "trie.h"
 #include "framepac/byteorder.h"
 #include "framepac/file.h"
 #include "framepac/memory.h"
@@ -309,42 +310,7 @@ class LangIDPackedMultiTrie // : public Fr::PackedMultiTrie<...>
 
 //----------------------------------------------------------------------
 
-class PackedMultiTriePointer
-   {
-   private:
-//      static Fr::Allocator allocator ;
-      LangIDPackedMultiTrie	*m_trie ;
-      uint32_t    	 m_nodeindex ;
-      int	   	 m_keylength ;
-      bool		 m_failed ;
-   protected:
-      void initPointer(LangIDPackedMultiTrie *t)
-	 { m_trie = t ; m_nodeindex = 0 ; m_failed = false ; }
-   public:
-//      void *operator new(size_t) { return allocator.allocate() ; }
-//      void operator delete(void *blk) { allocator.release(blk) ; }
-      PackedMultiTriePointer() { initPointer(0) ; } // for arrays
-      PackedMultiTriePointer(LangIDPackedMultiTrie *t) { initPointer(t) ; }
-      PackedMultiTriePointer(const LangIDPackedMultiTrie *t)
-	 { initPointer(const_cast<LangIDPackedMultiTrie*>(t)) ; }
-      ~PackedMultiTriePointer() { /*m_trie = 0 ; m_nodeindex = 0 ;*/ }
-
-      void resetKey()
-	 {
-	 m_nodeindex = PTRIE_ROOT_INDEX ;
-	 m_keylength = 0 ;
-	 m_failed = false ;
-	 return ;
-	 }
-      bool extendKey(uint8_t keybyte) ;
-
-      // accessors
-      bool lookupSuccessful() const ;
-      bool hasChildren(uint32_t node_index, uint8_t nybble) const ;
-      int keyLength() const { return m_keylength ; }
-      PackedTrieNode *node() const
-         { return m_failed ? 0 : m_trie->node(m_nodeindex) ; }
-   } ;
+typedef TriePointer<LangIDPackedMultiTrie> PackedMultiTriePointer ;
 
 #endif /* !__PTRIE_H_INCLUDED */
 

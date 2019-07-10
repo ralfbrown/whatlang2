@@ -29,6 +29,7 @@
 #include <cstdio>
 #include <limits.h>
 #include <stdint.h>
+#include "trie.h"
 #include "framepac/byteorder.h"
 #include "framepac/file.h"
 #include "framepac/trie.h"
@@ -124,7 +125,9 @@ class MultiTrieNode ;
 class LangIDMultiTrie //: public Fr::MultiTrie<Fr::UInt32>
    {
    public:
+      static constexpr uint32_t ROOT_INDEX = 0U ;
       static constexpr uint32_t NULL_INDEX = 0U ;
+      typedef MultiTrieNode Node ;
    public:
       LangIDMultiTrie(uint32_t capacity = 0) ;
       LangIDMultiTrie(const char *filename, bool verbose) ;
@@ -240,32 +243,7 @@ class MultiTrieNode
 
 //----------------------------------------------------------------------
 
-class MultiTriePointer
-   {
-   private:
-      LangIDMultiTrie	*m_trie ;
-      uint32_t	 m_nodeindex ;
-      int	 m_keylength ;
-      bool	 m_failed ;
-   protected:
-      void initPointer(LangIDMultiTrie *t)
-	 { m_trie = t ; m_nodeindex = 0 ; m_failed = false ; }
-   public:
-      MultiTriePointer() { initPointer(0) ; } // for arrays
-      MultiTriePointer(LangIDMultiTrie *t) { initPointer(t) ; }
-      MultiTriePointer(const LangIDMultiTrie *t) { initPointer((LangIDMultiTrie*)t) ; }
-      ~MultiTriePointer() { m_trie = 0 ; m_nodeindex = 0 ; }
-
-      void resetKey() ;
-      bool extendKey(uint8_t keybyte) ;
-
-      // accessors
-      bool lookupSuccessful() const ;
-      bool hasChildren(uint32_t node_index, uint8_t nybble) const ;
-      int keyLength() const { return m_keylength ; }
-      MultiTrieNode *node() const
-         { return m_failed ? 0 : m_trie->node(m_nodeindex) ; }
-   } ;
+typedef TriePointer<LangIDMultiTrie> MultiTriePointer ;
 
 #endif /* !__MTRIE_H_INCLUDED */
 

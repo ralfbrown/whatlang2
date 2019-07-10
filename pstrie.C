@@ -106,11 +106,6 @@ class EnumerationInfo
 /*	Global variables						*/
 /************************************************************************/
 
-//FrAllocator PackedTriePointer::allocator("PackedTriePtr",
-//					 sizeof(PackedTriePointer)) ;
-
-//----------------------------------------------------------------------
-
 void write_escaped_key(Fr::CFile& f, const uint8_t* key, unsigned keylen) ;
 
 /************************************************************************/
@@ -1067,47 +1062,6 @@ bool LangIDPackedTrie::dump(Fr::CFile& f) const
 {
    Fr::LocalAlloc<uint8_t,10000> keybuf(longestKey()) ;
    return keybuf ? enumerate(keybuf,longestKey(),dump_ngram,&f) : false ;
-}
-
-/************************************************************************/
-/*	Methods for class PackedTriePointer				*/
-/************************************************************************/
-
-bool PackedTriePointer::hasChildren(uint32_t node_index,
-				    uint8_t keybyte) const
-{
-   PackedSimpleTrieNode *n = m_trie->node(node_index) ;
-   return m_trie->terminalNode(n) ? false : n->childPresent(keybyte) ;
-}
-
-//----------------------------------------------------------------------
-
-bool PackedTriePointer::hasExtension(uint8_t keybyte) const
-{
-   PackedSimpleTrieNode *n = m_trie->node(m_nodeindex) ;
-   return m_trie->terminalNode(n) ? false : n->childPresent(keybyte) ;
-}
-
-//----------------------------------------------------------------------
-
-bool PackedTriePointer::extendKey(uint8_t keybyte)
-{
-   if (m_failed)
-      return false ;
-   bool success = m_trie->extendKey(m_nodeindex,keybyte) ;
-   if (success)
-      m_keylength++ ;
-   else
-      m_failed = true ;
-   return success ;
-}
-
-//----------------------------------------------------------------------
-
-bool PackedTriePointer::lookupSuccessful() const
-{
-   PackedSimpleTrieNode *n = node() ;
-   return n && n->leaf() ;
 }
 
 /************************************************************************/

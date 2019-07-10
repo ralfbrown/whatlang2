@@ -57,9 +57,6 @@ using namespace std ;
 /*	Global variables						*/
 /************************************************************************/
 
-//Fr::Allocator PackedMultiTriePointer::allocator("PackedMTriePtr",
-//					      sizeof(PackedMultiTriePointer)) ;
-
 double PackedTrieFreq::s_value_map[PACKED_TRIE_NUM_VALUES] ;
 bool PackedTrieFreq::s_value_map_initialized = false ;
 
@@ -876,44 +873,6 @@ bool LangIDPackedMultiTrie::dump(Fr::CFile& f) const
    Fr::LocalAlloc<uint8_t,10000> keybuf(longestKey()) ;
    base_frequency = m_freq ;
    return keybuf ? enumerate(keybuf,longestKey(),dump_ngram,&f) : false ;
-}
-
-/************************************************************************/
-/*	Methods for class PackedMultiTriePointer			*/
-/************************************************************************/
-
-bool PackedMultiTriePointer::hasChildren(uint32_t node_index,
-					 uint8_t keybyte) const
-{
-   PackedTrieNode *n = m_trie->node(node_index) ;
-   return n->childPresent(keybyte) ;
-}
-
-//----------------------------------------------------------------------
-
-bool PackedMultiTriePointer::extendKey(uint8_t keybyte)
-{
-   if (m_failed)
-      return false ;
-   m_nodeindex = m_trie->extendKey(keybyte,m_nodeindex) ;
-   if (m_nodeindex != LangIDPackedMultiTrie::NULL_INDEX)
-      {
-      m_keylength++ ;
-      return true ;
-      }
-   else
-      {
-      m_failed = true ;
-      return false ;
-      }
-}
-
-//----------------------------------------------------------------------
-
-bool PackedMultiTriePointer::lookupSuccessful() const
-{
-   PackedTrieNode *n = node() ;
-   return n && n->leaf() ;
 }
 
 /************************************************************************/

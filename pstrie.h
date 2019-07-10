@@ -38,8 +38,6 @@
 /************************************************************************/
 /************************************************************************/
 
-class LangIDPackedTrie ;
-
 typedef bool PackedSimpleTrieEnumFn(const uint8_t *key, unsigned keylen,
 				    uint32_t frequency, void *user_data) ;
 
@@ -142,7 +140,10 @@ class PackedSimpleTrieNode
 class LangIDPackedTrie
    {
    public:
+      static constexpr uint32_t ROOT_INDEX = 0U ;
       static constexpr uint32_t NULL_INDEX = 0U ;
+      typedef PackedSimpleTrieNode Node ;
+
    public:
       LangIDPackedTrie() { init() ; }
       LangIDPackedTrie(const NybbleTrie *trie, uint32_t min_freq = 1,
@@ -157,28 +158,28 @@ class LangIDPackedTrie
       // accessors
       bool good() const
 	 { return (m_nodes != 0) && m_size > 0 ; }
-      bool terminalNode(const PackedSimpleTrieNode *n) const
+      bool terminalNode(const Node *n) const
          { return (n < m_nodes) || (n >= m_nodes + m_size) ; }
       uint32_t size() const { return m_size ; }
       unsigned longestKey() const { return m_maxkeylen ; }
-      PackedSimpleTrieNode* node(uint32_t N) const
+      Node* node(uint32_t N) const
 	 { if (N < m_size) return &m_nodes[N] ;
 	   if ((N & PTRIE_TERMINAL_MASK) != 0)
 	      {
 	      uint32_t termindex = (N & ~PTRIE_TERMINAL_MASK) ;
 	      if (termindex < m_numterminals)
-		 return (PackedSimpleTrieNode*)&m_terminals[termindex] ; 
+		 return (Node*)&m_terminals[termindex] ; 
 	      }
 	   return nullptr ;
 	 }
       static bool isTerminalNode(uint32_t N)
 	 { return (N & PTRIE_TERMINAL_MASK) != 0 ; }
-      PackedSimpleTrieNode *getFullNode(uint32_t N) const
+      Node *getFullNode(uint32_t N) const
 	 { return &m_nodes[N] ; }
-      PackedSimpleTrieNode *getTerminalNode(uint32_t N) const
-	 { return (PackedSimpleTrieNode*)&m_terminals[N & ~PTRIE_TERMINAL_MASK] ; }
+      Node *getTerminalNode(uint32_t N) const
+	 { return (Node*)&m_terminals[N & ~PTRIE_TERMINAL_MASK] ; }
 
-      PackedSimpleTrieNode *findNode(const uint8_t *key, unsigned keylength) const ;
+      Node *findNode(const uint8_t *key, unsigned keylength) const ;
       uint32_t find(const uint8_t *key, unsigned keylength) const ;
       bool extendKey(uint32_t &nodeindex, uint8_t keybyte) const ;
       unsigned countMatches(const uint8_t *key, unsigned keylen,
@@ -207,14 +208,14 @@ class LangIDPackedTrie
       bool writeHeader(Fr::CFile& f) const ;
       uint32_t allocateChildNodes(unsigned numchildren) ;
       uint32_t allocateTerminalNodes(unsigned numchildren) ;
-      bool insertChildren(PackedSimpleTrieNode *parent, const NybbleTrie *trie,
+      bool insertChildren(Node *parent, const NybbleTrie *trie,
 			  const NybbleTrieNode *node, uint32_t node_index,
 			  unsigned keylen, uint32_t min_freq = 1) ;
-      bool insertTerminals(PackedSimpleTrieNode *parent, const NybbleTrie *trie,
+      bool insertTerminals(Node *parent, const NybbleTrie *trie,
 			   const NybbleTrieNode *node, uint32_t node_index,
 			   unsigned keylen, uint32_t min_freq = 1) ;
    private:
-      PackedSimpleTrieNode    *m_nodes ; // array of nodes
+      Node    *m_nodes ; // array of nodes
       PackedTrieTerminalNode *m_terminals ;
       Fr::MemMappedFile	*m_fmap ;	 // memory-map info
       uint32_t	 	 m_size ;	 // number of nodes in m_nodes
@@ -227,43 +228,8 @@ class LangIDPackedTrie
 
 //----------------------------------------------------------------------
 
-class PackedTriePointer
-   {
-   private:
-//      static Fr::Allocator allocator ;
-      LangIDPackedTrie	*m_trie ;
-      uint32_t    	 m_nodeindex ;
-      int	   	 m_keylength ;
-      bool		 m_failed ;
-   protected:
-      void initPointer(LangIDPackedTrie *t)
-      { m_trie = t ; m_nodeindex = 0 ; m_keylength = 0 ; m_failed = false ; }
-   public:
-//      void *operator new(size_t) { return allocator.allocate() ; }
-//      void operator delete(void *blk) { allocator.release(blk) ; }
-      PackedTriePointer() { initPointer(0) ; } // for arrays
-      PackedTriePointer(LangIDPackedTrie *t) { initPointer(t) ; }
-      PackedTriePointer(const LangIDPackedTrie *t)
-	 { initPointer((LangIDPackedTrie*)t) ; }
-      ~PackedTriePointer() { /*m_trie = 0 ; m_nodeindex = 0 ;*/ }
+typedef TriePointer<LangIDPackedTrie> PackedTriePointer ;
 
-      void resetKey()
-	 {
-	 m_nodeindex = PTRIE_ROOT_INDEX ;
-	 m_keylength = 0 ;
-	 m_failed = false ;
-	 return ;
-	 }
-      bool extendKey(uint8_t keybyte) ;
-
-      // accessors
-      bool lookupSuccessful() const ;
-      bool hasExtension(uint8_t keybyte) const ;
-      bool hasChildren(uint32_t node_index, uint8_t nybble) const ;
-      int keyLength() const { return m_keylength ; }
-      PackedSimpleTrieNode *node() const
-         { return m_failed ? 0 : m_trie->node(m_nodeindex) ; }
-   } ;
 
 #endif /* !__PSTRIE_H_INCLUDED */
 
