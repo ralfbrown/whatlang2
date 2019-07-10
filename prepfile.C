@@ -182,7 +182,7 @@ Fr::CFile* PreprocessedInputFile::open_sampled_input_file(const char *filename,
       {
       fp->close()  ;
       if (m_buffered_lines) m_buffered_lines->free() ;
-      m_buffered_lines = 0 ;
+      m_buffered_lines = Fr::List::emptyList() ;
       max_bytes *= (max_bytes / (double)sampled * 1.01) ;
       return open_sampled_input_file(filename,max_bytes) ;
       }
@@ -248,10 +248,10 @@ void PreprocessedInputFile::close()
 
 int PreprocessedInputFile::readInput(unsigned char *buf, size_t buflen)
 {
-   if (m_buffered_lines)
+   if (m_buffered_lines && m_buffered_lines != Fr::List::emptyList())
       {
       int count = 0 ;
-      while ((unsigned long)count < buflen && m_buffered_lines)
+      while ((unsigned long)count < buflen && m_buffered_lines != Fr::List::emptyList())
 	 {
 	 size_t len = ((String*)m_buffered_lines->front())->c_len() ;
 	 if (count + len > buflen)
