@@ -141,7 +141,7 @@ class LangIDMultiTrie : public NybbleTrie
       static constexpr uint32_t INVALID_FREQ = MultiTrieFrequency::INVALID_FREQ ;
 
       typedef MultiTrieNode Node ;
-      typedef bool EnumFn(const MultiTrieNode *node, const uint8_t *key,
+      typedef bool EnumFn(const LangIDMultiTrie* trie, NodeIndex nodeindex, const uint8_t *key,
 	 		  unsigned keylen, void *user_data) ;
    public:
       LangIDMultiTrie(uint32_t capacity = 0) ;

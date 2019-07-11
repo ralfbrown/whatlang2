@@ -2217,15 +2217,15 @@ static int compare_frequencies(const MultiTrieFrequency &f1,
 
 //----------------------------------------------------------------------
 
-static bool sort_frequencies(const MultiTrieNode *n, const uint8_t * /*key*/,
+static bool sort_frequencies(const LangIDMultiTrie* trie, NybbleTrie::NodeIndex nodeindex, const uint8_t * /*key*/,
 			     unsigned /*keylen*/, void * /*user_data*/)
 {
-   auto f = n->frequencies() ;
+   auto node = trie->node(nodeindex) ;
+   auto f = node->frequencies() ;
    if (f)
       {
       // sort the frequency records
 //FIXME      f = std::stable_sort(f,compare_frequencies) ;
-      auto node = const_cast<MultiTrieNode*>(n) ;
       if (!node->setFrequencies(f))
 	 return false ;
       }

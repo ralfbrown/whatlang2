@@ -138,7 +138,6 @@ class NybbleTrie
       unsigned longestKey() const { return m_maxkeylen ; }
       bool ignoringWhiteSpace() const { return m_ignorewhitespace ; }
       Node* node(NodeIndex N) const { return m_nodes.item(N) ; }
-      Node* rootNode() const ;
       NodeIndex findKey(const uint8_t* key, unsigned keylength) const ;
       Node* findNode(const uint8_t* key, unsigned keylength) const { return node(findKey(key,keylength)) ; }
       uint32_t find(const uint8_t* key, unsigned keylength) const ;

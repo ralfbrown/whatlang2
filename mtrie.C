@@ -394,13 +394,11 @@ void LangIDMultiTrie::init(uint32_t cap)
 
 bool LangIDMultiTrie::loadWords(const char *filename, uint32_t langID, bool verbose)
 {
-   if (!filename || !*filename)
-      return false ;
    Fr::CInputFile fp(filename) ;
-   bool warned = false;
-   unsigned linenumber = 0 ;
    if (fp)
       {
+      bool warned = false;
+      unsigned linenumber = 0 ;
       unsigned wc = 0 ;
       while (Fr::CharPtr line = fp.getTrimmedLine())
 	 {
@@ -429,12 +427,12 @@ bool LangIDMultiTrie::loadWords(const char *filename, uint32_t langID, bool verb
 	 wc++ ;
 	 }
       if (verbose)
-	 cerr << "Read " << wc << " words from '" << filename << "'" << endl ;
+	 cerr << "Read " << wc << " words from '" << (filename?filename:"") << "'" << endl ;
       return true ;
       }
    else
       {
-      cerr << "Unable to read word list from '" << filename << "'" << endl ;
+      cerr << "Unable to read word list from '" << (filename?filename:"") << "'" << endl ;
       return false ;
       }
 }
@@ -537,7 +535,7 @@ bool LangIDMultiTrie::enumerateChildren(NodeIndex nodeindex,
 {
    auto n = node(nodeindex) ;
    assert(!(!n->leaf() && n->frequencies())) ;
-   if (n->leaf() && !fn(n,keybuf,curr_keylength_bits/8,user_data))
+   if (n->leaf() && !fn(this,nodeindex,keybuf,curr_keylength_bits/8,user_data))
       return false ;
    if (curr_keylength_bits < max_keylength_bits)
       {
@@ -670,10 +668,11 @@ uint32_t LangIDMultiTrie::numTerminalNodes() const
 
 //----------------------------------------------------------------------
 
-static bool count_freq_records(const MultiTrieNode *node, const uint8_t *,
+static bool count_freq_records(const LangIDMultiTrie* trie, NybbleTrie::NodeIndex nodeindex, const uint8_t *,
 			       unsigned, void *user_data)
 {
-   uint32_t *count = (uint32_t*)user_data ;
+   auto node = trie->node(nodeindex) ;
+   auto count = reinterpret_cast<uint32_t*>(user_data) ;
    (*count) += node->numFrequencies() ;
    return true ;
 }
@@ -851,9 +850,10 @@ void write_escaped_key(Fr::CFile& f, const uint8_t* key, unsigned keylen)
 
 //----------------------------------------------------------------------
 
-static bool dump_ngram(const MultiTrieNode *node, const uint8_t *key,
+static bool dump_ngram(const LangIDMultiTrie* trie, NybbleTrie::NodeIndex nodeindex, const uint8_t *key,
 		       unsigned keylen, void *user_data)
 {
+   auto node = trie->node(nodeindex) ;
    Fr::CFile& f = *((Fr::CFile*)user_data) ;
    if (f && node)
       {

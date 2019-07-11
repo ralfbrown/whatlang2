@@ -308,13 +308,11 @@ void NybbleTrie::init(uint32_t cap)
 
 bool NybbleTrie::loadWords(const char *filename, bool verbose)
 {
-   if (!filename || !*filename)
-      return false ;
    Fr::CInputFile fp(filename) ;
-   bool warned = false;
-   unsigned linenumber = 0 ;
    if (fp)
       {
+      bool warned = false;
+      unsigned linenumber = 0 ;
       unsigned wc = 0 ;
       while (Fr::CharPtr line = fp.getTrimmedLine())
 	 {
@@ -343,21 +341,14 @@ bool NybbleTrie::loadWords(const char *filename, bool verbose)
 	 wc++ ;
 	 }
       if (verbose)
-	 cerr << "Read " << wc << " words from '" << filename << "'" << endl ;
+	 cerr << "Read " << wc << " words from '" << (filename?filename:"") << "'" << endl ;
       return true ;
       }
    else
       {
-      cerr << "Unable to read word list from '" << filename << "'" << endl ;
+      cerr << "Unable to read word list from '" << (filename?filename:"") << "'" << endl ;
       return false ;
       }
-}
-
-//----------------------------------------------------------------------
-
-NybbleTrieNode *NybbleTrie::rootNode() const
-{
-   return node(NybbleTrie::ROOT_INDEX) ;
 }
 
 //----------------------------------------------------------------------
