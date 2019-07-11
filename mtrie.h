@@ -5,7 +5,7 @@
 /*									*/
 /*  File: mtrie.h - bit-slice-based Word-frequency multi-trie		*/
 /*  Version:  1.30				       			*/
-/*  LastEdit: 2019-07-07						*/
+/*  LastEdit: 2019-07-11						*/
 /*									*/
 /*  (c) Copyright 2011,2012,2019 Carnegie Mellon University		*/
 /*      This program is free software; you can redistribute it and/or   */
@@ -135,11 +135,11 @@ class LangIDMultiTrie //: public Fr::MultiTrie<Fr::UInt32>
       LangIDMultiTrie(const char *filename, bool verbose) ;
       LangIDMultiTrie(const class LangIDMultiTrie *) ;
       LangIDMultiTrie(const class LangIDPackedMultiTrie *) ;
-      ~LangIDMultiTrie() ;
+      ~LangIDMultiTrie() = default ;
 
       bool loadWords(const char *filename, uint32_t langID,
 		     bool verbose = false) ;
-      uint32_t allocateNode() ;
+      uint32_t allocateNode() { return (uint32_t)m_nodes.alloc() ; }
 
       // modifiers
       void ignoreWhiteSpace(bool ignore = true) { m_ignorewhitespace = ignore ; }
@@ -156,15 +156,15 @@ class LangIDMultiTrie //: public Fr::MultiTrie<Fr::UInt32>
 			       uint32_t incr = 1) ;
 
       // accessors
-      uint32_t size() const { return m_used ; }
-      uint32_t capacity() const { return m_capacity ; }
+      uint32_t size() const { return m_nodes.size() ; }
+      uint32_t capacity() const { return m_nodes.capacity() ; }
       uint32_t currentLanguage() const { return m_currentlangID ; }
       uint32_t totalTokens() const { return m_totaltokens ; }
       unsigned longestKey() const { return m_maxkeylen ; }
       bool ignoringWhiteSpace() const { return m_ignorewhitespace ; }
-      MultiTrieNode *node(uint32_t N) const ;
-      MultiTrieNode *rootNode() const ;
-      MultiTrieNode *findNode(const uint8_t *key, unsigned keylength) const ;
+      Node *node(uint32_t N) const { return m_nodes.item(N) ; }
+      Node *rootNode() const ;
+      Node *findNode(const uint8_t *key, unsigned keylength) const ;
       uint32_t find(const uint8_t *key, unsigned keylength) const ;
       bool extendKey(uint32_t &nodeindex, uint8_t keybyte) const ;
       bool enumerate(uint8_t *keybuf, unsigned maxkeylength, EnumFn *fn, void *user_data) const ;
@@ -192,9 +192,7 @@ class LangIDMultiTrie //: public Fr::MultiTrie<Fr::UInt32>
       bool extendNybble(uint32_t &nodeindex, uint8_t nybble) const ;
       uint32_t insertNybble(uint32_t nodeindex, uint8_t nybble) ;
    private:
-      MultiTrieNode     **m_nodes ;	 // list of buckets of nodes
-      uint32_t	 	  m_capacity ;	 // number of nodes allocated
-      uint32_t	 	  m_used ;	 // number of nodes in use
+      Fr::ItemPool<Node>  m_nodes ;
       uint32_t		  m_totaltokens ;
       uint32_t		  m_currentlangID ;
       unsigned		  m_maxkeylen ;

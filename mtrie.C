@@ -393,22 +393,6 @@ LangIDMultiTrie::LangIDMultiTrie(const char *filename, bool verbose)
 
 //----------------------------------------------------------------------
 
-LangIDMultiTrie::~LangIDMultiTrie()
-{
-   unsigned num_buckets = m_capacity / BUCKET_SIZE ;
-   for (size_t i = 0 ; i < num_buckets ; i++)
-      {
-      Fr::Free(m_nodes[i]) ;
-      }
-   Fr::Free(m_nodes) ;
-   m_nodes = nullptr ;
-   m_capacity = 0 ;
-   m_used = 0 ;
-   return ;
-}
-
-//----------------------------------------------------------------------
-
 void LangIDMultiTrie::init(uint32_t cap)
 {
    m_maxkeylen = 0 ;
@@ -417,23 +401,10 @@ void LangIDMultiTrie::init(uint32_t cap)
    if (cap == 0)
       cap = 1 ;
    cap = round_up(cap,BUCKET_SIZE) ;
-   unsigned num_buckets = cap / BUCKET_SIZE ;
-   m_nodes = Fr::New<MultiTrieNode*>(num_buckets) ;
-   m_capacity = 0 ;
-   if (m_nodes)
-      {
-      for (unsigned i = 0 ; i < num_buckets ; i++)
-	 {
-	 m_nodes[i] = Fr::New<MultiTrieNode>(BUCKET_SIZE) ;
-	 if (m_nodes[i])
-	    m_capacity += BUCKET_SIZE ;
-	 else
-	    break ;
-	 }
-      m_used = 1 ;
-      // initialize the root node
-      new (node(LangIDMultiTrie::ROOT_INDEX)) MultiTrieNode ;
-      }
+   m_nodes.reserve(cap) ;
+   auto root = m_nodes.alloc() ;
+   // initialize the root node
+   new (node(root)) MultiTrieNode ;
    return ;
 }
 
@@ -494,51 +465,6 @@ bool LangIDMultiTrie::loadWords(const char *filename, uint32_t langID, bool verb
       cerr << "Unable to read word list from '" << filename << "'" << endl ;
       return false ;
       }
-}
-
-//----------------------------------------------------------------------
-
-uint32_t LangIDMultiTrie::allocateNode()
-{
-   if (m_used >= m_capacity)
-      {
-      // we've filled the node array, so add another bucket
-      unsigned num_buckets = m_capacity / BUCKET_SIZE + 1 ;
-      auto newbuckets = Fr::NewR<MultiTrieNode*>(m_nodes,num_buckets) ;
-      if (newbuckets)
-	 {
-	 m_nodes = newbuckets ;
-	 m_nodes[num_buckets-1] = Fr::New<MultiTrieNode>(BUCKET_SIZE) ;
-	 if (m_nodes[num_buckets-1] == 0)
-	    {
-	    fprintf(stderr,"Out of memory!\n") ;
-	    abort() ;
-	    }
-	 m_capacity += BUCKET_SIZE ;
-	 }
-      else
-	 {
-	 fprintf(stderr,"Out of memory!\n") ;
-	 abort() ;
-	 }
-      }
-   uint32_t node_index = m_used++ ;
-   auto n = node(node_index) ;
-   new (n) MultiTrieNode ;
-   return node_index ;
-}
-
-//----------------------------------------------------------------------
-
-MultiTrieNode* LangIDMultiTrie::node(uint32_t N) const
-{
-   if (N < m_used)
-      {
-      auto bucket = m_nodes[N / BUCKET_SIZE] ;
-      return (bucket) ? &bucket[N % BUCKET_SIZE] : 0 ;
-      }
-   else
-      return nullptr ;
 }
 
 //----------------------------------------------------------------------
@@ -751,7 +677,7 @@ bool LangIDMultiTrie::extendKey(uint32_t &nodeindex, uint8_t keybyte) const
 
 bool LangIDMultiTrie::enumerate(uint8_t *keybuf, unsigned maxkeylength, EnumFn *fn, void *user_data) const
 {
-   if (keybuf && fn && m_nodes[ROOT_INDEX])
+   if (keybuf && fn)
       {
       memset(keybuf,'\0',maxkeylength) ;
       return enumerateChildren(ROOT_INDEX,keybuf,maxkeylength*8,0,fn,user_data) ;
@@ -1011,7 +937,7 @@ LangIDMultiTrie *LangIDMultiTrie::load(Fr::CFile& f)
    auto trie = new LangIDMultiTrie(used) ;
    if (!trie)
       return nullptr ;
-   trie->m_used = used ;
+   trie->m_nodes.allocBatch(used) ;
    trie->addTokenCount(val_tokens.load()) ;
    trie->m_maxkeylen = (unsigned)val_keylen.load() ;
    // skip the padding (reserved bytes)
