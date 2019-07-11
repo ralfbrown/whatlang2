@@ -49,7 +49,7 @@ using namespace std ;
 /*	Configuration and Manifest Constants				*/
 /************************************************************************/
 
-#define VERSION "1.24"
+#define VERSION "1.30"
 
 #define MAX_NGRAMS 5000
 
