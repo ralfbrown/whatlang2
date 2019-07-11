@@ -247,7 +247,7 @@ uint32_t NybbleTrieNode::insertChild(unsigned int N, NybbleTrie *trie)
 	    }
 	 }
       }
-   return (uint32_t)~0 ;
+   return NybbleTrie::INVALID_INDEX ;
 }
 
 //----------------------------------------------------------------------
@@ -295,7 +295,6 @@ void NybbleTrie::init(uint32_t cap)
    m_ignorewhitespace = false ;
    if (cap == 0)
       cap = 1 ;
-   cap = round_up(cap,BUCKET_SIZE) ;
    m_nodes.reserve(cap) ;
    auto root = m_nodes.alloc() ;
    // initialize the root node
@@ -454,7 +453,7 @@ bool NybbleTrie::insertMax(const uint8_t *key, unsigned keylength,
 
 uint32_t NybbleTrie::find(const uint8_t *key, unsigned keylength) const
 {
-   uint32_t cur_index = NybbleTrie::ROOT_INDEX ;
+   uint32_t cur_index = ROOT_INDEX ;
    while (keylength > 0)
       {
       if (!extendKey(cur_index,*key))
@@ -468,18 +467,17 @@ uint32_t NybbleTrie::find(const uint8_t *key, unsigned keylength) const
 
 //----------------------------------------------------------------------
 
-NybbleTrieNode* NybbleTrie::findNode(const uint8_t *key, unsigned keylength)
-   const
+uint32_t NybbleTrie::findKey(const uint8_t *key, unsigned keylength) const
 {
-   uint32_t cur_index = NybbleTrie::ROOT_INDEX ;
+   uint32_t cur_index = ROOT_INDEX ;
    while (keylength > 0)
       {
       if (!extendKey(cur_index,*key))
-	 return nullptr ;
+	 return INVALID_INDEX ;
       key++ ;
       keylength-- ;
       }
-   return node(cur_index) ;
+   return cur_index ;
 }
 
 //----------------------------------------------------------------------
@@ -593,17 +591,17 @@ bool NybbleTrie::singleChild(uint32_t nodeindex) const
    auto node = this->node(nodeindex) ;
    for (size_t i = 0 ; i < 8 && node ; i += BITS_PER_LEVEL)
       {
-      unsigned index = ~0 ;
+      unsigned index = INVALID_INDEX ;
       for (unsigned ch = 0 ; ch < (1<<BITS_PER_LEVEL) ; ch++)
 	 {
 	 if (node->childPresent(ch))
 	    {
-	    if (index != ~0U)
+	    if (index != INVALID_INDEX)
 	       return false ; 		// multiple children
 	    index = ch ;
 	    }
 	 }
-      if (index == ~0U)
+      if (index == INVALID_INDEX)
 	 return false ; 		// no children at all
       node = this->node(node->childIndex(index)) ;
       }
@@ -618,17 +616,17 @@ bool NybbleTrie::singleChildSameFreq(uint32_t nodeindex, bool allow_nonleaf, dou
    auto parent_freq = node->frequency() ;
    for (size_t i = 0 ; i < 8 && node ; i += BITS_PER_LEVEL)
       {
-      unsigned index = ~0 ;
+      unsigned index = INVALID_INDEX ;
       for (unsigned ch = 0 ; ch < (1<<BITS_PER_LEVEL) ; ch++)
 	 {
 	 if (node->childPresent(ch))
 	    {
-	    if (index != ~0U)
+	    if (index != INVALID_INDEX)
 	       return false ; 		// multiple children
 	    index = ch ;
 	    }
 	 }
-      if (index == ~0U)
+      if (index == INVALID_INDEX)
 	 return false ; 		// no children at all
       node = this->node(node->childIndex(index)) ;
       }

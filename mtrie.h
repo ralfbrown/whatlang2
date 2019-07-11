@@ -40,12 +40,6 @@ using namespace std ;
 /*	Manifest Constants						*/
 /************************************************************************/
 
-// we can trade off speed for memory by adjusting how many bits each
-//   node in the trie represents.  Current supported values are 2 and 4;
-//   two bits per node uses about 60% as much total memory as 4 bits,
-//   but needs twice as many memory accesses for lookups
-#define MTRIE_BITS_PER_LEVEL 2
-
 #define LID_LANGID_MASK   0x0FFFFFFF
 #define LID_STOPGRAM_MASK 0x8000000
 
@@ -172,9 +166,7 @@ class LangIDMultiTrie : public NybbleTrie
       // accessors
       Node *node(uint32_t N) const { return static_cast<Node*>(m_nodes.item(N)) ; }
       uint32_t currentLanguage() const { return m_currentlangID ; }
-      Node *findNode(const uint8_t *key, unsigned keylength) const ;
-      uint32_t find(const uint8_t *key, unsigned keylength) const ;
-      bool extendKey(uint32_t &nodeindex, uint8_t keybyte) const ;
+      Node *findNode(const uint8_t *key, unsigned keylength) const { return node(findKey(key,keylength)) ; }
       bool enumerate(uint8_t *keybuf, unsigned maxkeylength, EnumFn *fn, void *user_data) const ;
       bool enumerateChildren(uint32_t nodeindex, uint8_t *keybuf, unsigned max_keylength_bits,
 			     unsigned curr_keylength_bits, EnumFn *fn, void *user_data) const ;
@@ -195,7 +187,6 @@ class LangIDMultiTrie : public NybbleTrie
    private:
       void init(uint32_t capacity) ;
       bool writeHeader(Fr::CFile& f) const ;
-      bool extendNybble(uint32_t &nodeindex, uint8_t nybble) const ;
    private:
       uint32_t		  m_currentlangID ;
    } ;

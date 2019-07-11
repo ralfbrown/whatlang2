@@ -102,6 +102,7 @@ class NybbleTrie
    public:
       static constexpr uint32_t ROOT_INDEX = 0U ;
       static constexpr uint32_t NULL_INDEX = 0U ;
+      static constexpr uint32_t INVALID_INDEX = (uint32_t)~0 ;
       typedef NybbleTrieNode Node ;
       typedef bool EnumFn(const NybbleTrie *trie, uint32_t index, const uint8_t *key, unsigned keylen,
 	                  void *user_data) ;
@@ -136,7 +137,8 @@ class NybbleTrie
       bool ignoringWhiteSpace() const { return m_ignorewhitespace ; }
       Node *node(uint32_t N) const { return m_nodes.item(N) ; }
       Node *rootNode() const ;
-      Node *findNode(const uint8_t *key, unsigned keylength) const ;
+      uint32_t findKey(const uint8_t *key, unsigned keylength) const ;
+      Node *findNode(const uint8_t *key, unsigned keylength) const { return node(findKey(key,keylength)) ; }
       uint32_t find(const uint8_t *key, unsigned keylength) const ;
       bool extendKey(uint32_t &nodeindex, uint8_t keybyte) const ;
       bool enumerate(uint8_t *keybuf, unsigned maxkeylength, EnumFn *fn, void *user_data) const ;

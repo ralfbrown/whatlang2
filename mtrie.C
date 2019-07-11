@@ -32,6 +32,7 @@
 #include "framepac/byteorder.h"
 #include "framepac/file.h"
 #include "framepac/memory.h"
+#include "framepac/texttransforms.h"
 
 using namespace std ;
 
@@ -52,7 +53,7 @@ using namespace std ;
 // reserve some space for future additions to the file format
 #define MULTITRIE_PADBYTES_1  64
 
-#if MTRIE_BITS_PER_LEVEL == 3
+#if BITS_PER_LEVEL == 3
 #  define LEVEL_SIZE 9
 #else
 #  define LEVEL_SIZE 8
@@ -61,8 +62,6 @@ using namespace std ;
 /************************************************************************/
 /*	Types								*/
 /************************************************************************/
-
-typedef char LONGbuffer[4] ;
 
 /************************************************************************/
 /*	Global variables						*/
@@ -360,7 +359,7 @@ uint32_t MultiTrieNode::insertChild(unsigned int N, LangIDMultiTrie *trie)
 	    }
 	 }
       }
-   return (uint32_t)~0 ;
+   return NybbleTrie::INVALID_INDEX ;
 }
 
 //----------------------------------------------------------------------
@@ -405,7 +404,6 @@ void LangIDMultiTrie::init(uint32_t cap)
    m_ignorewhitespace = false ;
    if (cap == 0)
       cap = 1 ;
-   cap = round_up(cap,BUCKET_SIZE) ;
    m_nodes.reserve(cap) ;
    auto root = m_nodes.alloc() ;
    // initialize the root node
@@ -448,15 +446,7 @@ bool LangIDMultiTrie::loadWords(const char *filename, uint32_t langID, bool verb
 	    continue ;
 	    }
 	 // trim leading and trailing whitespace from rest of line
-	 lineptr = freq_end ;
-	 while (*lineptr == ' ' || *lineptr == '\t')
-	    lineptr++ ;
-	 if (!*lineptr)
-	    continue ;
-	 char *lineend = strchr(lineptr,'\0') ;
-	 while (lineend > lineptr && 
-		(lineend[-1] <= ' ' || lineend[-1] == '\t'))
-	    *--lineend = '\0' ;
+	 lineptr = Fr::trim_whitespace(freq_end) ;
 	 unsigned len = strlen(lineptr) ;
 	 insert((uint8_t*)lineptr,len,langID,freq,false) ;
 	 wc++ ;
@@ -499,37 +489,6 @@ bool LangIDMultiTrie::insert(const uint8_t *key, unsigned keylength,
 	 }
       }
    return new_node ;
-}
-
-//----------------------------------------------------------------------
-
-uint32_t LangIDMultiTrie::find(const uint8_t *key, unsigned keylength) const
-{
-   uint32_t cur_index = ROOT_INDEX ;
-   while (keylength > 0)
-      {
-      if (!extendKey(cur_index,*key))
-	 return 0 ;
-      key++ ;
-      keylength-- ;
-      }
-   auto n = node(cur_index) ;
-   return n ? n->frequency() : 0 ;
-}
-
-//----------------------------------------------------------------------
-
-MultiTrieNode* LangIDMultiTrie::findNode(const uint8_t *key, unsigned keylength) const
-{
-   uint32_t cur_index = ROOT_INDEX ;
-   while (keylength > 0)
-      {
-      if (!extendKey(cur_index,*key))
-	 return nullptr ;
-      key++ ;
-      keylength-- ;
-      }
-   return node(cur_index) ;
 }
 
 //----------------------------------------------------------------------
@@ -589,51 +548,6 @@ bool LangIDMultiTrie::incrementExtensions(const uint8_t *key, unsigned prevlengt
 
 //----------------------------------------------------------------------
 
-bool LangIDMultiTrie::extendNybble(uint32_t &nodeindex, uint8_t nybble) const
-{
-   auto n = node(nodeindex) ;
-   if (n->childPresent(nybble))
-      {
-      nodeindex = n->childIndex(nybble) ;
-      return true ;
-      }
-   return false ;
-}
-
-//----------------------------------------------------------------------
-
-bool LangIDMultiTrie::extendKey(uint32_t &nodeindex, uint8_t keybyte) const
-{
-   if (ignoringWhiteSpace() && keybyte == ' ')
-      return true ;
-   uint32_t idx = nodeindex ;
-#if MTRIE_BITS_PER_LEVEL == 8
-   if (extendNybble(idx,keybyte))
-#elif MTRIE_BITS_PER_LEVEL == 4
-   if (extendNybble(idx,keybyte >> 4) &&
-       extendNybble(idx,keybyte & 0x0F))
-#elif MTRIE_BITS_PER_LEVEL == 3
-   if (extendNybble(idx,(keybyte >> 6) & 0x03) &&
-       extendNybble(idx,(keybyte >> 3) & 0x07) &&
-       extendNybble(idx,keybyte & 0x07))
-#elif MTRIE_BITS_PER_LEVEL == 2
-   if (extendNybble(idx,(keybyte >> 6) & 0x03) &&
-       extendNybble(idx,(keybyte >> 4) & 0x03) &&
-       extendNybble(idx,(keybyte >> 2) & 0x03) &&
-       extendNybble(idx,keybyte & 0x03))
-#else
-#  error No code for given MTRIE_BITS_PER_LEVEL
-#endif
-      {
-      nodeindex = idx ;
-      return true ;
-      }
-   nodeindex = 0 ;
-   return false ;
-}
-
-//----------------------------------------------------------------------
-
 bool LangIDMultiTrie::enumerate(uint8_t *keybuf, unsigned maxkeylength, EnumFn *fn, void *user_data) const
 {
    if (keybuf && fn)
@@ -659,8 +573,8 @@ bool LangIDMultiTrie::enumerateChildren(uint32_t nodeindex,
       return false ;
    if (curr_keylength_bits < max_keylength_bits)
       {
-      unsigned curr_bits = curr_keylength_bits + MTRIE_BITS_PER_LEVEL ;
-      for (size_t i = 0 ; i < (1<<MTRIE_BITS_PER_LEVEL) ; i++)
+      unsigned curr_bits = curr_keylength_bits + BITS_PER_LEVEL ;
+      for (size_t i = 0 ; i < (1<<BITS_PER_LEVEL) ; i++)
 	 {
 	 uint32_t child = n->childIndex(i) ;
 	 if (child != LangIDMultiTrie::NULL_INDEX)
@@ -669,11 +583,11 @@ bool LangIDMultiTrie::enumerateChildren(uint32_t nodeindex,
 	    if (childnode)
 	       {
 	       unsigned byte = curr_keylength_bits / 8 ;
-	       unsigned shift = LEVEL_SIZE - (curr_keylength_bits%8) - MTRIE_BITS_PER_LEVEL ;
-#if MTRIE_BITS_PER_LEVEL == 3
-	       if (shift == 0) curr_bits = curr_keylength_bits + MTRIE_BITS_PER_LEVEL - 1 ;
+	       unsigned shift = LEVEL_SIZE - (curr_keylength_bits%8) - BITS_PER_LEVEL ;
+#if BITS_PER_LEVEL == 3
+	       if (shift == 0) curr_bits = curr_keylength_bits + BITS_PER_LEVEL - 1 ;
 #endif
-	       unsigned mask = (((1<<MTRIE_BITS_PER_LEVEL)-1) << shift) ;
+	       unsigned mask = (((1<<BITS_PER_LEVEL)-1) << shift) ;
 	       keybuf[byte] &= ~mask ;
 	       keybuf[byte] |= (i << shift) ;
 	       if (!enumerateChildren(child,keybuf,max_keylength_bits,curr_bits,fn,user_data))
@@ -716,8 +630,8 @@ bool LangIDMultiTrie::enumerateFullByteNodes(uint32_t nodeindex, uint32_t &count
 {
    if (keylen_bits % 8 == 0)
       count++ ;
-   keylen_bits = keylen_bits + MTRIE_BITS_PER_LEVEL ;
-#if MTRIE_BITS_PER_LEVEL == 3
+   keylen_bits = keylen_bits + BITS_PER_LEVEL ;
+#if BITS_PER_LEVEL == 3
    if (keylen_bits % 8 == 1) keylen_bits-- ;
 #endif
    auto n = node(nodeindex) ;
@@ -827,7 +741,7 @@ LangIDMultiTrie *LangIDMultiTrie::load(Fr::CFile& f)
       return nullptr ;
       }
    unsigned char bits ;
-   if (!f.readValue(&bits) || bits != MTRIE_BITS_PER_LEVEL)
+   if (!f.readValue(&bits) || bits != BITS_PER_LEVEL)
       {
       // error: wrong type of trie
       return nullptr ;
@@ -886,7 +800,7 @@ bool LangIDMultiTrie::writeHeader(Fr::CFile& f) const
       return false; 
    // follow with the format version number
    unsigned char version = MULTITRIE_FORMAT_VERSION ;
-   unsigned char bits = MTRIE_BITS_PER_LEVEL ;
+   unsigned char bits = BITS_PER_LEVEL ;
    if (!f.writeValue(version) ||
       !f.writeValue(bits))
       return false ;
