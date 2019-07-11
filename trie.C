@@ -457,61 +457,6 @@ bool NybbleTrieNode::enumerateTerminalNodes(const NybbleTrie *trie,
    return true ;
 }
 
-//----------------------------------------------------------------------
-
-bool NybbleTrieNode::enumerateFullNodes(const NybbleTrie *trie,
-					uint32_t &count,
-					uint32_t min_freq) const
-{
-   count++ ;
-   if (this->allChildrenAreTerminals(trie,min_freq))
-      return true ;
-   for (size_t i1 = 0 ; i1 < lengthof(m_children) ; i1++)
-      {
-      if (m_children[i1] == NybbleTrie::NULL_INDEX) continue ;
-      NybbleTrieNode *child1 = trie->node(m_children[i1]) ;
-#if BITS_PER_LEVEL < 8
-      if (!child1)
-	 continue ;
-      for (size_t i2 = 0 ; i2 < lengthof(m_children) ; i2++)
-	 {
-	 if (child1->m_children[i2] == NybbleTrie::NULL_INDEX) continue ;
-	 NybbleTrieNode *child2 = trie->node(child1->m_children[i2]) ;
-#if BITS_PER_LEVEL < 4
-	 if (!child2)
-	    continue ;
-	 for (size_t i3 = 0 ; i3 < lengthof(m_children) ; i3++)
-	    {
-	    if (child2->m_children[i3] == NybbleTrie::NULL_INDEX) continue ;
-	    NybbleTrieNode *child3 = trie->node(child2->m_children[i3]) ;
-#if BITS_PER_LEVEL == 2
-	    if (!child3)
-	       continue ;
-	    for (size_t i4 = 0 ; i4 < lengthof(m_children) ; i4++)
-	       {
-	       if (child3->m_children[i4] == NybbleTrie::NULL_INDEX) continue ;
-	       NybbleTrieNode *child4 = trie->node(child3->m_children[i4]) ;
-	       if (child4 && child4->frequency() >= min_freq)
-		  child4->enumerateFullNodes(trie,count,min_freq) ;
-	       }
-#else // BITS_PER_LEVEL > 2
-	    if (child3 && child3->frequency() >= min_freq)
-	       child3->enumerateFullNodes(trie,count,min_freq) ;
-#endif
-	    }
-#else // BITS_PER_LEVEL >= 4
-	 if (child2 && child2->frequency() >= min_freq)
-	    child2->enumerateFullNodes(trie,count,min_freq) ;
-#endif
-	 }
-#else // BITS_PER_LEVEL == 8
-      if (child1 && child1->frequency() >= min_freq)
-	 child1->enumerateFullNodes(trie,count,min_freq) ;
-#endif
-      }
-   return true ;
-}
-
 /************************************************************************/
 /*	Methods for class NybbleTrie					*/
 /************************************************************************/
@@ -1085,14 +1030,6 @@ uint32_t NybbleTrie::numTerminalNodes(uint32_t min_freq) const
 {
    uint32_t count = 0 ;
    return (m_nodes[0]->enumerateTerminalNodes(this,0,count,min_freq) ? count : 0) ;
-}
-
-//----------------------------------------------------------------------
-
-uint32_t NybbleTrie::numFullNodes(uint32_t min_freq) const
-{
-   uint32_t count = 1 ; // root node is always a full node
-   return (m_nodes[0]->enumerateFullNodes(this,count,min_freq) ? count : 1) ;
 }
 
 //----------------------------------------------------------------------

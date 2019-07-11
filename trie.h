@@ -86,8 +86,6 @@ class NybbleTrieNode
       unsigned numExtensions(const NybbleTrie *trie, uint32_t min_freq = 0) const ;
       bool allChildrenAreTerminals(const NybbleTrie *trie) const ;
       bool allChildrenAreTerminals(const NybbleTrie *trie, uint32_t min_freq) const ;
-      bool enumerateFullNodes(const NybbleTrie *trie, uint32_t &count,
-			      uint32_t min_freq = 0) const ;
       bool enumerateTerminalNodes(const NybbleTrie *trie,
 				  unsigned keylen_bits, uint32_t &count,
 				  uint32_t min_freq = 0) const ;
@@ -164,7 +162,6 @@ class NybbleTrie
       bool scaleFrequencies(uint64_t total_count) ;
       bool scaleFrequencies(uint64_t total_count, double power, double log_power) ;
       uint32_t numTerminalNodes(uint32_t min_freq = 0) const ;
-      uint32_t numFullNodes(uint32_t min_freq = 0) const ;
 
       // I/O
       static NybbleTrie *load(Fr::CFile& f) ;
