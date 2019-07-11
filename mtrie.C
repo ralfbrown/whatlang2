@@ -42,11 +42,6 @@ using namespace std ;
 
 #define BUCKET_SIZE 65536	// must be power of 2
 
-// we want to store percentages for entries in the trie in 32 bits.  Since
-//   it is very unlikely that any ngram in the trie will have a probability
-//   greater than 4.2%, scale the percentage by a factor of one billion.
-#define SCALE_FACTOR 1000000000L
-
 #define MULTITRIE_SIGNATURE "MulTrie\0"
 #define MULTITRIE_FORMAT_VERSION 1
 
@@ -81,26 +76,8 @@ uint32_t MultiTrieFrequency::s_curr_alloc = 0 ;
 
 //----------------------------------------------------------------------
 
-#ifndef round_up
-inline uint32_t round_up(uint32_t value, uint32_t granularity)
-{
-   return granularity * ((value + granularity - 1) / granularity) ;
-}
-#endif
-
-//----------------------------------------------------------------------
-
-static uint32_t scaled_frequency(uint32_t raw_freq, uint64_t total_count)
-{
-   double percent = 100.0 * raw_freq / (double)total_count ;
-   // avoid overflow by truncating excessively high percentages to the
-   //   largest value representable in a uint32_t
-   if (percent > ((uint32_t)~0) / (double)SCALE_FACTOR)
-      return (uint32_t)~0 ;
-   uint32_t scaled = (uint32_t)(SCALE_FACTOR * percent + 0.5) ;
-   // avoid truncation to zero for very low percentages
-   return (percent > 0.0 && scaled == 0) ? 1 : scaled ;
-}
+// defined in trie.C
+uint32_t scaled_frequency(uint32_t raw_freq, uint64_t total_count) ;
 
 /************************************************************************/
 /*	Methods for class MultiTrieFrequency				*/
@@ -467,16 +444,7 @@ bool LangIDMultiTrie::loadWords(const char *filename, uint32_t langID, bool verb
 bool LangIDMultiTrie::insert(const uint8_t *key, unsigned keylength,
 		       uint32_t langID, uint32_t frequency, bool stopgram)
 {
-   if (keylength > m_maxkeylen)
-      m_maxkeylen = keylength ;
-   uint32_t cur_index = ROOT_INDEX ;
-   while (keylength > 0)
-      {
-      this->insertChild(cur_index,*key) ;
-      key++ ;
-      keylength-- ;
-      }
-   auto leaf = node(cur_index) ;
+   auto leaf = node(insertKey(key,keylength)) ;
    bool new_node = false ;
    if (leaf)
       {
@@ -560,7 +528,7 @@ bool LangIDMultiTrie::enumerate(uint8_t *keybuf, unsigned maxkeylength, EnumFn *
 
 //----------------------------------------------------------------------
 
-bool LangIDMultiTrie::enumerateChildren(uint32_t nodeindex,
+bool LangIDMultiTrie::enumerateChildren(NodeIndex nodeindex,
 				      uint8_t *keybuf,
 				      unsigned max_keylength_bits,
 				      unsigned curr_keylength_bits,
@@ -601,7 +569,7 @@ bool LangIDMultiTrie::enumerateChildren(uint32_t nodeindex,
 
 //----------------------------------------------------------------------
 
-bool LangIDMultiTrie::enumerateTerminalNodes(uint32_t nodeindex, uint32_t &count, unsigned keylen_bits) const
+bool LangIDMultiTrie::enumerateTerminalNodes(NodeIndex nodeindex, uint32_t &count, unsigned keylen_bits) const
 {
    auto n = node(nodeindex)   ;
    if (!n->hasChildren())
@@ -626,7 +594,7 @@ bool LangIDMultiTrie::enumerateTerminalNodes(uint32_t nodeindex, uint32_t &count
 
 //----------------------------------------------------------------------
 
-bool LangIDMultiTrie::enumerateFullByteNodes(uint32_t nodeindex, uint32_t &count, unsigned keylen_bits) const
+bool LangIDMultiTrie::enumerateFullByteNodes(NodeIndex nodeindex, uint32_t &count, unsigned keylen_bits) const
 {
    if (keylen_bits % 8 == 0)
       count++ ;
@@ -649,7 +617,7 @@ bool LangIDMultiTrie::enumerateFullByteNodes(uint32_t nodeindex, uint32_t &count
 
 //----------------------------------------------------------------------
 
-unsigned LangIDMultiTrie::numExtensions(uint32_t nodeindex, unsigned bits) const
+unsigned LangIDMultiTrie::numExtensions(NodeIndex nodeindex, unsigned bits) const
 {
    if (bits >= 8)
       {
@@ -668,7 +636,7 @@ unsigned LangIDMultiTrie::numExtensions(uint32_t nodeindex, unsigned bits) const
 
 //----------------------------------------------------------------------
 
-bool LangIDMultiTrie::allChildrenAreTerminals(uint32_t nodeindex, unsigned bits) const
+bool LangIDMultiTrie::allChildrenAreTerminals(NodeIndex nodeindex, unsigned bits) const
 {
    auto n = node(nodeindex) ;
    if (bits >= 8)

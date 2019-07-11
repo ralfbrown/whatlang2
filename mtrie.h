@@ -164,16 +164,16 @@ class LangIDMultiTrie : public NybbleTrie
 			       uint32_t incr = 1) ;
 
       // accessors
-      Node *node(uint32_t N) const { return static_cast<Node*>(m_nodes.item(N)) ; }
+      Node* node(NodeIndex N) const { return static_cast<Node*>(m_nodes.item(N)) ; }
       uint32_t currentLanguage() const { return m_currentlangID ; }
-      Node *findNode(const uint8_t *key, unsigned keylength) const { return node(findKey(key,keylength)) ; }
-      bool enumerate(uint8_t *keybuf, unsigned maxkeylength, EnumFn *fn, void *user_data) const ;
-      bool enumerateChildren(uint32_t nodeindex, uint8_t *keybuf, unsigned max_keylength_bits,
-			     unsigned curr_keylength_bits, EnumFn *fn, void *user_data) const ;
-      bool enumerateFullByteNodes(uint32_t nodeindex, uint32_t &count, unsigned keylen_bits = 0) const ;
-      bool enumerateTerminalNodes(uint32_t nodeindex, uint32_t &count, unsigned keylen_bits = 0) const ;
-      unsigned numExtensions(uint32_t nodeindex, unsigned = 0) const ;
-      bool allChildrenAreTerminals(uint32_t nodeindex, unsigned = 0) const ;
+      Node* findNode(const uint8_t* key, unsigned keylength) const { return node(findKey(key,keylength)) ; }
+      bool enumerate(uint8_t* keybuf, unsigned maxkeylength, EnumFn* fn, void *user_data) const ;
+      bool enumerateChildren(NodeIndex nodeindex, uint8_t* keybuf, unsigned max_keylength_bits,
+			     unsigned curr_keylength_bits, EnumFn* fn, void *user_data) const ;
+      bool enumerateFullByteNodes(NodeIndex nodeindex, uint32_t& count, unsigned keylen_bits = 0) const ;
+      bool enumerateTerminalNodes(NodeIndex nodeindex, uint32_t& count, unsigned keylen_bits = 0) const ;
+      unsigned numExtensions(NodeIndex nodeindex, unsigned = 0) const ;
+      bool allChildrenAreTerminals(NodeIndex nodeindex, unsigned = 0) const ;
       uint32_t countFreqRecords() const ;
       uint32_t numFullByteNodes() const ;
       uint32_t numTerminalNodes() const ;

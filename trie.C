@@ -362,7 +362,7 @@ NybbleTrieNode *NybbleTrie::rootNode() const
 
 //----------------------------------------------------------------------
 
-uint32_t NybbleTrie::insertNybble(uint32_t nodeindex, uint8_t nybble)
+NybbleTrie::NodeIndex NybbleTrie::insertNybble(NodeIndex nodeindex, uint8_t nybble)
 {
    auto n = node(nodeindex) ;
    return n->insertChild(nybble,this) ;
@@ -397,19 +397,26 @@ void NybbleTrie::insertChild(uint32_t &nodeindex, uint8_t keybyte)
 
 //----------------------------------------------------------------------
 
-bool NybbleTrie::insert(const uint8_t *key, unsigned keylength,
-			uint32_t frequency, bool stopgram)
+NybbleTrie::NodeIndex NybbleTrie::insertKey(const uint8_t* key, unsigned keylength)
 {
    if (keylength > m_maxkeylen)
       m_maxkeylen = keylength ;
-   uint32_t cur_index = NybbleTrie::ROOT_INDEX ;
+   auto cur_index = ROOT_INDEX ;
    while (keylength > 0)
       {
       this->insertChild(cur_index,*key) ;
       key++ ;
       keylength-- ;
       }
-   auto leaf = node(cur_index) ;
+   return cur_index ;
+}
+
+//----------------------------------------------------------------------
+
+bool NybbleTrie::insert(const uint8_t *key, unsigned keylength,
+			uint32_t frequency, bool stopgram)
+{
+   auto leaf = node(insertKey(key,keylength)) ;
    bool new_node = false ;
    if (leaf)
       {
@@ -467,9 +474,9 @@ uint32_t NybbleTrie::find(const uint8_t *key, unsigned keylength) const
 
 //----------------------------------------------------------------------
 
-uint32_t NybbleTrie::findKey(const uint8_t *key, unsigned keylength) const
+NybbleTrie::NodeIndex NybbleTrie::findKey(const uint8_t *key, unsigned keylength) const
 {
-   uint32_t cur_index = ROOT_INDEX ;
+   auto cur_index = ROOT_INDEX ;
    while (keylength > 0)
       {
       if (!extendKey(cur_index,*key))
@@ -485,7 +492,7 @@ uint32_t NybbleTrie::findKey(const uint8_t *key, unsigned keylength) const
 uint32_t NybbleTrie::increment(const uint8_t *key, unsigned keylength,
 			       uint32_t incr, bool stopgram)
 {
-   uint32_t cur_index = NybbleTrie::ROOT_INDEX ;
+   auto cur_index = ROOT_INDEX ;
    for (size_t i = 0 ; i < keylength ; i++)
       {
       if (!extendKey(cur_index,key[i]))
@@ -516,7 +523,7 @@ bool NybbleTrie::incrementExtensions(const uint8_t *key,
 				     unsigned keylength,
 				     uint32_t incr)
 {
-   uint32_t cur_index = NybbleTrie::ROOT_INDEX ;
+   auto cur_index = ROOT_INDEX ;
    // check whether the prevlength prefix is present in the trie
    for (size_t i = 0 ; i < prevlength ; i++)
       {
@@ -541,7 +548,7 @@ bool NybbleTrie::incrementExtensions(const uint8_t *key,
 
 //----------------------------------------------------------------------
 
-bool NybbleTrie::extendNybble(uint32_t &nodeindex, uint8_t nybble) const
+bool NybbleTrie::extendNybble(NodeIndex& nodeindex, uint8_t nybble) const
 {
    auto n = node(nodeindex) ;
    if (n->childPresent(nybble))
@@ -554,11 +561,11 @@ bool NybbleTrie::extendNybble(uint32_t &nodeindex, uint8_t nybble) const
 
 //----------------------------------------------------------------------
 
-bool NybbleTrie::extendKey(uint32_t &nodeindex, uint8_t keybyte) const
+bool NybbleTrie::extendKey(NodeIndex& nodeindex, uint8_t keybyte) const
 {
    if (ignoringWhiteSpace() && keybyte == ' ')
       return true ;
-   uint32_t idx = nodeindex ;
+   auto idx = nodeindex ;
 #if BITS_PER_LEVEL == 8
    if (extendNybble(idx,keybyte))
 #elif BITS_PER_LEVEL == 4
@@ -586,7 +593,7 @@ bool NybbleTrie::extendKey(uint32_t &nodeindex, uint8_t keybyte) const
 
 //----------------------------------------------------------------------
 
-bool NybbleTrie::singleChild(uint32_t nodeindex) const 
+bool NybbleTrie::singleChild(NodeIndex nodeindex) const 
 {
    auto node = this->node(nodeindex) ;
    for (size_t i = 0 ; i < 8 && node ; i += BITS_PER_LEVEL)
@@ -610,7 +617,7 @@ bool NybbleTrie::singleChild(uint32_t nodeindex) const
 
 //----------------------------------------------------------------------
 
-bool NybbleTrie::singleChildSameFreq(uint32_t nodeindex, bool allow_nonleaf, double ratio) const 
+bool NybbleTrie::singleChildSameFreq(NodeIndex nodeindex, bool allow_nonleaf, double ratio) const 
 {
    auto node = this->node(nodeindex) ;
    auto parent_freq = node->frequency() ;
@@ -638,7 +645,7 @@ bool NybbleTrie::singleChildSameFreq(uint32_t nodeindex, bool allow_nonleaf, dou
 
 //----------------------------------------------------------------------
 
-bool NybbleTrie::countTerminalNodes(uint32_t nodeindex, unsigned keylen_bits,
+bool NybbleTrie::countTerminalNodes(NodeIndex nodeindex, unsigned keylen_bits,
 				    uint32_t& count, uint32_t min_freq) const
 {
    auto node = this->node(nodeindex) ;
@@ -664,7 +671,7 @@ bool NybbleTrie::countTerminalNodes(uint32_t nodeindex, unsigned keylen_bits,
 
 //----------------------------------------------------------------------
 
-unsigned NybbleTrie::numExtensions(uint32_t nodeindex, uint32_t min_freq, unsigned bits) const
+unsigned NybbleTrie::numExtensions(NodeIndex nodeindex, uint32_t min_freq, unsigned bits) const
 {
    unsigned count = 0 ;
    auto node = this->node(nodeindex) ;
@@ -683,7 +690,7 @@ unsigned NybbleTrie::numExtensions(uint32_t nodeindex, uint32_t min_freq, unsign
 
 //----------------------------------------------------------------------
 
-bool NybbleTrie::allChildrenAreTerminals(uint32_t nodeindex, uint32_t min_freq, unsigned bits) const
+bool NybbleTrie::allChildrenAreTerminals(NodeIndex nodeindex, uint32_t min_freq, unsigned bits) const
 {
    auto node = this->node(nodeindex) ;
    if (bits >= 8)
@@ -713,7 +720,7 @@ bool NybbleTrie::enumerate(uint8_t *keybuf, unsigned maxkeylength, EnumFn *fn, v
 
 //----------------------------------------------------------------------
 
-bool NybbleTrie::enumerateChildren(uint32_t nodeindex,
+bool NybbleTrie::enumerateChildren(NodeIndex nodeindex,
 				       uint8_t *keybuf,
 				       unsigned max_keylength_bits,
 				       unsigned curr_keylength_bits,
@@ -752,7 +759,7 @@ bool NybbleTrie::enumerateChildren(uint32_t nodeindex,
 
 //----------------------------------------------------------------------
 
-static bool scale_frequency(const NybbleTrie* trie, uint32_t nodeindex,
+static bool scale_frequency(const NybbleTrie* trie, NybbleTrie::NodeIndex nodeindex,
 			    const uint8_t * /*key*/, unsigned /*keylen*/,
 			    void *user_data)
 {
@@ -782,7 +789,7 @@ class CountAndPower
 	 { count = c ; power = p ; log_power = l ; }
    } ;
 
-static bool scale_frequency_smoothed(const NybbleTrie* trie, uint32_t nodeindex,
+static bool scale_frequency_smoothed(const NybbleTrie* trie, NybbleTrie::NodeIndex nodeindex,
 				     const uint8_t * /*key*/,
 				     unsigned /*keylen*/,
 				     void *user_data)

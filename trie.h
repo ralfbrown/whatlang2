@@ -100,24 +100,26 @@ class NybbleTrieNode
 class NybbleTrie
    {
    public:
-      static constexpr uint32_t ROOT_INDEX = 0U ;
-      static constexpr uint32_t NULL_INDEX = 0U ;
-      static constexpr uint32_t INVALID_INDEX = (uint32_t)~0 ;
+      typedef uint32_t NodeIndex ;
+      static constexpr NodeIndex ROOT_INDEX = 0U ;
+      static constexpr NodeIndex NULL_INDEX = 0U ;
+      static constexpr NodeIndex INVALID_INDEX = (uint32_t)~0 ;
       typedef NybbleTrieNode Node ;
-      typedef bool EnumFn(const NybbleTrie *trie, uint32_t index, const uint8_t *key, unsigned keylen,
+      typedef bool EnumFn(const NybbleTrie *trie, NodeIndex index, const uint8_t *key, unsigned keylen,
 	                  void *user_data) ;
    public:
-      NybbleTrie(uint32_t capacity = 0) ;
+      NybbleTrie(NodeIndex capacity = 0) ;
       NybbleTrie(const char *filename, bool verbose) ;
       ~NybbleTrie() = default ;
 
       bool loadWords(const char *filename, bool verbose) ;
-      uint32_t allocateNode() { return (uint32_t)m_nodes.alloc() ; }
+      NodeIndex allocateNode() { return (NodeIndex)m_nodes.alloc() ; }
 
       // modifiers
       void setUserData(void *ud) { m_userdata = ud ; }
       void ignoreWhiteSpace(bool ignore = true) { m_ignorewhitespace = ignore ; }
       void addTokenCount(uint32_t incr = 1) { m_totaltokens += incr ; }
+      NodeIndex insertKey(const uint8_t* key, unsigned keylength) ;
       bool insert(const uint8_t *key, unsigned keylength,
 		  uint32_t frequency, bool stopgram) ;
       bool insertMax(const uint8_t *key, unsigned keylength,
@@ -135,21 +137,21 @@ class NybbleTrie
       uint32_t totalTokens() const { return m_totaltokens ; }
       unsigned longestKey() const { return m_maxkeylen ; }
       bool ignoringWhiteSpace() const { return m_ignorewhitespace ; }
-      Node *node(uint32_t N) const { return m_nodes.item(N) ; }
-      Node *rootNode() const ;
-      uint32_t findKey(const uint8_t *key, unsigned keylength) const ;
-      Node *findNode(const uint8_t *key, unsigned keylength) const { return node(findKey(key,keylength)) ; }
-      uint32_t find(const uint8_t *key, unsigned keylength) const ;
-      bool extendKey(uint32_t &nodeindex, uint8_t keybyte) const ;
-      bool enumerate(uint8_t *keybuf, unsigned maxkeylength, EnumFn *fn, void *user_data) const ;
-      bool enumerateChildren(uint32_t nodeindex, uint8_t *keybuf, unsigned max_keylength_bits,
+      Node* node(NodeIndex N) const { return m_nodes.item(N) ; }
+      Node* rootNode() const ;
+      NodeIndex findKey(const uint8_t* key, unsigned keylength) const ;
+      Node* findNode(const uint8_t* key, unsigned keylength) const { return node(findKey(key,keylength)) ; }
+      uint32_t find(const uint8_t* key, unsigned keylength) const ;
+      bool extendKey(NodeIndex& nodeindex, uint8_t keybyte) const ;
+      bool enumerate(uint8_t* keybuf, unsigned maxkeylength, EnumFn *fn, void *user_data) const ;
+      bool enumerateChildren(NodeIndex nodeindex, uint8_t *keybuf, unsigned max_keylength_bits,
 			     unsigned curr_keylength_bits, EnumFn *fn, void *user_data) const ;
-      bool countTerminalNodes(uint32_t nodeindex, unsigned keylen_bits, uint32_t &count,
+      bool countTerminalNodes(NodeIndex nodeindex, unsigned keylen_bits, uint32_t &count,
 			      uint32_t min_freq = 0) const ;
-      unsigned numExtensions(uint32_t nodeindex, uint32_t min_freq = 0, unsigned = 0) const ;
-      bool allChildrenAreTerminals(uint32_t nodeindex, uint32_t min_freq = 0, unsigned = 0) const ;
-      bool singleChild(uint32_t nodeindex) const ;
-      bool singleChildSameFreq(uint32_t nodeindex, bool allow_nonleaf, double ratio) const ;
+      unsigned numExtensions(NodeIndex nodeindex, uint32_t min_freq = 0, unsigned = 0) const ;
+      bool allChildrenAreTerminals(NodeIndex nodeindex, uint32_t min_freq = 0, unsigned = 0) const ;
+      bool singleChild(NodeIndex nodeindex) const ;
+      bool singleChildSameFreq(NodeIndex nodeindex, bool allow_nonleaf, double ratio) const ;
 
       bool scaleFrequencies(uint64_t total_count) ;
       bool scaleFrequencies(uint64_t total_count, double power, double log_power) ;
@@ -160,10 +162,10 @@ class NybbleTrie
       static NybbleTrie *load(const char *filename) ;
       bool write(Fr::CFile& f) const ;
    protected:
-      uint32_t insertNybble(uint32_t nodeindex, uint8_t nybble) ;
+      NodeIndex insertNybble(NodeIndex nodeindex, uint8_t nybble) ;
    private:
       void init(uint32_t capacity) ;
-      bool extendNybble(uint32_t &nodeindex, uint8_t nybble) const ;
+      bool extendNybble(NodeIndex& nodeindex, uint8_t nybble) const ;
    protected:
       Fr::ItemPool<Node> m_nodes ;
       void	       *m_userdata ;
