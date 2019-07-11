@@ -467,13 +467,12 @@ static bool collect_language_ngrams_packed(const PackedTrieNode *node,
 					   const uint8_t *key,
 					   unsigned keylen, void *user_data)
 {
-   StopGramInfo *stop_gram_info = (StopGramInfo*)user_data ;
+   auto stop_gram_info = reinterpret_cast<StopGramInfo*>(user_data) ;
    assert(stop_gram_info != nullptr) ;
    assert(node != nullptr) ;
    if (node->leaf())
       {
-      const PackedTrieFreq *freq
-	 = node->frequencies(stop_gram_info->freqBaseAddress()) ;
+      auto freq = node->frequencies(stop_gram_info->freqBaseAddress()) ;
       // the following is the smallest value which can be represented by
       //   the bitfields in PackedTrieFreq; anything less than that will
       //   round to zero unless smoothed

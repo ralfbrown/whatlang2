@@ -83,7 +83,7 @@ class NybbleTrieNode
       void incrFrequency(uint32_t incr = 1) { m_frequency += incr ; }
       void scaleFrequency(uint64_t total_count) ;
       void scaleFrequency(uint64_t total_count, double power, double log_power) ;
-      bool insertChild(unsigned int N, NybbleTrie *trie) ;
+      uint32_t insertChild(unsigned int N, NybbleTrie *trie) ;
 
       // I/O
       static NybbleTrieNode *read(Fr::CFile& f) ;

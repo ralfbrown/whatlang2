@@ -217,7 +217,7 @@ class MultiTrieNode : public NybbleTrieNode
       // modifiers
       void setFrequency(uint32_t ID, uint32_t f, bool stopgram) ;
       bool setFrequencies(MultiTrieFrequency *freqs) ;
-      bool insertChild(unsigned int N, LangIDMultiTrie *trie) ;
+      uint32_t insertChild(unsigned int N, LangIDMultiTrie *trie) ;
 
       // I/O
       bool load(Fr::CFile& f) ;

@@ -344,18 +344,23 @@ bool MultiTrieNode::setFrequencies(MultiTrieFrequency *freqs)
 
 //----------------------------------------------------------------------
 
-bool MultiTrieNode::insertChild(unsigned int N, LangIDMultiTrie *trie)
+uint32_t MultiTrieNode::insertChild(unsigned int N, LangIDMultiTrie *trie)
 {
-   if (N < lengthof(m_children) && !childPresent(N))
+   if (N < lengthof(m_children))
       {
-      uint32_t new_index = trie->allocateNode() ;
-      if (new_index)
+      if (childPresent(N))
+	 return childIndex(N) ;
+      else
 	 {
-	 m_children[N] = new_index ;
-	 return true ;
+	 uint32_t new_index = trie->allocateNode() ;
+	 if (new_index)
+	    {
+	    m_children[N] = new_index ;
+	    return new_index ;
+	    }
 	 }
       }
-   return false ;
+   return (uint32_t)~0 ;
 }
 
 //----------------------------------------------------------------------
@@ -479,11 +484,7 @@ MultiTrieNode *LangIDMultiTrie::rootNode() const
 uint32_t LangIDMultiTrie::insertNybble(uint32_t nodeindex, uint8_t nybble)
 {
    auto n = node(nodeindex) ;
-   if (n->childPresent(nybble))
-      return n->childIndex(nybble) ;
-   if (n->insertChild(nybble,this))
-      return n->childIndex(nybble) ;
-   return (uint32_t)~0 ;
+   return n->insertChild(nybble,this) ;
 }
 
 //----------------------------------------------------------------------
