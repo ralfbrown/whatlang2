@@ -71,13 +71,7 @@ using namespace std ;
 /************************************************************************/
 /************************************************************************/
 
-class PackedTrieNode ;
-typedef bool PackedTrieEnumFn(const PackedTrieNode *node, const uint8_t *key,
-			      unsigned keylen, void *user_data) ;
-
-class MultiTrieNode ;
 class LangIDMultiTrie ;
-class LangIDPackedMultiTrie ;
 
 //----------------------------------------------------------------------
 
@@ -137,7 +131,7 @@ class PackedTrieFreq
 	 { return (m_freqinfo.load() & PACKED_TRIE_LASTENTRY) != 0 ; }
       bool isStopgram() const
 	 { return (m_freqinfo.load() & PACKED_TRIE_STOPGRAM) != 0 ; }
-      const PackedTrieFreq *next() const { return isLast() ? 0 : (this + 1) ; }
+      const PackedTrieFreq *next() const { return isLast() ? nullptr : (this + 1) ; }
       static bool dataMappingInitialized() { return s_value_map_initialized ; }
 
       // manipulators
@@ -153,70 +147,55 @@ class PackedTrieFreq
 
 //----------------------------------------------------------------------
 
-class PackedTrieNode
-   {
-   public:
-      static constexpr uint32_t INVALID_FREQ = (uint32_t)~0 ;
-
-   public:
-      void *operator new(size_t, void *where) { return where ; }
-      PackedTrieNode() ;
-      ~PackedTrieNode() = default ;
-
-      // accessors
-      bool leaf() const
-         { return m_frequency_info.load() != INVALID_FREQ ; }
-      bool childPresent(unsigned int N) const ;
-      uint32_t firstChild() const { return m_firstchild.load() ; }
-      uint32_t childIndex(unsigned int N) const ;
-      uint32_t childIndexIfPresent(uint8_t N) const ;
-      uint32_t childIndexIfPresent(unsigned int N) const ;
-      double probability(const PackedTrieFreq *base, uint32_t ID = 0) const ;
-      const PackedTrieFreq *frequencies(const PackedTrieFreq *base) const
-         { return base + m_frequency_info.load() ; }
-
-      // modifiers
-      void setFirstChild(uint32_t index) { m_firstchild.store(index) ; }
-      void setFrequencies(uint32_t index) { m_frequency_info.store(index) ; }
-      void setChild(unsigned N) ;
-      void setPopCounts() ;
-
-   private:
-      Fr::UInt32 m_frequency_info ;
-      Fr::UInt32 m_firstchild ;
-#define LENGTHOF_M_CHILDREN ((1<<PTRIE_BITS_PER_LEVEL) / (8*sizeof(Fr::UInt32)))
-      Fr::UInt32 m_children[LENGTHOF_M_CHILDREN] ;
-      uint8_t	 m_popcounts[LENGTHOF_M_CHILDREN] ;
-#undef LENGTHOF_M_CHILDREN
-   } ;
-
-//----------------------------------------------------------------------
-
 class PackedTrieTerminalNode
    {
    public:
       static constexpr uint32_t NULL_INDEX = 0U ;
       static constexpr uint32_t INVALID_FREQ = (uint32_t)~0 ;
-   private:
-      Fr::UInt32 m_frequency_info ;
    public:
       void *operator new(size_t, void *where) { return where ; }
       PackedTrieTerminalNode() { m_frequency_info.store(INVALID_FREQ); }
       ~PackedTrieTerminalNode() = default ;
 
       // accessors
-      bool leaf() const { return true ; }
-      bool childPresent(unsigned int /*N*/) const { return false ; }
-      uint32_t firstChild() const { return 0 ; }
-      uint32_t childIndex(unsigned int /*N*/) const { return NULL_INDEX ; }
-      uint32_t childIndexIfPresent(unsigned int /*N*/) const { return NULL_INDEX ; }
-      double probability(const PackedTrieFreq *base, uint32_t ID = 0) const ;
+      bool leaf() const { return m_frequency_info.load() != INVALID_FREQ ; }
       const PackedTrieFreq *frequencies(const PackedTrieFreq *base) const
          { return base + m_frequency_info.load() ; }
 
       // modifiers
       void setFrequencies(uint32_t index)
 	 { m_frequency_info.store(index) ; }
+   protected:
+      Fr::UInt32 m_frequency_info ;
+   } ;
+
+//----------------------------------------------------------------------
+
+class PackedTrieNode : public PackedTrieTerminalNode
+   {
+   public:
+      void *operator new(size_t, void *where) { return where ; }
+      PackedTrieNode() ;
+      ~PackedTrieNode() = default ;
+
+      // accessors
+      bool childPresent(unsigned int N) const ;
+      uint32_t firstChild() const { return m_firstchild.load() ; }
+      uint32_t childIndex(unsigned int N) const ;
+      uint32_t childIndexIfPresent(uint8_t N) const ;
+      uint32_t childIndexIfPresent(unsigned int N) const ;
+
+      // modifiers
+      void setFirstChild(uint32_t index) { m_firstchild.store(index) ; }
+      void setChild(unsigned N) ;
+      void setPopCounts() ;
+
+   private:
+      Fr::UInt32 m_firstchild ;
+#define LENGTHOF_M_CHILDREN ((1<<PTRIE_BITS_PER_LEVEL) / (8*sizeof(Fr::UInt32)))
+      Fr::UInt32 m_children[LENGTHOF_M_CHILDREN] ;
+      uint8_t	 m_popcounts[LENGTHOF_M_CHILDREN] ;
+#undef LENGTHOF_M_CHILDREN
    } ;
 
 //----------------------------------------------------------------------
@@ -234,6 +213,8 @@ class LangIDPackedMultiTrie // : public Fr::PackedMultiTrie<...>
       static constexpr uint32_t NULL_INDEX = 0U ;
       static constexpr uint32_t ROOT_INDEX = 0U ;
       static constexpr uint32_t INVALID_FREQ = (uint32_t)~0 ;
+      typedef bool EnumFn(const PackedTrieNode *node, const uint8_t *key, unsigned keylen, void *user_data) ;
+
    public:
       LangIDPackedMultiTrie() { init() ; }
       LangIDPackedMultiTrie(const LangIDMultiTrie *trie) ;
@@ -248,7 +229,7 @@ class LangIDPackedMultiTrie // : public Fr::PackedMultiTrie<...>
 
       // accessors
       bool good() const
-	 { return (m_nodes != 0) && (m_freq != 0) && m_size > 0 ; }
+	 { return (m_nodes != nullptr) && (m_freq != nullptr) && m_size > 0 ; }
       bool terminalNode(const PackedTrieNode *n) const
 	 { return (n < m_nodes) || (n >= m_nodes + m_size) ; }
       uint32_t size() const { return m_size ; }
@@ -271,12 +252,11 @@ class LangIDPackedMultiTrie // : public Fr::PackedMultiTrie<...>
       bool extendKey(uint32_t &nodeindex, uint8_t keybyte) const ;
       uint32_t extendKey(uint8_t keybyte, uint32_t nodeindex) const ;
       bool enumerate(uint8_t *keybuf, unsigned maxkeylength,
-		     PackedTrieEnumFn *fn, void *user_data) const ;
+		     EnumFn *fn, void *user_data) const ;
       bool enumerateChildren(uint32_t nodeindex,
 			     uint8_t *keybuf, unsigned max_keylength_bits,
 			     unsigned curr_keylength_bits,
-			     PackedTrieEnumFn *fn,
-			     void *user_data) const ;
+			     EnumFn *fn, void *user_data) const ;
 
       // I/O
       static LangIDPackedMultiTrie *load(Fr::CFile& f, const char *filename) ;

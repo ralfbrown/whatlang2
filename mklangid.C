@@ -1875,7 +1875,7 @@ static bool load_frequencies(Fr::CFile& f, NybbleTrie *ngrams,
 	 }
       else if (first_line && strncasecmp(buffer,"TotalCount:",11) == 0)
 	 {
-	 total_bytes = strtoul(buffer+11,0,0) ;
+	 total_bytes = strtoul(buffer+11,nullptr,0) ;
 	 if (total_bytes > 0)
 	    have_total_bytes = true ;
 	 }
@@ -2291,7 +2291,7 @@ static bool cluster_models_by_charset(LanguageIdentifier *clusterdb,
       }
    save_database(cluster_dbfile) ;
    language_identifier = ident ;
-   Fr::Free(model_sizes) ; model_sizes = 0 ;
+   Fr::Free(model_sizes) ; model_sizes = nullptr ;
    Fr::Free(encodings) ;
    Fr::Free(enc_info) ;
    return true ;
@@ -2357,7 +2357,7 @@ static bool compute_ngrams(const char **filelist, unsigned num_files,
       return false ;
       }
    BigramCounts *bi_counts = nullptr ;
-   BigramCounts **bigram_ptr = omit_bigrams ? 0 : &bi_counts ;
+   BigramCounts **bigram_ptr = omit_bigrams ? nullptr : &bi_counts ;
    total_bytes = count_trigrams(filelist,num_files,*counts,
 				skip_newlines,aligned,bigram_ptr) ;
    unsigned top_K = set_oversampling(topK,ABSOLUTE_MIN_LENGTH,minimum_length,
@@ -2817,12 +2817,12 @@ static int real_main(int argc, const char **argv)
       }
    if (argc < 2)
       {
-      usage(argv0,0) ;
+      usage(argv0,nullptr) ;
       return 1 ;
       }
    language_identifier = load_language_database(database_file,"",true) ;
    bool success = false ;
-   LanguageID lang_info("en","US","utf-8",0) ;
+   LanguageID lang_info("en","US","utf-8",nullptr) ;
    while (argc > 1)
       {
       if (process_argument_group(argc,argv,lang_info,no_save,argv0))

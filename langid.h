@@ -162,8 +162,7 @@ class BigramCounts
       ~BigramCounts() {}
 
       // accessors
-      uint32_t count(uint8_t c1, uint8_t c2) const
-	 { return m_counts[(c1 << 8) + c2] ; }
+      uint32_t count(uint8_t c1, uint8_t c2) const { return m_counts[(c1 << 8) + c2] ; }
       uint64_t totalCount() const { return m_total ; }
       double probability(uint8_t c1, uint8_t c2) const
 	 { return this->count(c1,c2) / (double)this->totalCount() ; }
@@ -392,7 +391,7 @@ class LanguageIdentifier
       const char *languageEncoding(size_t N) const ;
       const char *languageSource(size_t N) const ;
       const LanguageID *languageInfo(size_t N) const
-	 { return N < numLanguages() ? &m_langinfo[N] : 0 ; }
+	 { return N < numLanguages() ? &m_langinfo[N] : nullptr ; }
       uint64_t trainingBytes(size_t N) const
 	 { return N < numLanguages() ? m_langinfo[N].trainingBytes() : 0 ; }
       unsigned languageNumber(const LanguageID *lang_info) const ;

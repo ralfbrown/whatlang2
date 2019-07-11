@@ -262,7 +262,7 @@ static const char* locate_newline(const char *buf, int buflen, LineMode line_mod
    if (line_mode == LM_8bit)
       {
       const char *newline = (const char*)memchr(buf,'\n',buflen) ;
-      return newline ? newline + 1 : 0 ;
+      return newline ? newline + 1 : nullptr ;
       }
    else if (line_mode == LM_16bigendian)
       {
@@ -464,7 +464,7 @@ int main(int argc, char **argv)
 	    topN = atoi(argv[1]+2) ;
 	    break ;
 	 case 'r':
-	    cutoff_ratio = strtod(argv[1]+2,0) ;
+	    cutoff_ratio = strtod(argv[1]+2,nullptr) ;
 	    break ;
 	 case 's':
 	    separate_sources = true ;

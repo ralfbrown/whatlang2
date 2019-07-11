@@ -83,7 +83,7 @@ class MultiTrieFrequency
       uint32_t languageID() const { return m_langID & LID_LANGID_MASK ; }
       bool isStopgram() const { return (m_langID & LID_STOPGRAM_MASK) != 0 ; }
       static MultiTrieFrequency *getAddress(uint32_t index)
-         { return (index == INVALID_FREQ) ? 0 : baseAddress() + index ; }
+         { return (index == INVALID_FREQ) ? nullptr : baseAddress() + index ; }
       static uint32_t getIndex(MultiTrieFrequency *f)
          { return f ? (uint32_t)(f - baseAddress()) : INVALID_FREQ ; }
       MultiTrieFrequency *next() const { return getAddress(m_next) ; }

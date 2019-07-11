@@ -183,9 +183,8 @@ bool PackedTrieFreq::writeDataMapping(Fr::CFile& f)
 
 PackedTrieNode::PackedTrieNode()
 {
-   m_frequency_info.store(INVALID_FREQ) ;
    m_firstchild.store(0U) ;
-   memset(m_children,'\0',sizeof(m_children)) ;
+   std::fill_n(m_children,lengthof(m_children),NULL_INDEX) ;
    return ;
 }
 
@@ -242,22 +241,6 @@ uint32_t PackedTrieNode::childIndexIfPresent(unsigned int N) const
    mask-- ;
    children &= mask ;
    return (firstChild() + m_popcounts[N/32] + Fr::popcount(children)) ;
-}
-
-//----------------------------------------------------------------------
-
-double PackedTrieNode::probability(const PackedTrieFreq *base,
-				   uint32_t langID) const
-{
-   const PackedTrieFreq *freq = base + m_frequency_info.load() ;
-   for ( ; ; freq++)
-      {
-      if (freq->languageID() == langID)
-	 return freq->probability() ;
-      if (freq->isLast())
-	 break ;
-      }
-   return 0 ;
 }
 
 //----------------------------------------------------------------------
@@ -402,7 +385,7 @@ void LangIDPackedMultiTrie::init()
    m_fmap = nullptr ;
    m_nodes = nullptr ;
    m_terminals = nullptr ;
-   m_freq = 0 ;
+   m_freq = nullptr ;
    m_size = 0 ;
    m_used = 0 ;
    m_numterminals = 0 ;
@@ -707,8 +690,7 @@ uint32_t LangIDPackedMultiTrie::extendKey(uint8_t keybyte, uint32_t nodeindex) c
 
 //----------------------------------------------------------------------
 
-bool LangIDPackedMultiTrie::enumerate(uint8_t *keybuf, unsigned maxkeylength,
-				PackedTrieEnumFn *fn, void *user_data) const
+bool LangIDPackedMultiTrie::enumerate(uint8_t *keybuf, unsigned maxkeylength, EnumFn *fn, void *user_data) const
 {
    if (keybuf && fn && m_nodes && m_nodes[ROOT_INDEX].firstChild())
       {
@@ -724,8 +706,7 @@ bool LangIDPackedMultiTrie::enumerateChildren(uint32_t nodeindex,
 				       uint8_t *keybuf,
 				       unsigned max_keylength_bits,
 				       unsigned curr_keylength_bits,
-				       PackedTrieEnumFn *fn,
-				       void *user_data) const
+				       EnumFn *fn, void *user_data) const
 {
    auto n = node(nodeindex) ;
    if (n->leaf() && !fn(n,keybuf,curr_keylength_bits/8,user_data))
@@ -844,7 +825,7 @@ static bool dump_ngram(const PackedTrieNode *node, const uint8_t *key,
       f.printf("   ") ;
       write_escaped_key(f,key,keylen) ;
       f.printf("  ::") ;
-      const PackedTrieFreq *freq = node->frequencies(base_frequency) ;
+      auto freq = node->frequencies(base_frequency) ;
       for ( ; freq ; freq++)
 	 {
 	 f.printf(" %lu=%g",(unsigned long)freq->languageID(),freq->probability()) ;
@@ -880,7 +861,7 @@ static bool add_ngram(const PackedTrieNode *node, const uint8_t *key,
    //   for each language ID, but we only use this during training so
    //   speed is not critical
    auto trie = (LangIDMultiTrie*)user_data ;
-   const PackedTrieFreq *frequencies = node->frequencies(frequency_base) ;
+   auto frequencies = node->frequencies(frequency_base) ;
    if (frequencies)
       {
       for ( ; frequencies < frequency_end ; frequencies++)

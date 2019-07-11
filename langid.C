@@ -1928,7 +1928,7 @@ LanguageScores *LanguageIdentifier::identify(const char *buffer,
    if (!buffer || !buflen || !m_langdata)
       return nullptr ;
    auto scores = new LanguageScores(numLanguages()) ;
-   const uint8_t *align = enforce_alignment ? m_alignments : 0 ;
+   const uint8_t *align = enforce_alignment ? m_alignments : nullptr ;
    if (!identify(scores,buffer,buflen,align,ignore_whitespace,
 		 apply_stop_grams,0))
       {
@@ -1958,7 +1958,7 @@ LanguageScores *LanguageIdentifier::identify(LanguageScores *scores,
       freeScores(scores) ;
       scores = new LanguageScores(numLanguages()) ;
       }
-   const uint8_t *align = enforce_alignment ? m_alignments : 0 ;
+   const uint8_t *align = enforce_alignment ? m_alignments : nullptr ;
    if (!identify(scores,buffer,buflen,align,ignore_whitespace,
 		 apply_stop_grams,0))
       {
@@ -2004,12 +2004,11 @@ void LanguageIdentifier::freeScores(LanguageScores *scores)
 static bool cosine_term(const PackedTrieNode *node, const uint8_t *,
 			unsigned /*keylen*/, void *user_data)
 {
-   WeightedLanguageScores *scores = (WeightedLanguageScores*)user_data ;
+   auto scores = (WeightedLanguageScores*)user_data ;
    double lang1prob = 0.0 ;
-   const PackedTrieFreq *frequencies
-      = node->frequencies((PackedTrieFreq*)scores->userData()) ;
+   auto frequencies = node->frequencies((PackedTrieFreq*)scores->userData()) ;
    unsigned langid = scores->activeLanguage() ;
-   for (const PackedTrieFreq *freq = frequencies ; freq ; freq = freq->next())
+   for (auto freq = frequencies ; freq ; freq = freq->next())
       {
       if (freq->languageID() == langid)
 	 {
@@ -2018,7 +2017,7 @@ static bool cosine_term(const PackedTrieNode *node, const uint8_t *,
 	 break ;
 	 }
       }
-   for (const PackedTrieFreq *freq = frequencies ; freq ; freq = freq->next())
+   for (auto freq = frequencies ; freq ; freq = freq->next())
       {
       unsigned lang2 = freq->languageID() ;
       if (!freq->isStopgram())
@@ -2432,7 +2431,7 @@ void unload_language_database(LanguageIdentifier *id)
    if (id->charsetIdentifier() != id)
       {
       delete id->charsetIdentifier() ;
-      id->charsetIdentifier(0) ;
+      id->charsetIdentifier(nullptr) ;
       }
    delete id ;
    return ;
