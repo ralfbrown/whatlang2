@@ -136,7 +136,6 @@ ZIPNAME=langident-$(RELEASE).zip
 endif
 
 WARN=-Wall -Wextra -Wno-deprecated -Wshadow -Wcast-align -Wmissing-noreturn -Wmissing-format-attribute
-WARN += -Wzero-as-null-pointer-constant
 #WARN += -Wunused-result (not on Doha)
 #WARN += -Wno-multichar -Wpacked -Wdisabled-optimization -Wpadded
 

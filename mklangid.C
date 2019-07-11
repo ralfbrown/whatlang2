@@ -862,10 +862,10 @@ static bool add_stop_grams(const char **filelist, unsigned num_files,
    unsigned longkey = stop_grams->longestKey() ;
    if (ngrams->longestKey() > longkey)
       longkey = ngrams->longestKey() ;
-   uint8_t ngram_buf[longkey+1] ;
+   Fr::LocalAlloc<uint8_t> ngram_buf(longkey+1) ;
    if (unique_boost > 1.0)
       {
-      ngrams->enumerate(ngram_buf,ngrams->longestKey(),boost_unique_ngram,stop_grams) ;
+      ngrams->enumerate(&ngram_buf,ngrams->longestKey(),boost_unique_ngram,stop_grams) ;
       }
    // scan the stop-gram list and add any with a zero count to the main
    //   n-gram list, flagged as stop-grams; optionally, add any which
@@ -1015,7 +1015,7 @@ static void dump_vocabulary(const NybbleTrie *ngrams, bool scaled,
       f.printf("FreqCoverage: %g\n",opts.freqCoverage()) ;
    if (opts.matchFactor() > 0.0)
       f.printf("MatchFactor: %g\n",opts.matchFactor()) ;
-   uint8_t keybuf[max_length+1] ;
+   Fr::LocalAlloc<uint8_t> keybuf(max_length+1) ;
    if (scaled)
       {
       dump_total_bytes = total_bytes ;
@@ -1218,7 +1218,7 @@ static bool count_ngrams(PreprocessedInputFile *infile, va_list args)
    bool aligned = (bool)va_arg(args,int) ;
    if (max_length < min_length || max_length == 0)
       return false ;
-   uint8_t ngram[max_length] ;
+   Fr::LocalAlloc<uint8_t> ngram(max_length) ;
    // fill the ngram buffer, except for the last byte
    for (size_t i = 0 ; i+1 < max_length ; i++)
       {
@@ -1424,8 +1424,8 @@ static NybbleTrie *restrict_ngrams(NybbleTrie *ngrams, unsigned top_K,
 {
    if (minlen > max_length)
       minlen = max_length ;
-   uint32_t top_frequencies[top_K] ;
-   std::fill_n(top_frequencies,top_K,0) ;
+   Fr::LocalAlloc<uint32_t> top_frequencies(top_K) ;
+   std::fill_n(top_frequencies.begin(),top_K,0) ;
    auto new_ngrams = new NybbleTrie ;
    NgramEnumerationData enum_data(have_max_length) ;
    enum_data.m_ngrams = new_ngrams ;
@@ -1433,7 +1433,7 @@ static NybbleTrie *restrict_ngrams(NybbleTrie *ngrams, unsigned top_K,
    enum_data.m_max_length = max_length ;
    enum_data.m_frequencies = top_frequencies ;
    enum_data.m_topK = top_K ;
-   uint8_t keybuf[max_length+1] ;
+   Fr::LocalAlloc<uint8_t> keybuf(max_length+1) ;
    // figure out the threshold we need to limit the total n-grams to the
    //   desired number
    enum_data.m_count = 0 ;
@@ -1487,8 +1487,8 @@ static NybbleTrie *count_ngrams(const char **filelist, unsigned num_files,
    if (minlen > max_length)
       minlen = max_length ;
    unsigned top_K = set_oversampling(topK,min_length,minimum_length,aligned) ;
-   uint32_t top_frequencies[top_K] ;
-   std::fill_n(top_frequencies,top_K,0) ;
+   Fr::LocalAlloc<uint32_t> top_frequencies(top_K) ;
+   std::fill_n(top_frequencies.begin(),top_K,0) ;
    auto new_ngrams = new NybbleTrie ;
    NgramEnumerationData enum_data(have_max_length) ;
    enum_data.m_ngrams = new_ngrams ;
@@ -1497,7 +1497,7 @@ static NybbleTrie *count_ngrams(const char **filelist, unsigned num_files,
    enum_data.m_frequencies = top_frequencies ;
    enum_data.m_topK = top_K ;
    enum_data.m_alignment = alignment ;
-   uint8_t keybuf[max_length+1] ;
+   Fr::LocalAlloc<uint8_t> keybuf(max_length+1) ;
    // find the threshold at which to cut off ngrams to limit to topK
    if (verbose)
       {
@@ -1742,9 +1742,9 @@ static bool compute_coverage(PreprocessedInputFile *infile, va_list args)
    unsigned maxlen = ngrams->longestKey() ;
    if (maxlen > ABSOLUTE_MAX_LENGTH)
       maxlen = ABSOLUTE_MAX_LENGTH ;
-   uint8_t buf[maxlen+1] ;
-   unsigned cover[maxlen+1] ;
-   double freqtotal[maxlen+1] ;
+   Fr::LocalAlloc<uint8_t> buf(maxlen+1) ;
+   Fr::LocalAlloc<unsigned> cover(maxlen+1) ;
+   Fr::LocalAlloc<double> freqtotal(maxlen+1) ;
    unsigned buflen = 0 ;
    // initialize the statistics and prime the buffer
    for (size_t i = 0 ; i < maxlen ; i++)
@@ -2259,11 +2259,11 @@ static bool cluster_models_by_charset(LanguageIdentifier *clusterdb,
    base_frequency = ptrie->frequencyBaseAddress() ;
    model_sizes = Fr::NewC<unsigned>(numlangs) ;
    unsigned maxkey = ptrie->longestKey() ;
-   uint8_t keybuf[maxkey] ;
+   Fr::LocalAlloc<uint8_t> keybuf(maxkey) ;
    ptrie->enumerate(keybuf,maxkey,merge_ngrams,merged) ;
    base_frequency = nullptr ;
    // figure out the maximum size of an individual model for each encoding
-   unsigned max_sizes[num_encs] ;
+   Fr::LocalAlloc<unsigned> max_sizes(num_encs) ;
    memset(max_sizes,'\0',sizeof(max_sizes)) ;
    for (size_t i = 0 ; i < num_encs ; i++)
       {
