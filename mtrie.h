@@ -204,7 +204,7 @@ class MultiTrieNode
    public:
       void *operator new(size_t, void *where) { return where ; }
       MultiTrieNode() ;
-      ~MultiTrieNode() {}
+      ~MultiTrieNode() = default ;
 
       // accessors
       bool leaf() const { return m_isleaf ; }

@@ -231,167 +231,6 @@ uint32_t NybbleTrieNode::childIndex(unsigned int N) const
 
 //----------------------------------------------------------------------
 
-unsigned NybbleTrieNode::numExtensions(const NybbleTrie *trie,
-				       uint32_t min_freq) const
-{
-   unsigned count = 0 ;
-   for (size_t i1 = 0 ; i1 < lengthof(m_children) ; i1++)
-      {
-      if (m_children[i1] == NybbleTrie::NULL_INDEX) continue ;
-      NybbleTrieNode *child1 = trie->node(m_children[i1]) ;
-#if BITS_PER_LEVEL < 8
-      if (!child1)
-	 continue ;
-      for (size_t i2 = 0 ; i2 < lengthof(m_children) ; i2++)
-	 {
-	 if (child1->m_children[i2] == NybbleTrie::NULL_INDEX) continue ;
-	 NybbleTrieNode *child2 = trie->node(child1->m_children[i2]) ;
-#if BITS_PER_LEVEL < 4
-	 if (!child2)
-	    continue ;
-	 for (size_t i3 = 0 ; i3 < lengthof(m_children) ; i3++)
-	    {
-	    if (child2->m_children[i3] == NybbleTrie::NULL_INDEX) continue ;
-	    NybbleTrieNode *child3 = trie->node(child2->m_children[i3]) ;
-#if BITS_PER_LEVEL == 2
-	    if (!child3)
-	       continue ;
-	    for (size_t i4 = 0 ; i4 < lengthof(m_children) ; i4++)
-	       {
-	       if (child3->m_children[i4] == NybbleTrie::NULL_INDEX) continue ;
-	       NybbleTrieNode *child4 = trie->node(child3->m_children[i4]) ;
-	       if (child4 && child4->frequency() >= min_freq)
-		  count++ ;
-	       }
-#else // BITS_PER_LEVEL > 2
-	    if (child3 && child3->frequency() >= min_freq)
-	       count++ ;
-#endif
-	    }
-#else // BITS_PER_LEVEL >= 4
-	 if (child2 && child2->frequency() >= min_freq)
-	    count++ ;
-#endif
-	 }
-#else // BITS_PER_LEVEL == 8
-      if (child1 && child1->frequency() >= min_freq)
-	 count++ ;
-#endif
-      }
-   return count ;
-}
-
-//----------------------------------------------------------------------
-
-bool NybbleTrieNode::allChildrenAreTerminals(const NybbleTrie *trie) const
-{
-   for (size_t i1 = 0 ; i1 < lengthof(m_children) ; i1++)
-      {
-      if (m_children[i1] == NybbleTrie::NULL_INDEX) continue ;
-      NybbleTrieNode *child1 = trie->node(m_children[i1]) ;
-#if BITS_PER_LEVEL < 8
-      if (!child1)
-	 continue ;
-      for (size_t i2 = 0 ; i2 < lengthof(m_children) ; i2++)
-	 {
-	 if (child1->m_children[i2] == NybbleTrie::NULL_INDEX) continue ;
-	 NybbleTrieNode *child2 = trie->node(child1->m_children[i2]) ;
-#if BITS_PER_LEVEL < 4
-	 if (!child2)
-	    continue ;
-	 for (size_t i3 = 0 ; i3 < lengthof(m_children) ; i3++)
-	    {
-	    if (child2->m_children[i3] == NybbleTrie::NULL_INDEX) continue ;
-	    NybbleTrieNode *child3 = trie->node(child2->m_children[i3]) ;
-#if BITS_PER_LEVEL == 2
-	    if (!child3)
-	       continue ;
-	    for (size_t i4 = 0 ; i4 < lengthof(m_children) ; i4++)
-	       {
-	       if (child3->m_children[i4] == NybbleTrie::NULL_INDEX) continue ;
-	       NybbleTrieNode *child4 = trie->node(child3->m_children[i4]) ;
-	       if (child4 && child4->hasChildren())
-		  return false ;
-	       }
-#else // BITS_PER_LEVEL > 2
-	    if (child3 && child3->hasChildren())
-	       return false ;
-#endif
-	    }
-#else // BITS_PER_LEVEL >= 4
-	 if (child2 && child2->hasChildren())
-	    return false ;
-#endif
-	 }
-#else // BITS_PER_LEVEL == 8
-      if (child1 && child1->hasChildren())
-	 return false ;
-#endif
-      }
-   return true ;
-}
-
-//----------------------------------------------------------------------
-
-bool NybbleTrieNode::allChildrenAreTerminals(const NybbleTrie *trie,
-					     uint32_t min_freq) const
-{
-   for (size_t i1 = 0 ; i1 < lengthof(m_children) ; i1++)
-      {
-      if (m_children[i1] == NybbleTrie::NULL_INDEX) continue ;
-      NybbleTrieNode *child1 = trie->node(m_children[i1]) ;
-#if BITS_PER_LEVEL < 8
-      if (!child1)
-	 continue ;
-      for (size_t i2 = 0 ; i2 < lengthof(m_children) ; i2++)
-	 {
-	 if (child1->m_children[i2] == NybbleTrie::NULL_INDEX) continue ;
-	 NybbleTrieNode *child2 = trie->node(child1->m_children[i2]) ;
-#if BITS_PER_LEVEL < 4
-	 if (!child2)
-	    continue ;
-	 for (size_t i3 = 0 ; i3 < lengthof(m_children) ; i3++)
-	    {
-	    if (child2->m_children[i3] == NybbleTrie::NULL_INDEX) continue ;
-	    NybbleTrieNode *child3 = trie->node(child2->m_children[i3]) ;
-#if BITS_PER_LEVEL == 2
-	    if (!child3)
-	       continue ;
-	    for (size_t i4 = 0 ; i4 < lengthof(m_children) ; i4++)
-	       {
-	       if (child3->m_children[i4] == NybbleTrie::NULL_INDEX) continue ;
-	       NybbleTrieNode *child4 = trie->node(child3->m_children[i4]) ;
-	       if (child4 &&
-		   (!child4->leaf() || child4->frequency() >= min_freq) &&
-		   child4->numExtensions(trie,min_freq) > 0)
-		  return false ;
-	       }
-#else // BITS_PER_LEVEL > 2
-	    if (child3 && 
-		(!child3->leaf() || child3->frequency() >= min_freq) &&
-		child3->numExtensions(trie,min_freq) > 0)
-	       return false ;
-#endif
-	    }
-#else // BITS_PER_LEVEL >= 4
-	 if (child2 && 
-	     (!child2->leaf() || child2->frequency() >= min_freq) &&
-	     child2->numExtensions(trie,min_freq) > 0)
-	    return false ;
-#endif
-	 }
-#else // BITS_PER_LEVEL == 8
-      if (child1 && 
-	  (!child1->leaf() || child1->frequency() >= min_freq) &&
-	  child1->numExtensions(trie,min_freq) > 0)
-	 return false ;
-#endif
-      }
-   return true ;
-}
-
-//----------------------------------------------------------------------
-
 bool NybbleTrieNode::insertChild(unsigned int N, NybbleTrie *trie)
 {
    if (N < lengthof(m_children) && !childPresent(N))
@@ -416,45 +255,10 @@ void NybbleTrieNode::scaleFrequency(uint64_t total_count)
 
 //----------------------------------------------------------------------
 
-void NybbleTrieNode::scaleFrequency(uint64_t total_count, double power,
-				    double log_power)
+void NybbleTrieNode::scaleFrequency(uint64_t total_count, double power, double log_power)
 {
    m_frequency = scaled_frequency(m_frequency,total_count,power,log_power) ;
    return ;
-}
-
-//----------------------------------------------------------------------
-
-bool NybbleTrieNode::enumerateTerminalNodes(const NybbleTrie *trie,
-					    unsigned keylen_bits,
-					    uint32_t &count,
-					    uint32_t min_freq) const
-{
-   if (!hasChildren())
-      return true ;
-   else if ((keylen_bits % 8) == 0 &&
-	    this->allChildrenAreTerminals(trie,min_freq))
-      {
-      count += this->numExtensions(trie,min_freq) ;
-      return true ;
-      }
-   keylen_bits = keylen_bits + BITS_PER_LEVEL ;
-#if BITS_PER_LEVEL == 3
-   if (keylen_bits % 8 == 1) keylen_bits-- ;
-#endif
-   for (size_t i = 0 ; i < lengthof(m_children) ; i++)
-      {
-      uint32_t child = childIndex(i) ;
-      if (child != NybbleTrie::NULL_INDEX)
-	 {
-	 NybbleTrieNode *childnode = trie->node(child) ;
-	 if (!childnode ||
-	     !childnode->enumerateTerminalNodes(trie,keylen_bits,count,
-						min_freq))
-	    return false ;
-	 }
-      }
-   return true ;
 }
 
 /************************************************************************/
@@ -911,6 +715,69 @@ bool NybbleTrie::singleChildSameFreq(uint32_t nodeindex, bool allow_nonleaf, dou
 
 //----------------------------------------------------------------------
 
+bool NybbleTrie::countTerminalNodes(uint32_t nodeindex, unsigned keylen_bits,
+				    uint32_t& count, uint32_t min_freq) const
+{
+   auto node = this->node(nodeindex) ;
+   if (!node->hasChildren())
+      return true ;
+   else if ((keylen_bits % 8) == 0 && allChildrenAreTerminals(nodeindex,min_freq))
+      {
+      count += numExtensions(nodeindex,min_freq) ;
+      return true ;
+      }
+   keylen_bits = keylen_bits + BITS_PER_LEVEL ;
+#if BITS_PER_LEVEL == 3
+   if (keylen_bits % 8 == 1) keylen_bits-- ;
+#endif
+   for (size_t i = 0 ; i < (1<<BITS_PER_LEVEL) ; ++i)
+      {
+      uint32_t child = node->childIndex(i) ;
+      if (child != NybbleTrie::NULL_INDEX && !countTerminalNodes(child,keylen_bits,count,min_freq))
+	 return false ;
+      }
+   return true ;
+}
+
+//----------------------------------------------------------------------
+
+unsigned NybbleTrie::numExtensions(uint32_t nodeindex, uint32_t min_freq, unsigned bits) const
+{
+   unsigned count = 0 ;
+   auto node = this->node(nodeindex) ;
+   if (bits >= 8)
+      {
+      return (node && node->frequency() >= min_freq) ? 1 : 0 ;
+      }
+   for (size_t i = 0 ; i < (1<<BITS_PER_LEVEL) ; ++i)
+      {
+      auto childindex = node->childIndex(i) ;
+      if (childindex != NULL_INDEX)
+	 count += numExtensions(childindex,min_freq,bits+BITS_PER_LEVEL) ;
+      }
+   return count ;
+}
+
+//----------------------------------------------------------------------
+
+bool NybbleTrie::allChildrenAreTerminals(uint32_t nodeindex, uint32_t min_freq, unsigned bits) const
+{
+   auto node = this->node(nodeindex) ;
+   if (bits >= 8)
+      {
+      return ! ((!node->leaf() || node->frequency() >= min_freq) && numExtensions(nodeindex,min_freq) > 0) ;
+      }
+   for (size_t i = 0 ; i < (1<<BITS_PER_LEVEL) ; ++i)
+      {
+      auto childindex = node->childIndex(i) ;
+      if (childindex != NULL_INDEX && !allChildrenAreTerminals(childindex,min_freq,bits+BITS_PER_LEVEL))
+	 return false ;
+      }
+   return true ;
+}
+
+//----------------------------------------------------------------------
+
 bool NybbleTrie::enumerate(uint8_t *keybuf, unsigned maxkeylength, EnumFn *fn, void *user_data) const
 {
    if (keybuf && fn && m_nodes[ROOT_INDEX])
@@ -1029,7 +896,7 @@ bool NybbleTrie::scaleFrequencies(uint64_t total_count, double power,
 uint32_t NybbleTrie::numTerminalNodes(uint32_t min_freq) const
 {
    uint32_t count = 0 ;
-   return (m_nodes[0]->enumerateTerminalNodes(this,0,count,min_freq) ? count : 0) ;
+   return countTerminalNodes(ROOT_INDEX,0,count,min_freq) ? count : 0 ;
 }
 
 //----------------------------------------------------------------------

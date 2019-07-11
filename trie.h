@@ -71,7 +71,7 @@ class NybbleTrieNode
    public:
       void *operator new(size_t, void *where) { return where ; }
       NybbleTrieNode() ;
-      ~NybbleTrieNode() {}
+      ~NybbleTrieNode() = default ;
 
       // accessors
       bool leaf() const { return m_leaf ; }
@@ -81,14 +81,6 @@ class NybbleTrieNode
       bool childPresent(unsigned int N) const ;
       uint32_t childIndex(unsigned int N) const ;
       uint32_t frequency() const { return m_frequency ; }
-
-      //TODO: move to NybbleTrie
-      unsigned numExtensions(const NybbleTrie *trie, uint32_t min_freq = 0) const ;
-      bool allChildrenAreTerminals(const NybbleTrie *trie) const ;
-      bool allChildrenAreTerminals(const NybbleTrie *trie, uint32_t min_freq) const ;
-      bool enumerateTerminalNodes(const NybbleTrie *trie,
-				  unsigned keylen_bits, uint32_t &count,
-				  uint32_t min_freq = 0) const ;
 
       // modifiers
       void markAsLeaf() { m_leaf = true ; }
@@ -156,6 +148,10 @@ class NybbleTrie
       bool enumerate(uint8_t *keybuf, unsigned maxkeylength, EnumFn *fn, void *user_data) const ;
       bool enumerateChildren(uint32_t nodeindex, uint8_t *keybuf, unsigned max_keylength_bits,
 			     unsigned curr_keylength_bits, EnumFn *fn, void *user_data) const ;
+      bool countTerminalNodes(uint32_t nodeindex, unsigned keylen_bits, uint32_t &count,
+			      uint32_t min_freq = 0) const ;
+      unsigned numExtensions(uint32_t nodeindex, uint32_t min_freq = 0, unsigned = 0) const ;
+      bool allChildrenAreTerminals(uint32_t nodeindex, uint32_t min_freq = 0, unsigned = 0) const ;
       bool singleChild(uint32_t nodeindex) const ;
       bool singleChildSameFreq(uint32_t nodeindex, bool allow_nonleaf, double ratio) const ;
 
