@@ -311,58 +311,6 @@ bool MultiTrieNode::childPresent(unsigned int N) const
 
 //----------------------------------------------------------------------
 
-bool MultiTrieNode::singleChild(const LangIDMultiTrie *trie) const 
-{
-   auto node = this ;
-   for (size_t i = 0 ; i < 8 && node ; i += MTRIE_BITS_PER_LEVEL)
-      {
-      unsigned index = lengthof(m_children) ;
-      for (unsigned ch = 0 ; ch < lengthof(m_children) ; ch++)
-	 {
-	 if (node->m_children[ch] != LangIDMultiTrie::NULL_INDEX)
-	    {
-	    if (index != lengthof(m_children))
-	       return false ; 		// multiple children
-	    index = ch ;
-	    }
-	 }
-      if (index == lengthof(m_children))
-	 return false ; 		// no children at all
-      node = trie->node(node->m_children[index]) ;
-      }
-   return node != nullptr ;
-}
-
-//----------------------------------------------------------------------
-
-bool MultiTrieNode::singleChildSameFreq(const LangIDMultiTrie *trie, bool allow_nonleaf, double ratio) const 
-{
-   auto node = this ;
-   for (size_t i = 0 ; i < 8 && node ; i += MTRIE_BITS_PER_LEVEL)
-      {
-      unsigned index = lengthof(m_children) ;
-      for (unsigned ch = 0 ; ch < lengthof(m_children) ; ch++)
-	 {
-	 if (node->m_children[ch] != LangIDMultiTrie::NULL_INDEX)
-	    {
-	    if (index != lengthof(m_children))
-	       return false ; 		// multiple children
-	    index = ch ;
-	    }
-	 }
-      if (index == lengthof(m_children))
-	 return false ; 		// no children at all
-      node = trie->node(node->m_children[index]) ;
-      }
-   if (!node)
-      return false ;
-   uint32_t freq = node->frequency() ;
-   return ((freq <= frequency() && freq >= ratio * frequency()) ||
-	   (allow_nonleaf && freq == 0)) ;
-}
-
-//----------------------------------------------------------------------
-
 uint32_t MultiTrieNode::childIndex(unsigned int N) const
 {
    return (N < lengthof(m_children)) ? m_children[N] : LangIDMultiTrie::NULL_INDEX ;
@@ -1039,6 +987,58 @@ bool LangIDMultiTrie::enumerateChildren(uint32_t nodeindex,
 	 }
       }
    return true ;
+}
+
+//----------------------------------------------------------------------
+
+bool LangIDMultiTrie::singleChild(uint32_t nodeindex) const 
+{
+   auto node = this->node(nodeindex) ;
+   for (size_t i = 0 ; i < 8 && node ; i += MTRIE_BITS_PER_LEVEL)
+      {
+      unsigned index = ~0 ;
+      for (unsigned ch = 0 ; ch < (1<<MTRIE_BITS_PER_LEVEL) ; ch++)
+	 {
+	 if (node->childPresent(ch))
+	    {
+	    if (index != ~0U)
+	       return false ; 		// multiple children
+	    index = ch ;
+	    }
+	 }
+      if (index == ~0U)
+	 return false ; 		// no children at all
+      node = this->node(node->childIndex(index)) ;
+      }
+   return node != nullptr ;
+}
+
+//----------------------------------------------------------------------
+
+bool LangIDMultiTrie::singleChildSameFreq(uint32_t nodeindex, bool allow_nonleaf, double ratio) const 
+{
+   auto node = this->node(nodeindex) ;
+   auto parent_freq = node->frequency() ;
+   for (size_t i = 0 ; i < 8 && node ; i += MTRIE_BITS_PER_LEVEL)
+      {
+      unsigned index = ~0 ;
+      for (unsigned ch = 0 ; ch < (1<<MTRIE_BITS_PER_LEVEL) ; ch++)
+	 {
+	 if (node->childPresent(ch))
+	    {
+	    if (index != ~0U)
+	       return false ; 		// multiple children
+	    index = ch ;
+	    }
+	 }
+      if (index == ~0U)
+	 return false ; 		// no children at all
+      node = this->node(node->childIndex(index)) ;
+      }
+   if (!node)
+      return false ;
+   auto freq = node->frequency() ;
+   return ((freq <= parent_freq && freq >= ratio * parent_freq) || (allow_nonleaf && freq == 0)) ;
 }
 
 //----------------------------------------------------------------------

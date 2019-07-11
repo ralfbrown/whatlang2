@@ -90,9 +90,6 @@ class NybbleTrieNode
       uint32_t frequency() const { return m_frequency ; }
       unsigned numExtensions(const NybbleTrie *trie,
 			     uint32_t min_freq = 0) const ;
-      bool singleChild(const NybbleTrie *trie) const ;
-      bool singleChildSameFreq(const NybbleTrie *trie,
-			       bool allow_nonleaf, double ratio) const ;
       bool enumerateFullNodes(const NybbleTrie *trie, uint32_t &count,
 			      uint32_t min_freq = 0) const ;
       bool enumerateTerminalNodes(const NybbleTrie *trie,
@@ -167,6 +164,8 @@ class NybbleTrie
       bool enumerate(uint8_t *keybuf, unsigned maxkeylength, EnumFn *fn, void *user_data) const ;
       bool enumerateChildren(uint32_t nodeindex, uint8_t *keybuf, unsigned max_keylength_bits,
 			     unsigned curr_keylength_bits, EnumFn *fn, void *user_data) const ;
+      bool singleChild(uint32_t nodeindex) const ;
+      bool singleChildSameFreq(uint32_t nodeindex, bool allow_nonleaf, double ratio) const ;
 
       bool scaleFrequencies(uint64_t total_count) ;
       bool scaleFrequencies(uint64_t total_count, double power, double log_power) ;

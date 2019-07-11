@@ -170,6 +170,8 @@ class LangIDMultiTrie //: public Fr::MultiTrie<Fr::UInt32>
       bool enumerate(uint8_t *keybuf, unsigned maxkeylength, EnumFn *fn, void *user_data) const ;
       bool enumerateChildren(uint32_t nodeindex, uint8_t *keybuf, unsigned max_keylength_bits,
 			     unsigned curr_keylength_bits, EnumFn *fn, void *user_data) const ;
+      bool singleChild(uint32_t nodeindex) const ;
+      bool singleChildSameFreq(uint32_t nodeindex, bool allow_nonleaf, double ratio) const ;
       uint32_t countFreqRecords() const ;
       uint32_t numFullByteNodes() const ;
       uint32_t numTerminalNodes() const ;
@@ -216,9 +218,6 @@ class MultiTrieNode
       unsigned numFrequencies() const ;
       MultiTrieFrequency *frequencies() const
          { return MultiTrieFrequency::getAddress(m_frequency_info) ; }
-      bool singleChild(const LangIDMultiTrie *trie) const ;
-      bool singleChildSameFreq(const LangIDMultiTrie *trie,
-			       bool allow_nonleaf, double ratio) const ;
       bool enumerateFullByteNodes(const LangIDMultiTrie *trie,
 				  unsigned keylen_bits, uint32_t &count) const ;
       bool enumerateTerminalNodes(const LangIDMultiTrie *trie,
