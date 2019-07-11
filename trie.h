@@ -68,10 +68,6 @@ typedef bool NybbleTrieEnumFn(const NybbleTrieNode *node,
 
 class NybbleTrieNode
    {
-   protected:
-      bool nextFrequencies(const NybbleTrie *trie, uint32_t *frequencies,
-			   uint8_t idx, unsigned bits) const ;
-
    public:
       void *operator new(size_t, void *where) { return where ; }
       NybbleTrieNode() ;
@@ -83,20 +79,18 @@ class NybbleTrieNode
       bool hasChildren() const ;
       bool hasChildren(const NybbleTrie *trie, uint32_t min_freq) const ;
       bool childPresent(unsigned int N) const ;
-      bool allChildrenAreTerminals(const NybbleTrie *trie) const ;
-      bool allChildrenAreTerminals(const NybbleTrie *trie,
-				   uint32_t min_freq) const ;
       uint32_t childIndex(unsigned int N) const ;
       uint32_t frequency() const { return m_frequency ; }
-      unsigned numExtensions(const NybbleTrie *trie,
-			     uint32_t min_freq = 0) const ;
+
+      //TODO: move to NybbleTrie
+      unsigned numExtensions(const NybbleTrie *trie, uint32_t min_freq = 0) const ;
+      bool allChildrenAreTerminals(const NybbleTrie *trie) const ;
+      bool allChildrenAreTerminals(const NybbleTrie *trie, uint32_t min_freq) const ;
       bool enumerateFullNodes(const NybbleTrie *trie, uint32_t &count,
 			      uint32_t min_freq = 0) const ;
       bool enumerateTerminalNodes(const NybbleTrie *trie,
 				  unsigned keylen_bits, uint32_t &count,
 				  uint32_t min_freq = 0) const ;
-      bool nextFrequencies(const NybbleTrie *trie,
-			   uint32_t *frequencies) const ;
 
       // modifiers
       void markAsLeaf() { m_leaf = true ; }

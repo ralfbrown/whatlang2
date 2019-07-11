@@ -425,53 +425,6 @@ void NybbleTrieNode::scaleFrequency(uint64_t total_count, double power,
 
 //----------------------------------------------------------------------
 
-bool NybbleTrieNode::nextFrequencies(const NybbleTrie *trie,
-				     uint32_t *frequencies,
-				     uint8_t idx, unsigned bits) const
-{
-   if (bits >= 8)
-      {
-      frequencies[idx] = frequency() ;
-      }
-   else
-      {
-      unsigned curr_bits = bits + BITS_PER_LEVEL ;
-      for (size_t i = 0 ; i < lengthof(m_children) ; i++)
-	 {
-	 uint32_t child = childIndex(i) ;
-	 if (child == NybbleTrie::NULL_INDEX)
-	    continue ;
-	 NybbleTrieNode *childnode = trie->node(child) ;
-	 if (!childnode)
-	    continue ;
-	 unsigned shift = LEVEL_SIZE - (bits % 8) - BITS_PER_LEVEL ;
-#if BITS_PER_LEVEL == 3
-	 if (shift == 0)
-	    curr_bits = bits + BITS_PER_LEVEL - 1 ;
-#endif
-	 unsigned mask = (((1 << BITS_PER_LEVEL)-1) << shift) ;
-	 idx &= ~mask ;
-	 idx |= (i << shift) ;
-	 if (!childnode->nextFrequencies(trie,frequencies,idx,curr_bits))
-	    return false ;
-	 }
-
-      }
-   return true ;
-}
-
-//----------------------------------------------------------------------
-
-bool NybbleTrieNode::nextFrequencies(const NybbleTrie *trie,
-				     uint32_t *frequencies) const
-{
-   if (!frequencies)
-      return false ;
-   return nextFrequencies(trie,frequencies,0,0) ;
-}
-
-//----------------------------------------------------------------------
-
 bool NybbleTrieNode::enumerateTerminalNodes(const NybbleTrie *trie,
 					    unsigned keylen_bits,
 					    uint32_t &count,
@@ -971,12 +924,12 @@ bool NybbleTrie::singleChild(uint32_t nodeindex) const
 	 {
 	 if (node->childIndex(ch) != NybbleTrie::NULL_INDEX)
 	    {
-	    if (index != ~0)
+	    if (index != ~0U)
 	       return false ; 		// multiple children
 	    index = ch ;
 	    }
 	 }
-      if (index == ~0)
+      if (index == ~0U)
 	 return false ; 		// no children at all
       node = this->node(node->childIndex(index)) ;
       }
@@ -996,12 +949,12 @@ bool NybbleTrie::singleChildSameFreq(uint32_t nodeindex, bool allow_nonleaf, dou
 	 {
 	 if (node->childPresent(ch))
 	    {
-	    if (index != ~0)
+	    if (index != ~0U)
 	       return false ; 		// multiple children
 	    index = ch ;
 	    }
 	 }
-      if (index == ~0)
+      if (index == ~0U)
 	 return false ; 		// no children at all
       node = this->node(node->childIndex(index)) ;
       }

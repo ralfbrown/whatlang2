@@ -212,16 +212,15 @@ class MultiTrieNode
       bool hasChildren() const ;
       bool childPresent(unsigned int N) const ;
       uint32_t childIndex(unsigned int N) const ;
-      unsigned numExtensions(const LangIDMultiTrie *trie) const ;
-      bool allChildrenAreTerminals(const LangIDMultiTrie *trie) const ;
       uint32_t frequency(uint32_t ID = 0) const ;
       unsigned numFrequencies() const ;
-      MultiTrieFrequency *frequencies() const
-         { return MultiTrieFrequency::getAddress(m_frequency_info) ; }
-      bool enumerateFullByteNodes(const LangIDMultiTrie *trie,
-				  unsigned keylen_bits, uint32_t &count) const ;
-      bool enumerateTerminalNodes(const LangIDMultiTrie *trie,
-				  unsigned keylen_bits, uint32_t &count) const ;
+      MultiTrieFrequency *frequencies() const { return MultiTrieFrequency::getAddress(m_frequency_info) ; }
+
+      //TODO: move to LangIDMultiTrie
+      unsigned numExtensions(const LangIDMultiTrie *trie) const ;
+      bool allChildrenAreTerminals(const LangIDMultiTrie *trie) const ;
+      bool enumerateFullByteNodes(const LangIDMultiTrie *trie, unsigned keylen_bits, uint32_t &count) const ;
+      bool enumerateTerminalNodes(const LangIDMultiTrie *trie, unsigned keylen_bits, uint32_t &count) const ;
 
       // modifiers
       void markAsLeaf() { m_isleaf = true ; }
