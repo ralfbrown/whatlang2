@@ -1424,8 +1424,7 @@ static NybbleTrie *restrict_ngrams(NybbleTrie *ngrams, unsigned top_K,
 {
    if (minlen > max_length)
       minlen = max_length ;
-   Fr::LocalAlloc<uint32_t> top_frequencies(top_K) ;
-   std::fill_n(top_frequencies.begin(),top_K,0) ;
+   Fr::LocalAlloc<uint32_t> top_frequencies(top_K,true) ;
    auto new_ngrams = new NybbleTrie ;
    NgramEnumerationData enum_data(have_max_length) ;
    enum_data.m_ngrams = new_ngrams ;
@@ -1487,8 +1486,7 @@ static NybbleTrie *count_ngrams(const char **filelist, unsigned num_files,
    if (minlen > max_length)
       minlen = max_length ;
    unsigned top_K = set_oversampling(topK,min_length,minimum_length,aligned) ;
-   Fr::LocalAlloc<uint32_t> top_frequencies(top_K) ;
-   std::fill_n(top_frequencies.begin(),top_K,0) ;
+   Fr::LocalAlloc<uint32_t> top_frequencies(top_K,true) ;
    auto new_ngrams = new NybbleTrie ;
    NgramEnumerationData enum_data(have_max_length) ;
    enum_data.m_ngrams = new_ngrams ;
