@@ -53,16 +53,9 @@ using namespace std ;
 /************************************************************************/
 
 class NybbleTrie ;
-class NybbleTrieNode ;
 
 class WildcardSet ;
 class WildcardCollection ;
-
-//----------------------------------------------------------------------
-
-typedef bool NybbleTrieEnumFn(const NybbleTrieNode *node,
-			      const uint8_t *key, unsigned keylen,
-			      void *user_data) ;
 
 //----------------------------------------------------------------------
 
@@ -94,7 +87,7 @@ class NybbleTrieNode
       // I/O
       static NybbleTrieNode *read(Fr::CFile& f) ;
       bool write(Fr::CFile& f) const ;
-   private:
+   protected:
       uint32_t	m_children[1<<BITS_PER_LEVEL] ;
       uint32_t  m_frequency ;
       bool	m_leaf ;

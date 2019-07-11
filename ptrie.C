@@ -305,11 +305,10 @@ LangIDPackedMultiTrie::LangIDPackedMultiTrie(const LangIDMultiTrie *multrie)
       m_freq = Fr::New<PackedTrieFreq>(m_numfreq) ;
       if (m_nodes && m_freq)
 	 {
-	 const auto mroot = multrie->rootNode() ;
 	 auto proot = &m_nodes[ROOT_INDEX] ;
 	 new (proot) PackedTrieNode ;
 	 m_used = 1 ;
-	 if (!insertChildren(proot,multrie,mroot,ROOT_INDEX))
+	 if (!insertChildren(proot,multrie,LangIDMultiTrie::ROOT_INDEX))
 	    {
 	    m_size = 0 ;
 	    m_numfreq = 0 ;
@@ -459,13 +458,12 @@ uint32_t LangIDPackedMultiTrie::allocateTerminalNodes(unsigned numchildren)
 
 bool LangIDPackedMultiTrie::insertTerminals(PackedTrieNode *parent,
 				      const LangIDMultiTrie *mtrie,
-				      const MultiTrieNode *mnode,
 				      uint32_t mnode_index,
 				      unsigned keylen)
 {
-   if (!parent || !mnode)
+   if (!parent || mnode_index == NULL_INDEX)
       return false ;
-   unsigned numchildren = mnode->numExtensions(mtrie) ;
+   unsigned numchildren = mtrie->numExtensions(mnode_index) ;
    if (numchildren == 0)
       return true ;
    keylen++ ;
@@ -517,20 +515,19 @@ bool LangIDPackedMultiTrie::insertTerminals(PackedTrieNode *parent,
 
 bool LangIDPackedMultiTrie::insertChildren(PackedTrieNode *parent,
 				     const LangIDMultiTrie *mtrie,
-				     const MultiTrieNode *mnode,
 				     uint32_t mnode_index,
 				     unsigned keylen)
 {
-   if (!parent || !mnode)
+   if (!parent || mnode_index == NULL_INDEX)
       return false ;
    // first pass: fill in all the children
-   unsigned numchildren = mnode->numExtensions(mtrie) ;
+   unsigned numchildren = mtrie->numExtensions(mnode_index) ;
    if (numchildren == 0)
       return true ;
    keylen++ ;
    if (keylen > longestKey())
       m_maxkeylen = keylen ;
-   bool terminal = mnode->allChildrenAreTerminals(mtrie) ;
+   bool terminal = mtrie->allChildrenAreTerminals(mnode_index) ;
    uint32_t firstchild = (terminal
 			  ? allocateTerminalNodes(numchildren)
 			  : allocateChildNodes(numchildren)) ;
@@ -571,10 +568,10 @@ bool LangIDPackedMultiTrie::insertChildren(PackedTrieNode *parent,
 	    }
 	 if (terminal)
 	    {
-	    if (!insertTerminals(pchild,mtrie,mchild,nodeindex,keylen))
+	    if (!insertTerminals(pchild,mtrie,nodeindex,keylen))
 	       return false ;
 	    }
-	 else if (!insertChildren(pchild,mtrie,mchild,nodeindex,keylen))
+	 else if (!insertChildren(pchild,mtrie,nodeindex,keylen))
 	    return false ;
 	 }
       }

@@ -170,6 +170,11 @@ class LangIDMultiTrie //: public Fr::MultiTrie<Fr::UInt32>
       bool enumerate(uint8_t *keybuf, unsigned maxkeylength, EnumFn *fn, void *user_data) const ;
       bool enumerateChildren(uint32_t nodeindex, uint8_t *keybuf, unsigned max_keylength_bits,
 			     unsigned curr_keylength_bits, EnumFn *fn, void *user_data) const ;
+      bool enumerateFullByteNodes(uint32_t nodeindex, uint32_t &count, unsigned keylen_bits = 0) const ;
+      bool enumerateTerminalNodes(uint32_t nodeindex, uint32_t &count, unsigned keylen_bits = 0) const ;
+      unsigned numExtensions(uint32_t nodeindex, unsigned = 0) const ;
+      bool allChildrenAreTerminals(uint32_t nodeindex, unsigned = 0) const ;
+      //end TODO
       bool singleChild(uint32_t nodeindex) const ;
       bool singleChildSameFreq(uint32_t nodeindex, bool allow_nonleaf, double ratio) const ;
       uint32_t countFreqRecords() const ;
@@ -199,7 +204,7 @@ class LangIDMultiTrie //: public Fr::MultiTrie<Fr::UInt32>
 
 //----------------------------------------------------------------------
 
-class MultiTrieNode
+class MultiTrieNode : public NybbleTrieNode
    {
    public:
       void *operator new(size_t, void *where) { return where ; }
@@ -207,23 +212,12 @@ class MultiTrieNode
       ~MultiTrieNode() = default ;
 
       // accessors
-      bool leaf() const { return m_isleaf ; }
       bool isStopgram(unsigned langID) const ;
-      bool hasChildren() const ;
-      bool childPresent(unsigned int N) const ;
-      uint32_t childIndex(unsigned int N) const ;
       uint32_t frequency(uint32_t ID = 0) const ;
       unsigned numFrequencies() const ;
-      MultiTrieFrequency *frequencies() const { return MultiTrieFrequency::getAddress(m_frequency_info) ; }
-
-      //TODO: move to LangIDMultiTrie
-      unsigned numExtensions(const LangIDMultiTrie *trie) const ;
-      bool allChildrenAreTerminals(const LangIDMultiTrie *trie) const ;
-      bool enumerateFullByteNodes(const LangIDMultiTrie *trie, unsigned keylen_bits, uint32_t &count) const ;
-      bool enumerateTerminalNodes(const LangIDMultiTrie *trie, unsigned keylen_bits, uint32_t &count) const ;
+      MultiTrieFrequency *frequencies() const { return MultiTrieFrequency::getAddress(m_frequency) ; }
 
       // modifiers
-      void markAsLeaf() { m_isleaf = true ; }
       void setFrequency(uint32_t ID, uint32_t f, bool stopgram) ;
       bool setFrequencies(MultiTrieFrequency *freqs) ;
       bool insertChild(unsigned int N, LangIDMultiTrie *trie) ;
@@ -231,11 +225,6 @@ class MultiTrieNode
       // I/O
       bool load(Fr::CFile& f) ;
       bool write(Fr::CFile& f) const ;
-
-   private:
-      uint32_t	m_children[1<<MTRIE_BITS_PER_LEVEL] ;
-      uint32_t  m_frequency_info ;
-      bool	m_isleaf ;
    } ;
 
 //----------------------------------------------------------------------

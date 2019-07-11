@@ -290,11 +290,9 @@ class LangIDPackedMultiTrie // : public Fr::PackedMultiTrie<...>
       uint32_t allocateChildNodes(unsigned numchildren) ;
       uint32_t allocateTerminalNodes(unsigned numchildren) ;
       bool insertChildren(PackedTrieNode *parent, const LangIDMultiTrie *mtrie,
-			  const MultiTrieNode *mnode, uint32_t mnode_index,
-			  unsigned keylen = 0) ;
+			  uint32_t mnode_index, unsigned keylen = 0) ;
       bool insertTerminals(PackedTrieNode *parent, const LangIDMultiTrie *mtrie,
-			   const MultiTrieNode *mnode, uint32_t mnode_index,
-			   unsigned keylen = 0) ;
+			   uint32_t mnode_index, unsigned keylen = 0) ;
    private:
       PackedTrieNode    *m_nodes ;	 // array of nodes
       PackedTrieTerminalNode *m_terminals ;

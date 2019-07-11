@@ -271,9 +271,7 @@ bool MultiTrieFrequency::writeAll(Fr::CFile& f)
 
 MultiTrieNode::MultiTrieNode()
 {
-   m_frequency_info = LangIDMultiTrie::INVALID_FREQ ;
-   m_isleaf = false ;
-   std::fill_n(m_children,lengthof(m_children),LangIDMultiTrie::NULL_INDEX) ;
+   m_frequency = LangIDMultiTrie::INVALID_FREQ ;
    return ;
 }
 
@@ -288,133 +286,6 @@ bool MultiTrieNode::isStopgram(unsigned langID) const
 	 return freq->isStopgram() ;
       }
    return false ;
-}
-
-//----------------------------------------------------------------------
-
-bool MultiTrieNode::hasChildren() const
-{
-   for (size_t i = 0 ; i < lengthof(m_children) ; i++)
-      {
-      if (m_children[i])
-	 return true ;
-      }
-   return false ;
-}
-
-//----------------------------------------------------------------------
-
-bool MultiTrieNode::childPresent(unsigned int N) const 
-{
-   return (N < lengthof(m_children)) ? (m_children[N] != LangIDMultiTrie::NULL_INDEX) : false ;
-}
-
-//----------------------------------------------------------------------
-
-uint32_t MultiTrieNode::childIndex(unsigned int N) const
-{
-   return (N < lengthof(m_children)) ? m_children[N] : LangIDMultiTrie::NULL_INDEX ;
-}
-
-//----------------------------------------------------------------------
-
-unsigned MultiTrieNode::numExtensions(const LangIDMultiTrie *trie) const
-{
-   unsigned count = 0 ;
-   for (size_t i1 = 0 ; i1 < lengthof(m_children) ; i1++)
-      {
-      if (m_children[i1] == LangIDMultiTrie::NULL_INDEX) continue ;
-      auto child1 = trie->node(m_children[i1]) ;
-#if MTRIE_BITS_PER_LEVEL < 8
-      if (!child1)
-	 continue ;
-      for (size_t i2 = 0 ; i2 < lengthof(m_children) ; i2++)
-	 {
-	 if (child1->m_children[i2] == LangIDMultiTrie::NULL_INDEX) continue ;
-	 auto child2 = trie->node(child1->m_children[i2]) ;
-#if MTRIE_BITS_PER_LEVEL < 4
-	 if (!child2)
-	    continue ;
-	 for (size_t i3 = 0 ; i3 < lengthof(m_children) ; i3++)
-	    {
-	    if (child2->m_children[i3] == LangIDMultiTrie::NULL_INDEX) continue ;
-	    auto child3 = trie->node(child2->m_children[i3]) ;
-#if MTRIE_BITS_PER_LEVEL == 2
-	    if (!child3)
-	       continue ;
-	    for (size_t i4 = 0 ; i4 < lengthof(m_children) ; i4++)
-	       {
-	       if (child3->m_children[i4] == LangIDMultiTrie::NULL_INDEX) continue ;
-	       auto child4 = trie->node(child3->m_children[i4]) ;
-	       if (child4)
-		  count++ ;
-	       }
-#else // MTRIE_BITS_PER_LEVEL > 2
-	    if (child3)
-	       count++ ;
-#endif
-	    }
-#else // MTRIE_BITS_PER_LEVEL >= 4
-	 if (child2)
-	    count++ ;
-#endif
-	 }
-#else // MTRIE_BITS_PER_LEVEL == 8
-      if (child1)
-	 count++ ;
-#endif
-      }
-   return count ;
-}
-
-//----------------------------------------------------------------------
-
-bool MultiTrieNode::allChildrenAreTerminals(const LangIDMultiTrie *trie) const
-{
-   for (size_t i1 = 0 ; i1 < lengthof(m_children) ; i1++)
-      {
-      if (m_children[i1] == LangIDMultiTrie::LangIDMultiTrie::NULL_INDEX) continue ;
-      auto child1 = trie->node(m_children[i1]) ;
-#if MTRIE_BITS_PER_LEVEL < 8
-      if (!child1)
-	 continue ;
-      for (size_t i2 = 0 ; i2 < lengthof(m_children) ; i2++)
-	 {
-	 if (child1->m_children[i2] == LangIDMultiTrie::NULL_INDEX) continue ;
-	 auto child2 = trie->node(child1->m_children[i2]) ;
-#if MTRIE_BITS_PER_LEVEL < 4
-	 if (!child2)
-	    continue ;
-	 for (size_t i3 = 0 ; i3 < lengthof(m_children) ; i3++)
-	    {
-	    if (child2->m_children[i3] == LangIDMultiTrie::NULL_INDEX) continue ;
-	    auto child3 = trie->node(child2->m_children[i3]) ;
-#if MTRIE_BITS_PER_LEVEL == 2
-	    if (!child3)
-	       continue ;
-	    for (size_t i4 = 0 ; i4 < lengthof(m_children) ; i4++)
-	       {
-	       if (child3->m_children[i4] == LangIDMultiTrie::NULL_INDEX) continue ;
-	       auto child4 = trie->node(child3->m_children[i4]) ;
-	       if (child4 && child4->hasChildren())
-		  return false ;
-	       }
-#else // MTRIE_BITS_PER_LEVEL > 2
-	    if (child3 && child3->hasChildren())
-	       return false ;
-#endif
-	    }
-#else // MTRIE_BITS_PER_LEVEL >= 4
-	 if (child2 && child2->hasChildren())
-	    return false ;
-#endif
-	 }
-#else // MTRIE_BITS_PER_LEVEL == 8
-      if (child1 && child1->hasChildren())
-	 return false ;
-#endif
-      }
-   return true ;
 }
 
 //----------------------------------------------------------------------
@@ -446,14 +317,14 @@ uint32_t MultiTrieNode::frequency(uint32_t langID) const
 void MultiTrieNode::setFrequency(uint32_t langID, uint32_t freq,
 				 bool stopgram)
 {
-   auto f = MultiTrieFrequency::getAddress(m_frequency_info) ;
+   auto f = MultiTrieFrequency::getAddress(m_frequency) ;
    if (f)
       f->setFrequency(langID,freq,stopgram) ;
    else
       {
       // insert the initial frequency record
       f = MultiTrieFrequency::allocate(freq,langID,stopgram) ;
-      m_frequency_info = MultiTrieFrequency::getIndex(f) ;
+      m_frequency = MultiTrieFrequency::getIndex(f) ;
       }
    return ;
 }
@@ -467,7 +338,7 @@ bool MultiTrieNode::setFrequencies(MultiTrieFrequency *freqs)
    auto idx = MultiTrieFrequency::getIndex(freqs) ;
    if (idx == LangIDMultiTrie::INVALID_FREQ)
       return false ;
-   m_frequency_info = idx ;
+   m_frequency = idx ;
    return true ;
 }
 
@@ -485,66 +356,6 @@ bool MultiTrieNode::insertChild(unsigned int N, LangIDMultiTrie *trie)
 	 }
       }
    return false ;
-}
-
-//----------------------------------------------------------------------
-
-bool MultiTrieNode::enumerateFullByteNodes(const LangIDMultiTrie *trie,
-					   unsigned keylen_bits,
-					   uint32_t &count) const
-{
-   if (keylen_bits % 8 == 0)
-      count++ ;
-   keylen_bits = keylen_bits + MTRIE_BITS_PER_LEVEL ;
-#if MTRIE_BITS_PER_LEVEL == 3
-   if (keylen_bits % 8 == 1) keylen_bits-- ;
-#endif
-   for (size_t i = 0 ; i < lengthof(m_children) ; i++)
-      {
-      uint32_t child = childIndex(i) ;
-      if (child != LangIDMultiTrie::NULL_INDEX)
-	 {
-	 auto childnode = trie->node(child) ;
-	 if (childnode)
-	    {
-	    if (!childnode->enumerateFullByteNodes(trie,keylen_bits,count))
-	       return false ;
-	    }
-	 else
-	    return false ;
-	 }
-      }
-   return true ;
-}
-
-//----------------------------------------------------------------------
-
-bool MultiTrieNode::enumerateTerminalNodes(const LangIDMultiTrie *trie,
-					   unsigned keylen_bits,
-					   uint32_t &count) const
-{
-   if (!hasChildren())
-      return true ;
-   else if ((keylen_bits % 8) == 0 && this->allChildrenAreTerminals(trie))
-      {
-      count += this->numExtensions(trie) ;
-      return true ;
-      }
-   keylen_bits = keylen_bits + MTRIE_BITS_PER_LEVEL ;
-#if MTRIE_BITS_PER_LEVEL == 3
-   if (keylen_bits % 8 == 1) keylen_bits-- ;
-#endif
-   for (size_t i = 0 ; i < lengthof(m_children) ; i++)
-      {
-      uint32_t child = childIndex(i) ;
-      if (child != LangIDMultiTrie::NULL_INDEX)
-	 {
-	 auto childnode = trie->node(child) ;
-	 if (!childnode || !childnode->enumerateTerminalNodes(trie,keylen_bits,count))
-	    return false ;
-	 }
-      }
-   return true ;
 }
 
 //----------------------------------------------------------------------
@@ -991,6 +802,91 @@ bool LangIDMultiTrie::enumerateChildren(uint32_t nodeindex,
 
 //----------------------------------------------------------------------
 
+bool LangIDMultiTrie::enumerateTerminalNodes(uint32_t nodeindex, uint32_t &count, unsigned keylen_bits) const
+{
+   auto n = node(nodeindex)   ;
+   if (!n->hasChildren())
+      return true ;
+   else if ((keylen_bits % 8) == 0 && allChildrenAreTerminals(nodeindex))
+      {
+      count += numExtensions(nodeindex) ;
+      return true ;
+      }
+   keylen_bits = keylen_bits + BITS_PER_LEVEL ;
+#if BITS_PER_LEVEL == 3
+   if (keylen_bits % 8 == 1) keylen_bits-- ;
+#endif
+   for (size_t i = 0 ; i < (1<<BITS_PER_LEVEL) ; i++)
+      {
+      uint32_t child = n->childIndex(i) ;
+      if (child != LangIDMultiTrie::NULL_INDEX && !enumerateTerminalNodes(child,count,keylen_bits))
+	 return false ;
+      }
+   return true ;
+}
+
+//----------------------------------------------------------------------
+
+bool LangIDMultiTrie::enumerateFullByteNodes(uint32_t nodeindex, uint32_t &count, unsigned keylen_bits) const
+{
+   if (keylen_bits % 8 == 0)
+      count++ ;
+   keylen_bits = keylen_bits + MTRIE_BITS_PER_LEVEL ;
+#if MTRIE_BITS_PER_LEVEL == 3
+   if (keylen_bits % 8 == 1) keylen_bits-- ;
+#endif
+   auto n = node(nodeindex) ;
+   for (size_t i = 0 ; i < (1<<BITS_PER_LEVEL) ; i++)
+      {
+      uint32_t child = n->childIndex(i) ;
+      if (child != LangIDMultiTrie::NULL_INDEX)
+	 {
+	 if (!enumerateFullByteNodes(child,count,keylen_bits))
+	    return false ;
+	 }
+      }
+   return true ;
+}
+
+//----------------------------------------------------------------------
+
+unsigned LangIDMultiTrie::numExtensions(uint32_t nodeindex, unsigned bits) const
+{
+   if (bits >= 8)
+      {
+      return 1 ;
+      }
+   auto n = node(nodeindex) ;
+   unsigned count = 0 ;
+   for (size_t i = 0 ; i < (1<<BITS_PER_LEVEL) ; ++i)
+      {
+      auto child = n->childIndex(i) ;
+      if (child != NULL_INDEX)
+	 count += numExtensions(child,bits+BITS_PER_LEVEL) ;
+      }
+   return count ;
+}
+
+//----------------------------------------------------------------------
+
+bool LangIDMultiTrie::allChildrenAreTerminals(uint32_t nodeindex, unsigned bits) const
+{
+   auto n = node(nodeindex) ;
+   if (bits >= 8)
+      {
+      return !n->hasChildren() ;
+      }
+   for (size_t i = 0 ; i < (1<<BITS_PER_LEVEL) ; ++i)
+      {
+      auto child = n->childIndex(i) ;
+      if (child != NULL_INDEX && !allChildrenAreTerminals(child,bits+BITS_PER_LEVEL))
+	 return false ;
+      }
+   return true ;
+}
+
+//----------------------------------------------------------------------
+
 bool LangIDMultiTrie::singleChild(uint32_t nodeindex) const 
 {
    auto node = this->node(nodeindex) ;
@@ -1046,7 +942,7 @@ bool LangIDMultiTrie::singleChildSameFreq(uint32_t nodeindex, bool allow_nonleaf
 uint32_t LangIDMultiTrie::numFullByteNodes() const
 {
    uint32_t count = 0 ;
-   return (m_nodes[ROOT_INDEX]->enumerateFullByteNodes(this,0,count) ? count : 0) ;
+   return enumerateFullByteNodes(ROOT_INDEX,count) ? count : 0 ;
 }
 
 //----------------------------------------------------------------------
@@ -1054,7 +950,7 @@ uint32_t LangIDMultiTrie::numFullByteNodes() const
 uint32_t LangIDMultiTrie::numTerminalNodes() const
 {
    uint32_t count = 0 ;
-   return (m_nodes[ROOT_INDEX]->enumerateTerminalNodes(this,0,count) ? count : 0) ;
+   return enumerateTerminalNodes(ROOT_INDEX,count) ? count : 0 ;
 }
 
 //----------------------------------------------------------------------
