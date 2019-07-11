@@ -282,22 +282,6 @@ NybbleTrie::NybbleTrie(const char *filename, bool verbose)
 
 //----------------------------------------------------------------------
 
-NybbleTrie::~NybbleTrie()
-{
-   unsigned num_buckets = m_capacity / BUCKET_SIZE ;
-   for (size_t i = 0 ; i < num_buckets ; i++)
-      {
-      Fr::Free(m_nodes[i]) ;
-      }
-   Fr::Free(m_nodes) ;
-   m_nodes = nullptr ;
-   m_capacity = 0 ;
-   m_used = 0 ;
-   return ;
-}
-
-//----------------------------------------------------------------------
-
 void NybbleTrie::init(uint32_t cap)
 {
    m_userdata = nullptr ;
@@ -307,23 +291,10 @@ void NybbleTrie::init(uint32_t cap)
    if (cap == 0)
       cap = 1 ;
    cap = round_up(cap,BUCKET_SIZE) ;
-   unsigned num_buckets = cap / BUCKET_SIZE ;
-   m_nodes = Fr::New<NybbleTrieNode*>(num_buckets) ;
-   m_capacity = 0 ;
-   if (m_nodes)
-      {
-      for (unsigned i = 0 ; i < num_buckets ; i++)
-	 {
-	 m_nodes[i] = Fr::New<NybbleTrieNode>(BUCKET_SIZE) ;
-	 if (m_nodes[i])
-	    m_capacity += BUCKET_SIZE ;
-	 else
-	    break ;
-	 }
-      m_used = 1 ;
-      // initialize the root node
-      new (node(NybbleTrie::ROOT_INDEX)) NybbleTrieNode ;
-      }
+   m_nodes.reserve(cap) ;
+   auto root = m_nodes.alloc() ;
+   // initialize the root node
+   new (node(root)) NybbleTrieNode ;
    return ;
 }
 
@@ -376,52 +347,6 @@ bool NybbleTrie::loadWords(const char *filename, bool verbose)
       cerr << "Unable to read word list from '" << filename << "'" << endl ;
       return false ;
       }
-}
-
-//----------------------------------------------------------------------
-
-uint32_t NybbleTrie::allocateNode()
-{
-   if (m_used >= m_capacity)
-      {
-      // we've filled the node array, so add another bucket
-      unsigned num_buckets = m_capacity / BUCKET_SIZE + 1 ;
-      NybbleTrieNode **newbuckets
-	 = Fr::NewR<NybbleTrieNode*>(m_nodes,num_buckets) ;
-      if (newbuckets)
-	 {
-	 m_nodes = newbuckets ;
-	 m_nodes[num_buckets-1] = Fr::New<NybbleTrieNode>(BUCKET_SIZE) ;
-	 if (m_nodes[num_buckets-1] == 0)
-	    {
-	    fprintf(stderr,"Out of memory!\n") ;
-	    abort() ;
-	    }
-	 m_capacity += BUCKET_SIZE ;
-	 }
-      else
-	 {
-	 fprintf(stderr,"Out of memory!\n") ;
-	 abort() ;
-	 }
-      }
-   uint32_t node_index = m_used++ ;
-   NybbleTrieNode *n = node(node_index) ;
-   new (n) NybbleTrieNode ;
-   return node_index ;
-}
-
-//----------------------------------------------------------------------
-
-NybbleTrieNode* NybbleTrie::node(uint32_t N) const
-{
-   if (N < m_used)
-      {
-      NybbleTrieNode *bucket = m_nodes[N / BUCKET_SIZE] ;
-      return (bucket) ? &bucket[N % BUCKET_SIZE] : 0 ;
-      }
-   else
-      return nullptr ;
 }
 
 //----------------------------------------------------------------------
@@ -780,7 +705,7 @@ bool NybbleTrie::allChildrenAreTerminals(uint32_t nodeindex, uint32_t min_freq, 
 
 bool NybbleTrie::enumerate(uint8_t *keybuf, unsigned maxkeylength, EnumFn *fn, void *user_data) const
 {
-   if (keybuf && fn && m_nodes[ROOT_INDEX])
+   if (keybuf && fn)
       {
       memset(keybuf,'\0',maxkeylength) ;
       return enumerateChildren(ROOT_INDEX,keybuf,maxkeylength*8,0,fn,user_data) ;
@@ -843,13 +768,8 @@ static bool scale_frequency(const NybbleTrie* trie, uint32_t nodeindex,
 
 bool NybbleTrie::scaleFrequencies(uint64_t total_count)
 {
-   if (m_nodes[0])
-      {
-      uint8_t keybuf[10000] ;
-      return enumerateChildren(ROOT_INDEX,keybuf,8*sizeof(keybuf),0,scale_frequency,&total_count) ;
-      }
-   else
-      return false ;
+   uint8_t keybuf[10000] ;
+   return enumerateChildren(ROOT_INDEX,keybuf,8*sizeof(keybuf),0,scale_frequency,&total_count) ;
 }
 
 //----------------------------------------------------------------------
@@ -881,14 +801,9 @@ static bool scale_frequency_smoothed(const NybbleTrie* trie, uint32_t nodeindex,
 bool NybbleTrie::scaleFrequencies(uint64_t total_count, double power,
 				  double log_power)
 {
-   if (m_nodes[0])
-      {
-      uint8_t keybuf[10000] ;
-      CountAndPower c_p(total_count,power,log_power) ;
-      return enumerateChildren(ROOT_INDEX,keybuf,8*sizeof(keybuf),0,scale_frequency_smoothed,&c_p) ;
-      }
-   else
-      return false ;
+   uint8_t keybuf[10000] ;
+   CountAndPower c_p(total_count,power,log_power) ;
+   return enumerateChildren(ROOT_INDEX,keybuf,8*sizeof(keybuf),0,scale_frequency_smoothed,&c_p) ;
 }
 
 //----------------------------------------------------------------------

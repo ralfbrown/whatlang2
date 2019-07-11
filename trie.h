@@ -5,7 +5,7 @@
 /*									*/
 /*  File: trie.h - Word-frequency trie					*/
 /*  Version:  1.30				       			*/
-/*  LastEdit: 2019-07-07						*/
+/*  LastEdit: 2019-07-11						*/
 /*									*/
 /*  (c) Copyright 2011,2012,2014,2019 Carnegie Mellon University	*/
 /*      This program is free software; you can redistribute it and/or   */
@@ -30,6 +30,7 @@
 #include <limits.h>
 #include <stdint.h>
 #include "framepac/file.h"
+#include "framepac/itempool.h"
 
 using namespace std ;
 
@@ -107,10 +108,10 @@ class NybbleTrie
    public:
       NybbleTrie(uint32_t capacity = 0) ;
       NybbleTrie(const char *filename, bool verbose) ;
-      ~NybbleTrie() ;
+      ~NybbleTrie() = default ;
 
       bool loadWords(const char *filename, bool verbose) ;
-      uint32_t allocateNode() ;
+      uint32_t allocateNode() { return (uint32_t)m_nodes.alloc() ; }
 
       // modifiers
       void setUserData(void *ud) { m_userdata = ud ; }
@@ -128,14 +129,14 @@ class NybbleTrie
 
       // accessors
       void *userData() const { return m_userdata ; }
-      uint32_t size() const { return m_used ; }
-      uint32_t capacity() const { return m_capacity ; }
+      uint32_t size() const { return m_nodes.size() ; }
+      uint32_t capacity() const { return m_nodes.capacity() ; }
       uint32_t totalTokens() const { return m_totaltokens ; }
       unsigned longestKey() const { return m_maxkeylen ; }
       bool ignoringWhiteSpace() const { return m_ignorewhitespace ; }
-      NybbleTrieNode *node(uint32_t N) const ;
-      NybbleTrieNode *rootNode() const ;
-      NybbleTrieNode *findNode(const uint8_t *key, unsigned keylength) const ;
+      Node *node(uint32_t N) const { return m_nodes.item(N) ; }
+      Node *rootNode() const ;
+      Node *findNode(const uint8_t *key, unsigned keylength) const ;
       uint32_t find(const uint8_t *key, unsigned keylength) const ;
       bool extendKey(uint32_t &nodeindex, uint8_t keybyte) const ;
       bool enumerate(uint8_t *keybuf, unsigned maxkeylength, EnumFn *fn, void *user_data) const ;
@@ -161,10 +162,8 @@ class NybbleTrie
       bool extendNybble(uint32_t &nodeindex, uint8_t nybble) const ;
       uint32_t insertNybble(uint32_t nodeindex, uint8_t nybble) ;
    private:
-      NybbleTrieNode  **m_nodes ;	// list of buckets of nodes
+      Fr::ItemPool<Node> m_nodes ;
       void	       *m_userdata ;
-      uint32_t	        m_capacity ;
-      uint32_t	 	m_used ;
       uint32_t	 	m_totaltokens ;
       unsigned	 	m_maxkeylen ;
       bool	 	m_ignorewhitespace ;

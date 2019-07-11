@@ -174,7 +174,6 @@ class LangIDMultiTrie //: public Fr::MultiTrie<Fr::UInt32>
       bool enumerateTerminalNodes(uint32_t nodeindex, uint32_t &count, unsigned keylen_bits = 0) const ;
       unsigned numExtensions(uint32_t nodeindex, unsigned = 0) const ;
       bool allChildrenAreTerminals(uint32_t nodeindex, unsigned = 0) const ;
-      //end TODO
       bool singleChild(uint32_t nodeindex) const ;
       bool singleChildSameFreq(uint32_t nodeindex, bool allow_nonleaf, double ratio) const ;
       uint32_t countFreqRecords() const ;
