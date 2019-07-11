@@ -157,11 +157,12 @@ class NybbleTrie
       static NybbleTrie *load(Fr::CFile& f) ;
       static NybbleTrie *load(const char *filename) ;
       bool write(Fr::CFile& f) const ;
+   protected:
+      uint32_t insertNybble(uint32_t nodeindex, uint8_t nybble) ;
    private:
       void init(uint32_t capacity) ;
       bool extendNybble(uint32_t &nodeindex, uint8_t nybble) const ;
-      uint32_t insertNybble(uint32_t nodeindex, uint8_t nybble) ;
-   private:
+   protected:
       Fr::ItemPool<Node> m_nodes ;
       void	       *m_userdata ;
       uint32_t	 	m_totaltokens ;

@@ -474,48 +474,6 @@ bool LangIDMultiTrie::loadWords(const char *filename, uint32_t langID, bool verb
 
 //----------------------------------------------------------------------
 
-MultiTrieNode *LangIDMultiTrie::rootNode() const
-{
-   return node(LangIDMultiTrie::ROOT_INDEX) ;
-}
-
-//----------------------------------------------------------------------
-
-uint32_t LangIDMultiTrie::insertNybble(uint32_t nodeindex, uint8_t nybble)
-{
-   auto n = node(nodeindex) ;
-   return n->insertChild(nybble,this) ;
-}
-
-//----------------------------------------------------------------------
-
-void LangIDMultiTrie::insertChild(uint32_t &nodeindex, uint8_t keybyte)
-{
-   if (ignoringWhiteSpace() && keybyte == ' ')
-      return ;
-#if MTRIE_BITS_PER_LEVEL == 8
-   nodeindex = insertNybble(nodeindex,keybyte) ;
-#elif MTRIE_BITS_PER_LEVEL == 4
-   nodeindex = insertNybble(nodeindex,keybyte >> 4) ;
-   nodeindex = insertNybble(nodeindex,keybyte & 0x0F) ;
-#elif MTRIE_BITS_PER_LEVEL == 3
-   nodeindex = insertNybble(nodeindex,(keybyte >> 6) & 0x03) ;
-   nodeindex = insertNybble(nodeindex,(keybyte >> 3) & 0x07) ;
-   nodeindex = insertNybble(nodeindex,keybyte & 0x07) ;
-#elif MTRIE_BITS_PER_LEVEL == 2
-   nodeindex = insertNybble(nodeindex,(keybyte >> 6) & 0x03) ;
-   nodeindex = insertNybble(nodeindex,(keybyte >> 4) & 0x03) ;
-   nodeindex = insertNybble(nodeindex,(keybyte >> 2) & 0x03) ;
-   nodeindex = insertNybble(nodeindex,keybyte & 0x03) ;
-#else
-#  error No code for given MTRIE_BITS_PER_LEVEL
-#endif      
-   return ;
-}
-
-
-//----------------------------------------------------------------------
-
 bool LangIDMultiTrie::insert(const uint8_t *key, unsigned keylength,
 		       uint32_t langID, uint32_t frequency, bool stopgram)
 {
@@ -810,58 +768,6 @@ bool LangIDMultiTrie::allChildrenAreTerminals(uint32_t nodeindex, unsigned bits)
 	 return false ;
       }
    return true ;
-}
-
-//----------------------------------------------------------------------
-
-bool LangIDMultiTrie::singleChild(uint32_t nodeindex) const 
-{
-   auto node = this->node(nodeindex) ;
-   for (size_t i = 0 ; i < 8 && node ; i += MTRIE_BITS_PER_LEVEL)
-      {
-      unsigned index = ~0 ;
-      for (unsigned ch = 0 ; ch < (1<<MTRIE_BITS_PER_LEVEL) ; ch++)
-	 {
-	 if (node->childPresent(ch))
-	    {
-	    if (index != ~0U)
-	       return false ; 		// multiple children
-	    index = ch ;
-	    }
-	 }
-      if (index == ~0U)
-	 return false ; 		// no children at all
-      node = this->node(node->childIndex(index)) ;
-      }
-   return node != nullptr ;
-}
-
-//----------------------------------------------------------------------
-
-bool LangIDMultiTrie::singleChildSameFreq(uint32_t nodeindex, bool allow_nonleaf, double ratio) const 
-{
-   auto node = this->node(nodeindex) ;
-   auto parent_freq = node->frequency() ;
-   for (size_t i = 0 ; i < 8 && node ; i += MTRIE_BITS_PER_LEVEL)
-      {
-      unsigned index = ~0 ;
-      for (unsigned ch = 0 ; ch < (1<<MTRIE_BITS_PER_LEVEL) ; ch++)
-	 {
-	 if (node->childPresent(ch))
-	    {
-	    if (index != ~0U)
-	       return false ; 		// multiple children
-	    index = ch ;
-	    }
-	 }
-      if (index == ~0U)
-	 return false ; 		// no children at all
-      node = this->node(node->childIndex(index)) ;
-      }
-   if (!node)
-      return false ;
-   auto freq = node->frequency() ;
-   return ((freq <= parent_freq && freq >= ratio * parent_freq) || (allow_nonleaf && freq == 0)) ;
 }
 
 //----------------------------------------------------------------------

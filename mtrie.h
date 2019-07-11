@@ -52,12 +52,6 @@ using namespace std ;
 /************************************************************************/
 /************************************************************************/
 
-class MultiTrieNode ;
-
-class MultiTrie ;
-
-//----------------------------------------------------------------------
-
 class MultiTrieFrequency
    {
    public:
@@ -117,89 +111,7 @@ class MultiTrieFrequency
 
 //----------------------------------------------------------------------
 
-class MultiTrieNode ;
-
-//TODO: implement template in FramepaC-ng, make this a thin wrapper around it
-class LangIDMultiTrie //: public Fr::MultiTrie<Fr::UInt32>
-   {
-   public:
-      static constexpr uint32_t ROOT_INDEX = 0U ;
-      static constexpr uint32_t NULL_INDEX = 0U ;
-      static constexpr uint32_t INVALID_FREQ = MultiTrieFrequency::INVALID_FREQ ;
-
-      typedef MultiTrieNode Node ;
-      typedef bool EnumFn(const MultiTrieNode *node, const uint8_t *key,
-	 		  unsigned keylen, void *user_data) ;
-   public:
-      LangIDMultiTrie(uint32_t capacity = 0) ;
-      LangIDMultiTrie(const char *filename, bool verbose) ;
-      LangIDMultiTrie(const class LangIDMultiTrie *) ;
-      LangIDMultiTrie(const class LangIDPackedMultiTrie *) ;
-      ~LangIDMultiTrie() = default ;
-
-      bool loadWords(const char *filename, uint32_t langID,
-		     bool verbose = false) ;
-      uint32_t allocateNode() { return (uint32_t)m_nodes.alloc() ; }
-
-      // modifiers
-      void ignoreWhiteSpace(bool ignore = true) { m_ignorewhitespace = ignore ; }
-      void setLanguage(uint32_t langID) { m_currentlangID = langID ; }
-      void addTokenCount(uint32_t incr = 1) { m_totaltokens += incr ; }
-      bool insert(const uint8_t *key, unsigned keylength,
-		  uint32_t langID, uint32_t frequency, bool stopgram) ;
-      void insertChild(uint32_t &nodeindex, uint8_t keybyte) ;
-      uint32_t increment(const uint8_t *key, unsigned keylength,
-			 uint32_t langID, uint32_t incr = 1,
-			 bool stopgram = false) ;
-      bool incrementExtensions(const uint8_t *key, unsigned prevlength,
-			       unsigned keylength, uint32_t langID,
-			       uint32_t incr = 1) ;
-
-      // accessors
-      uint32_t size() const { return m_nodes.size() ; }
-      uint32_t capacity() const { return m_nodes.capacity() ; }
-      uint32_t currentLanguage() const { return m_currentlangID ; }
-      uint32_t totalTokens() const { return m_totaltokens ; }
-      unsigned longestKey() const { return m_maxkeylen ; }
-      bool ignoringWhiteSpace() const { return m_ignorewhitespace ; }
-      Node *node(uint32_t N) const { return m_nodes.item(N) ; }
-      Node *rootNode() const ;
-      Node *findNode(const uint8_t *key, unsigned keylength) const ;
-      uint32_t find(const uint8_t *key, unsigned keylength) const ;
-      bool extendKey(uint32_t &nodeindex, uint8_t keybyte) const ;
-      bool enumerate(uint8_t *keybuf, unsigned maxkeylength, EnumFn *fn, void *user_data) const ;
-      bool enumerateChildren(uint32_t nodeindex, uint8_t *keybuf, unsigned max_keylength_bits,
-			     unsigned curr_keylength_bits, EnumFn *fn, void *user_data) const ;
-      bool enumerateFullByteNodes(uint32_t nodeindex, uint32_t &count, unsigned keylen_bits = 0) const ;
-      bool enumerateTerminalNodes(uint32_t nodeindex, uint32_t &count, unsigned keylen_bits = 0) const ;
-      unsigned numExtensions(uint32_t nodeindex, unsigned = 0) const ;
-      bool allChildrenAreTerminals(uint32_t nodeindex, unsigned = 0) const ;
-      bool singleChild(uint32_t nodeindex) const ;
-      bool singleChildSameFreq(uint32_t nodeindex, bool allow_nonleaf, double ratio) const ;
-      uint32_t countFreqRecords() const ;
-      uint32_t numFullByteNodes() const ;
-      uint32_t numTerminalNodes() const ;
-
-      // I/O
-      static LangIDMultiTrie *load(Fr::CFile& f) ;
-      static LangIDMultiTrie *load(const char *filename) ;
-      bool write(Fr::CFile& f) const ;
-      bool write(const char *filename) const ;
-      bool dump(Fr::CFile& f) const ;
-   private:
-      void init(uint32_t capacity) ;
-      bool writeHeader(Fr::CFile& f) const ;
-      bool extendNybble(uint32_t &nodeindex, uint8_t nybble) const ;
-      uint32_t insertNybble(uint32_t nodeindex, uint8_t nybble) ;
-   private:
-      Fr::ItemPool<Node>  m_nodes ;
-      uint32_t		  m_totaltokens ;
-      uint32_t		  m_currentlangID ;
-      unsigned		  m_maxkeylen ;
-      bool		  m_ignorewhitespace ;
-   } ;
-
-//----------------------------------------------------------------------
+class LangIDMultiTrie ;
 
 class MultiTrieNode : public NybbleTrieNode
    {
@@ -222,6 +134,70 @@ class MultiTrieNode : public NybbleTrieNode
       // I/O
       bool load(Fr::CFile& f) ;
       bool write(Fr::CFile& f) const ;
+   } ;
+
+//----------------------------------------------------------------------
+
+//TODO: implement template in FramepaC-ng, make this a thin wrapper around it
+class LangIDMultiTrie : public NybbleTrie
+   {
+   public:
+      static constexpr uint32_t ROOT_INDEX = 0U ;
+      static constexpr uint32_t NULL_INDEX = 0U ;
+      static constexpr uint32_t INVALID_FREQ = MultiTrieFrequency::INVALID_FREQ ;
+
+      typedef MultiTrieNode Node ;
+      typedef bool EnumFn(const MultiTrieNode *node, const uint8_t *key,
+	 		  unsigned keylen, void *user_data) ;
+   public:
+      LangIDMultiTrie(uint32_t capacity = 0) ;
+      LangIDMultiTrie(const char *filename, bool verbose) ;
+      LangIDMultiTrie(const class LangIDMultiTrie *) ;
+      LangIDMultiTrie(const class LangIDPackedMultiTrie *) ;
+      ~LangIDMultiTrie() = default ;
+
+      bool loadWords(const char *filename, uint32_t langID, bool verbose = false) ;
+
+      // modifiers
+      void setLanguage(uint32_t langID) { m_currentlangID = langID ; }
+      bool insert(const uint8_t *key, unsigned keylength,
+		  uint32_t langID, uint32_t frequency, bool stopgram) ;
+      uint32_t increment(const uint8_t *key, unsigned keylength,
+			 uint32_t langID, uint32_t incr = 1,
+			 bool stopgram = false) ;
+      bool incrementExtensions(const uint8_t *key, unsigned prevlength,
+			       unsigned keylength, uint32_t langID,
+			       uint32_t incr = 1) ;
+
+      // accessors
+      Node *node(uint32_t N) const { return static_cast<Node*>(m_nodes.item(N)) ; }
+      uint32_t currentLanguage() const { return m_currentlangID ; }
+      Node *findNode(const uint8_t *key, unsigned keylength) const ;
+      uint32_t find(const uint8_t *key, unsigned keylength) const ;
+      bool extendKey(uint32_t &nodeindex, uint8_t keybyte) const ;
+      bool enumerate(uint8_t *keybuf, unsigned maxkeylength, EnumFn *fn, void *user_data) const ;
+      bool enumerateChildren(uint32_t nodeindex, uint8_t *keybuf, unsigned max_keylength_bits,
+			     unsigned curr_keylength_bits, EnumFn *fn, void *user_data) const ;
+      bool enumerateFullByteNodes(uint32_t nodeindex, uint32_t &count, unsigned keylen_bits = 0) const ;
+      bool enumerateTerminalNodes(uint32_t nodeindex, uint32_t &count, unsigned keylen_bits = 0) const ;
+      unsigned numExtensions(uint32_t nodeindex, unsigned = 0) const ;
+      bool allChildrenAreTerminals(uint32_t nodeindex, unsigned = 0) const ;
+      uint32_t countFreqRecords() const ;
+      uint32_t numFullByteNodes() const ;
+      uint32_t numTerminalNodes() const ;
+
+      // I/O
+      static LangIDMultiTrie *load(Fr::CFile& f) ;
+      static LangIDMultiTrie *load(const char *filename) ;
+      bool write(Fr::CFile& f) const ;
+      bool write(const char *filename) const ;
+      bool dump(Fr::CFile& f) const ;
+   private:
+      void init(uint32_t capacity) ;
+      bool writeHeader(Fr::CFile& f) const ;
+      bool extendNybble(uint32_t &nodeindex, uint8_t nybble) const ;
+   private:
+      uint32_t		  m_currentlangID ;
    } ;
 
 //----------------------------------------------------------------------

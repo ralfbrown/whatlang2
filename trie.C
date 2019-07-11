@@ -208,7 +208,7 @@ bool NybbleTrieNode::hasChildren(const NybbleTrie *trie,
       {
       if (m_children[i] == NybbleTrie::NULL_INDEX)
 	 continue ;
-      NybbleTrieNode *child = trie->node(m_children[i]) ;
+      auto child = trie->node(m_children[i]) ;
       if (child && child->frequency() >= min_freq)
 	 return true ;
       }
@@ -365,7 +365,7 @@ NybbleTrieNode *NybbleTrie::rootNode() const
 
 uint32_t NybbleTrie::insertNybble(uint32_t nodeindex, uint8_t nybble)
 {
-   NybbleTrieNode *n = node(nodeindex) ;
+   auto n = node(nodeindex) ;
    return n->insertChild(nybble,this) ;
 }
 
@@ -410,7 +410,7 @@ bool NybbleTrie::insert(const uint8_t *key, unsigned keylength,
       key++ ;
       keylength-- ;
       }
-   NybbleTrieNode *leaf = node(cur_index) ;
+   auto leaf = node(cur_index) ;
    bool new_node = false ;
    if (leaf)
       {
@@ -436,7 +436,7 @@ bool NybbleTrie::insertMax(const uint8_t *key, unsigned keylength,
       key++ ;
       keylength-- ;
       }
-   NybbleTrieNode *leaf = node(cur_index) ;
+   auto leaf = node(cur_index) ;
    bool new_node = false ;
    if (leaf)
       {
@@ -462,7 +462,7 @@ uint32_t NybbleTrie::find(const uint8_t *key, unsigned keylength) const
       key++ ;
       keylength-- ;
       }
-   NybbleTrieNode *n = node(cur_index) ;
+   auto n = node(cur_index) ;
    return n ? n->frequency() : 0 ;
 }
 
@@ -496,7 +496,7 @@ uint32_t NybbleTrie::increment(const uint8_t *key, unsigned keylength,
 	 return incr ;
 	 }
       }
-   NybbleTrieNode *n = node(cur_index) ;
+   auto n = node(cur_index) ;
    if (n)
       {
       uint32_t freq = n->frequency() + incr ;
@@ -529,10 +529,10 @@ bool NybbleTrie::incrementExtensions(const uint8_t *key,
    for (size_t i = prevlength ; i < keylength ; i++)
       {
       this->insertChild(cur_index,key[i]) ;
-      NybbleTrieNode *n = node(cur_index) ;
+      auto n = node(cur_index) ;
       if (!n)
 	 return false ;
-      uint32_t freq = n->frequency() + incr ;
+      auto freq = n->frequency() + incr ;
       n->setFrequency(freq) ;
       n->markAsLeaf() ;
       }
@@ -545,7 +545,7 @@ bool NybbleTrie::incrementExtensions(const uint8_t *key,
 
 bool NybbleTrie::extendNybble(uint32_t &nodeindex, uint8_t nybble) const
 {
-   NybbleTrieNode *n = node(nodeindex) ;
+   auto n = node(nodeindex) ;
    if (n->childPresent(nybble))
       {
       nodeindex = n->childIndex(nybble) ;
@@ -596,7 +596,7 @@ bool NybbleTrie::singleChild(uint32_t nodeindex) const
       unsigned index = ~0 ;
       for (unsigned ch = 0 ; ch < (1<<BITS_PER_LEVEL) ; ch++)
 	 {
-	 if (node->childIndex(ch) != NybbleTrie::NULL_INDEX)
+	 if (node->childPresent(ch))
 	    {
 	    if (index != ~0U)
 	       return false ; 		// multiple children
@@ -607,7 +607,7 @@ bool NybbleTrie::singleChild(uint32_t nodeindex) const
 	 return false ; 		// no children at all
       node = this->node(node->childIndex(index)) ;
       }
-   return node != 0 ;
+   return node != nullptr ;
 }
 
 //----------------------------------------------------------------------
