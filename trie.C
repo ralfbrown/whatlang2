@@ -525,50 +525,6 @@ bool NybbleTrieNode::nextFrequencies(const NybbleTrie *trie,
 
 //----------------------------------------------------------------------
 
-bool NybbleTrieNode::enumerateChildren(const NybbleTrie *trie,
-				       uint8_t *keybuf,
-				       unsigned max_keylength_bits,
-				       unsigned curr_keylength_bits,
-				       NybbleTrieEnumFn *fn,
-				       void *user_data) const
-{
-   if (leaf() && !fn(this,keybuf,curr_keylength_bits/8,user_data))
-      return false ;
-   if (curr_keylength_bits < max_keylength_bits)
-      {
-      unsigned curr_bits = curr_keylength_bits + BITS_PER_LEVEL ;
-      for (size_t i = 0 ; i < lengthof(m_children) ; i++)
-	 {
-	 uint32_t child = childIndex(i) ;
-	 if (child != NybbleTrie::NULL_INDEX)
-	    {
-	    NybbleTrieNode *childnode = trie->node(child) ;
-	    if (childnode)
-	       {
-	       unsigned byte = curr_keylength_bits / 8 ;
-	       unsigned shift = LEVEL_SIZE - (curr_keylength_bits%8) - BITS_PER_LEVEL ;
-#if BITS_PER_LEVEL == 3
-	       if (shift == 0)
-		  {
-		  curr_bits = curr_keylength_bits + BITS_PER_LEVEL - 1 ;
-		  }
-#endif
-	       unsigned mask = (((1<<BITS_PER_LEVEL)-1) << shift) ;
-	       keybuf[byte] &= ~mask ;
-	       keybuf[byte] |= (i << shift) ;
-	       if (!childnode->enumerateChildren(trie,keybuf,
-						 max_keylength_bits,
-						 curr_bits,fn,user_data))
-		  return false ;
-	       }
-	    }
-	 }
-      }
-   return true ;
-}
-
-//----------------------------------------------------------------------
-
 bool NybbleTrieNode::enumerateTerminalNodes(const NybbleTrie *trie,
 					    unsigned keylen_bits,
 					    uint32_t &count,
@@ -1058,26 +1014,64 @@ bool NybbleTrie::extendKey(uint32_t &nodeindex, uint8_t keybyte) const
 
 //----------------------------------------------------------------------
 
-bool NybbleTrie::enumerate(uint8_t *keybuf, unsigned maxkeylength,
-			   NybbleTrieEnumFn *fn, void *user_data) const
+bool NybbleTrie::enumerate(uint8_t *keybuf, unsigned maxkeylength, EnumFn *fn, void *user_data) const
 {
-   if (keybuf && fn && m_nodes[0])
+   if (keybuf && fn && m_nodes[ROOT_INDEX])
       {
       memset(keybuf,'\0',maxkeylength) ;
-      return m_nodes[0]->enumerateChildren(this,keybuf,maxkeylength*8,0,fn,
-					   user_data) ;
+      return enumerateChildren(ROOT_INDEX,keybuf,maxkeylength*8,0,fn,user_data) ;
       }
    return false ;
 }
 
 //----------------------------------------------------------------------
 
-static bool scale_frequency(const NybbleTrieNode *node,
+bool NybbleTrie::enumerateChildren(uint32_t nodeindex,
+				       uint8_t *keybuf,
+				       unsigned max_keylength_bits,
+				       unsigned curr_keylength_bits,
+				       EnumFn *fn,
+				       void *user_data) const
+{
+   auto n = node(nodeindex) ;
+   if (n->leaf() && !fn(this,nodeindex,keybuf,curr_keylength_bits/8,user_data))
+      return false ;
+   if (curr_keylength_bits < max_keylength_bits)
+      {
+      unsigned curr_bits = curr_keylength_bits + BITS_PER_LEVEL ;
+      for (size_t i = 0 ; i < (1<<BITS_PER_LEVEL) ; i++)
+	 {
+	 uint32_t child = n->childIndex(i) ;
+	 if (child != NybbleTrie::NULL_INDEX)
+	    {
+	    unsigned byte = curr_keylength_bits / 8 ;
+	    unsigned shift = LEVEL_SIZE - (curr_keylength_bits%8) - BITS_PER_LEVEL ;
+#if BITS_PER_LEVEL == 3
+	    if (shift == 0)
+	       {
+	       curr_bits = curr_keylength_bits + BITS_PER_LEVEL - 1 ;
+	       }
+#endif
+	    unsigned mask = (((1<<BITS_PER_LEVEL)-1) << shift) ;
+	    keybuf[byte] &= ~mask ;
+	    keybuf[byte] |= (i << shift) ;
+	    if (!enumerateChildren(child,keybuf,max_keylength_bits,curr_bits,fn,user_data))
+	       return false ;
+	    }
+	 }
+      }
+   return true ;
+}
+
+//----------------------------------------------------------------------
+
+static bool scale_frequency(const NybbleTrie* trie, uint32_t nodeindex,
 			    const uint8_t * /*key*/, unsigned /*keylen*/,
 			    void *user_data)
 {
    const uint64_t *total_count = (uint64_t*)user_data ;
-   ((NybbleTrieNode*)node)->scaleFrequency(*total_count) ;
+   auto node = trie->node(nodeindex) ;
+   node->scaleFrequency(*total_count) ;
    return true ;			// continue iterating
 }
 
@@ -1088,8 +1082,7 @@ bool NybbleTrie::scaleFrequencies(uint64_t total_count)
    if (m_nodes[0])
       {
       uint8_t keybuf[10000] ;
-      return m_nodes[0]->enumerateChildren(this,keybuf,8*sizeof(keybuf),0,
-					   scale_frequency,&total_count) ;
+      return enumerateChildren(ROOT_INDEX,keybuf,8*sizeof(keybuf),0,scale_frequency,&total_count) ;
       }
    else
       return false ;
@@ -1107,17 +1100,15 @@ class CountAndPower
 	 { count = c ; power = p ; log_power = l ; }
    } ;
 
-static bool scale_frequency_smoothed(const NybbleTrieNode *node,
+static bool scale_frequency_smoothed(const NybbleTrie* trie, uint32_t nodeindex,
 				     const uint8_t * /*key*/,
 				     unsigned /*keylen*/,
 				     void *user_data)
 {
    const CountAndPower *c_p = (CountAndPower*)user_data ;
    const uint64_t total_count = c_p->count ;
-   double power = c_p->power ;
-   double log_power = c_p->log_power ;
-   ((NybbleTrieNode*)node)->scaleFrequency(total_count,power,
-					   log_power) ;
+   auto node = trie->node(nodeindex) ;
+   node->scaleFrequency(total_count,c_p->power,c_p->log_power) ;
    return true ;			// continue iterating
 }
 
@@ -1130,8 +1121,7 @@ bool NybbleTrie::scaleFrequencies(uint64_t total_count, double power,
       {
       uint8_t keybuf[10000] ;
       CountAndPower c_p(total_count,power,log_power) ;
-      return m_nodes[0]->enumerateChildren(this,keybuf,8*sizeof(keybuf),0,
-					   scale_frequency_smoothed,&c_p) ;
+      return enumerateChildren(ROOT_INDEX,keybuf,8*sizeof(keybuf),0,scale_frequency_smoothed,&c_p) ;
       }
    else
       return false ;

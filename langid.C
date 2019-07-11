@@ -1814,13 +1814,11 @@ static void identify_languages(const char *buffer, size_t buflen,
    double normalizer = (double)length_normalizer ;
    for (size_t index = 0 ; index + minhist < buflen ; index++)
       {
-      uint32_t nodeindex = PTRIE_ROOT_INDEX ;
-      if ((nodeindex = langdata->extendKey((uint8_t)buffer[index],nodeindex))
-	 == LangIDPackedMultiTrie::NULL_INDEX)
+      uint32_t nodeindex = LangIDPackedMultiTrie::ROOT_INDEX ;
+      if ((nodeindex = langdata->extendKey((uint8_t)buffer[index],nodeindex)) == LangIDPackedMultiTrie::NULL_INDEX)
 	 continue ;
       if (minhist > 1 &&
-	  (nodeindex = langdata->extendKey((uint8_t)buffer[index+1],nodeindex))
-	 == LangIDPackedMultiTrie::NULL_INDEX)
+	  (nodeindex = langdata->extendKey((uint8_t)buffer[index+1],nodeindex)) == LangIDPackedMultiTrie::NULL_INDEX)
 	 continue ;
       // we have character sets with alignments of 1, 2, or 4 bytes; the
       //   low two bits of the offset from the start of the buffer tells

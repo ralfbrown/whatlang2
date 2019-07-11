@@ -5,7 +5,7 @@
 /*									*/
 /*  File: ptrie.h - packed Word-frequency multi-trie			*/
 /*  Version:  1.30				       			*/
-/*  LastEdit: 2019-07-09						*/
+/*  LastEdit: 2019-07-10						*/
 /*									*/
 /*  (c) Copyright 2011,2012,2013,2015,2019 Carnegie Mellon University	*/
 /*      This program is free software; you can redistribute it and/or   */
@@ -41,11 +41,7 @@ using namespace std ;
 /*	Manifest Constants						*/
 /************************************************************************/
 
-#define PTRIE_ROOT_INDEX 0
-#define INVALID_FREQ ((uint32_t)~0)
-
 #define PTRIE_BITS_PER_LEVEL 8
-#define PTRIE_CHILDREN_PER_NODE 256
 
 // how do we distinguish non-terminal from terminal nodes?
 #define PTRIE_TERMINAL_MASK 0x80000000
@@ -87,10 +83,6 @@ class LangIDPackedMultiTrie ;
 
 class PackedTrieFreq
    {
-   private:
-      Fr::UInt32 m_freqinfo ;
-      static double s_value_map[PACKED_TRIE_NUM_VALUES] ;
-      static bool s_value_map_initialized ;
    public:
       void *operator new(size_t, void *where) { return where ; }
       PackedTrieFreq()
@@ -152,23 +144,24 @@ class PackedTrieFreq
       void isLast(bool last) ;
       static void initDataMapping(double (*mapfn)(uint32_t)) ;
       static bool writeDataMapping(Fr::CFile& f) ;
+
+   private:
+      Fr::UInt32 m_freqinfo ;
+      static double s_value_map[PACKED_TRIE_NUM_VALUES] ;
+      static bool s_value_map_initialized ;
    } ;
 
 //----------------------------------------------------------------------
 
 class PackedTrieNode
    {
-   private:
-      Fr::UInt32 m_frequency_info ;
-      Fr::UInt32 m_firstchild ;
-#define LENGTHOF_M_CHILDREN (PTRIE_CHILDREN_PER_NODE / sizeof(Fr::UInt32) / 8)
-      Fr::UInt32 m_children[LENGTHOF_M_CHILDREN] ;
-      uint8_t	 m_popcounts[LENGTHOF_M_CHILDREN] ;
-#undef LENGTHOF_M_CHILDREN
+   public:
+      static constexpr uint32_t INVALID_FREQ = (uint32_t)~0 ;
+
    public:
       void *operator new(size_t, void *where) { return where ; }
       PackedTrieNode() ;
-      ~PackedTrieNode() {}
+      ~PackedTrieNode() = default ;
 
       // accessors
       bool leaf() const
@@ -181,17 +174,20 @@ class PackedTrieNode
       double probability(const PackedTrieFreq *base, uint32_t ID = 0) const ;
       const PackedTrieFreq *frequencies(const PackedTrieFreq *base) const
          { return base + m_frequency_info.load() ; }
-      bool enumerateChildren(const LangIDPackedMultiTrie *trie,
-			     uint8_t *keybuf, unsigned max_keylength_bits,
-			     unsigned curr_keylength_bits,
-			     PackedTrieEnumFn *fn,
-			     void *user_data) const ;
 
       // modifiers
       void setFirstChild(uint32_t index) { m_firstchild.store(index) ; }
       void setFrequencies(uint32_t index) { m_frequency_info.store(index) ; }
       void setChild(unsigned N) ;
       void setPopCounts() ;
+
+   private:
+      Fr::UInt32 m_frequency_info ;
+      Fr::UInt32 m_firstchild ;
+#define LENGTHOF_M_CHILDREN ((1<<PTRIE_BITS_PER_LEVEL) / (8*sizeof(Fr::UInt32)))
+      Fr::UInt32 m_children[LENGTHOF_M_CHILDREN] ;
+      uint8_t	 m_popcounts[LENGTHOF_M_CHILDREN] ;
+#undef LENGTHOF_M_CHILDREN
    } ;
 
 //----------------------------------------------------------------------
@@ -200,12 +196,13 @@ class PackedTrieTerminalNode
    {
    public:
       static constexpr uint32_t NULL_INDEX = 0U ;
+      static constexpr uint32_t INVALID_FREQ = (uint32_t)~0 ;
    private:
       Fr::UInt32 m_frequency_info ;
    public:
       void *operator new(size_t, void *where) { return where ; }
       PackedTrieTerminalNode() { m_frequency_info.store(INVALID_FREQ); }
-      ~PackedTrieTerminalNode() {}
+      ~PackedTrieTerminalNode() = default ;
 
       // accessors
       bool leaf() const { return true ; }
@@ -235,6 +232,8 @@ class LangIDPackedMultiTrie // : public Fr::PackedMultiTrie<...>
    {
    public:
       static constexpr uint32_t NULL_INDEX = 0U ;
+      static constexpr uint32_t ROOT_INDEX = 0U ;
+      static constexpr uint32_t INVALID_FREQ = (uint32_t)~0 ;
    public:
       LangIDPackedMultiTrie() { init() ; }
       LangIDPackedMultiTrie(const LangIDMultiTrie *trie) ;
@@ -273,6 +272,11 @@ class LangIDPackedMultiTrie // : public Fr::PackedMultiTrie<...>
       uint32_t extendKey(uint8_t keybyte, uint32_t nodeindex) const ;
       bool enumerate(uint8_t *keybuf, unsigned maxkeylength,
 		     PackedTrieEnumFn *fn, void *user_data) const ;
+      bool enumerateChildren(uint32_t nodeindex,
+			     uint8_t *keybuf, unsigned max_keylength_bits,
+			     unsigned curr_keylength_bits,
+			     PackedTrieEnumFn *fn,
+			     void *user_data) const ;
 
       // I/O
       static LangIDPackedMultiTrie *load(Fr::CFile& f, const char *filename) ;

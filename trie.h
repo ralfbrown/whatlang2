@@ -68,11 +68,6 @@ typedef bool NybbleTrieEnumFn(const NybbleTrieNode *node,
 
 class NybbleTrieNode
    {
-   private:
-      uint32_t	m_children[1<<BITS_PER_LEVEL] ;
-      uint32_t  m_frequency ;
-      bool	m_leaf ;
-      bool	m_stopgram ;
    protected:
       bool nextFrequencies(const NybbleTrie *trie, uint32_t *frequencies,
 			   uint8_t idx, unsigned bits) const ;
@@ -98,11 +93,6 @@ class NybbleTrieNode
       bool singleChild(const NybbleTrie *trie) const ;
       bool singleChildSameFreq(const NybbleTrie *trie,
 			       bool allow_nonleaf, double ratio) const ;
-      bool enumerateChildren(const NybbleTrie *trie,
-			     uint8_t *keybuf, unsigned max_keylength_bits,
-			     unsigned curr_keylength_bits,
-			     NybbleTrieEnumFn *fn,
-			     void *user_data) const ;
       bool enumerateFullNodes(const NybbleTrie *trie, uint32_t &count,
 			      uint32_t min_freq = 0) const ;
       bool enumerateTerminalNodes(const NybbleTrie *trie,
@@ -123,6 +113,11 @@ class NybbleTrieNode
       // I/O
       static NybbleTrieNode *read(Fr::CFile& f) ;
       bool write(Fr::CFile& f) const ;
+   private:
+      uint32_t	m_children[1<<BITS_PER_LEVEL] ;
+      uint32_t  m_frequency ;
+      bool	m_leaf ;
+      bool	m_stopgram ;
    } ;
 
 //----------------------------------------------------------------------
@@ -133,6 +128,8 @@ class NybbleTrie
       static constexpr uint32_t ROOT_INDEX = 0U ;
       static constexpr uint32_t NULL_INDEX = 0U ;
       typedef NybbleTrieNode Node ;
+      typedef bool EnumFn(const NybbleTrie *trie, uint32_t index, const uint8_t *key, unsigned keylen,
+	                  void *user_data) ;
    public:
       NybbleTrie(uint32_t capacity = 0) ;
       NybbleTrie(const char *filename, bool verbose) ;
@@ -167,8 +164,10 @@ class NybbleTrie
       NybbleTrieNode *findNode(const uint8_t *key, unsigned keylength) const ;
       uint32_t find(const uint8_t *key, unsigned keylength) const ;
       bool extendKey(uint32_t &nodeindex, uint8_t keybyte) const ;
-      bool enumerate(uint8_t *keybuf, unsigned maxkeylength,
-		     NybbleTrieEnumFn *fn, void *user_data) const ;
+      bool enumerate(uint8_t *keybuf, unsigned maxkeylength, EnumFn *fn, void *user_data) const ;
+      bool enumerateChildren(uint32_t nodeindex, uint8_t *keybuf, unsigned max_keylength_bits,
+			     unsigned curr_keylength_bits, EnumFn *fn, void *user_data) const ;
+
       bool scaleFrequencies(uint64_t total_count) ;
       bool scaleFrequencies(uint64_t total_count, double power, double log_power) ;
       uint32_t numTerminalNodes(uint32_t min_freq = 0) const ;

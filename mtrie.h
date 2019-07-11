@@ -46,8 +46,6 @@ using namespace std ;
 //   but needs twice as many memory accesses for lookups
 #define MTRIE_BITS_PER_LEVEL 2
 
-#define INVALID_FREQ ((uint32_t)~0)
-
 #define LID_LANGID_MASK   0x0FFFFFFF
 #define LID_STOPGRAM_MASK 0x8000000
 
@@ -55,8 +53,6 @@ using namespace std ;
 /************************************************************************/
 
 class MultiTrieNode ;
-typedef bool MultiTrieEnumFn(const MultiTrieNode *node, const uint8_t *key,
-			     unsigned keylen, void *user_data) ;
 
 class MultiTrie ;
 
@@ -64,13 +60,8 @@ class MultiTrie ;
 
 class MultiTrieFrequency
    {
-   private:
-      static MultiTrieFrequency *s_base_address ;
-      static uint32_t s_max_alloc ;
-      static uint32_t s_curr_alloc ;
-      uint32_t m_next ;
-      uint32_t m_frequency ;
-      uint32_t m_langID ;
+   public:
+      static constexpr uint32_t INVALID_FREQ = (uint32_t)~0 ;
    public:
       MultiTrieFrequency() {} // only for internal use by readAll()
       MultiTrieFrequency(uint32_t freq, uint32_t langID,
@@ -115,6 +106,13 @@ class MultiTrieFrequency
       static bool readAll(Fr::CFile& f) ;
       bool write(Fr::CFile& f) const ;
       static bool writeAll(Fr::CFile& f) ;
+   private:
+      static MultiTrieFrequency *s_base_address ;
+      static uint32_t s_max_alloc ;
+      static uint32_t s_curr_alloc ;
+      uint32_t m_next ;
+      uint32_t m_frequency ;
+      uint32_t m_langID ;
    } ;
 
 //----------------------------------------------------------------------
@@ -127,7 +125,11 @@ class LangIDMultiTrie //: public Fr::MultiTrie<Fr::UInt32>
    public:
       static constexpr uint32_t ROOT_INDEX = 0U ;
       static constexpr uint32_t NULL_INDEX = 0U ;
+      static constexpr uint32_t INVALID_FREQ = MultiTrieFrequency::INVALID_FREQ ;
+
       typedef MultiTrieNode Node ;
+      typedef bool EnumFn(const MultiTrieNode *node, const uint8_t *key,
+	 		  unsigned keylen, void *user_data) ;
    public:
       LangIDMultiTrie(uint32_t capacity = 0) ;
       LangIDMultiTrie(const char *filename, bool verbose) ;
@@ -165,8 +167,9 @@ class LangIDMultiTrie //: public Fr::MultiTrie<Fr::UInt32>
       MultiTrieNode *findNode(const uint8_t *key, unsigned keylength) const ;
       uint32_t find(const uint8_t *key, unsigned keylength) const ;
       bool extendKey(uint32_t &nodeindex, uint8_t keybyte) const ;
-      bool enumerate(uint8_t *keybuf, unsigned maxkeylength,
-		     MultiTrieEnumFn *fn, void *user_data) const ;
+      bool enumerate(uint8_t *keybuf, unsigned maxkeylength, EnumFn *fn, void *user_data) const ;
+      bool enumerateChildren(uint32_t nodeindex, uint8_t *keybuf, unsigned max_keylength_bits,
+			     unsigned curr_keylength_bits, EnumFn *fn, void *user_data) const ;
       uint32_t countFreqRecords() const ;
       uint32_t numFullByteNodes() const ;
       uint32_t numTerminalNodes() const ;
@@ -196,10 +199,6 @@ class LangIDMultiTrie //: public Fr::MultiTrie<Fr::UInt32>
 
 class MultiTrieNode
    {
-   private:
-      uint32_t	m_children[1<<MTRIE_BITS_PER_LEVEL] ;
-      uint32_t  m_frequency_info ;
-      bool	m_isleaf ;
    public:
       void *operator new(size_t, void *where) { return where ; }
       MultiTrieNode() ;
@@ -220,11 +219,6 @@ class MultiTrieNode
       bool singleChild(const LangIDMultiTrie *trie) const ;
       bool singleChildSameFreq(const LangIDMultiTrie *trie,
 			       bool allow_nonleaf, double ratio) const ;
-      bool enumerateChildren(const LangIDMultiTrie *trie,
-			     uint8_t *keybuf, unsigned max_keylength_bits,
-			     unsigned curr_keylength_bits,
-			     MultiTrieEnumFn *fn,
-			     void *user_data) const ;
       bool enumerateFullByteNodes(const LangIDMultiTrie *trie,
 				  unsigned keylen_bits, uint32_t &count) const ;
       bool enumerateTerminalNodes(const LangIDMultiTrie *trie,
@@ -239,6 +233,11 @@ class MultiTrieNode
       // I/O
       bool load(Fr::CFile& f) ;
       bool write(Fr::CFile& f) const ;
+
+   private:
+      uint32_t	m_children[1<<MTRIE_BITS_PER_LEVEL] ;
+      uint32_t  m_frequency_info ;
+      bool	m_isleaf ;
    } ;
 
 //----------------------------------------------------------------------

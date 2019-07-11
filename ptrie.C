@@ -193,7 +193,7 @@ PackedTrieNode::PackedTrieNode()
 
 bool PackedTrieNode::childPresent(unsigned int N) const 
 {
-   if (N >= PTRIE_CHILDREN_PER_NODE)
+   if (N >= (1<<PTRIE_BITS_PER_LEVEL))
       return false ;
    uint32_t children = m_children[N/32].load() ;
    uint32_t mask = (1U << (N % 32)) ;
@@ -204,7 +204,7 @@ bool PackedTrieNode::childPresent(unsigned int N) const
 
 uint32_t PackedTrieNode::childIndex(unsigned int N) const
 {
-   if (N >= PTRIE_CHILDREN_PER_NODE)
+   if (N >= (1<<PTRIE_BITS_PER_LEVEL))
       return LangIDPackedMultiTrie::NULL_INDEX ;
    uint32_t children = m_children[N/32].load() ;
    uint32_t mask = (1U << (N % 32)) - 1 ;
@@ -216,8 +216,8 @@ uint32_t PackedTrieNode::childIndex(unsigned int N) const
 
 uint32_t PackedTrieNode::childIndexIfPresent(uint8_t N) const
 {
-#if PTRIE_CHILDREN_PER_NODE < 256
-   if (N >= PTRIE_CHILDREN_PER_NODE)
+#if (1<<PTRIE_BITS_PER_LEVEL) < 256
+   if (N >= (1<<PTRIE_BITS_PER_LEVEL))
       return LangIDPackedMultiTrie::NULL_INDEX ;
 #endif
    uint32_t children = m_children[N/32].load() ;
@@ -233,7 +233,7 @@ uint32_t PackedTrieNode::childIndexIfPresent(uint8_t N) const
 
 uint32_t PackedTrieNode::childIndexIfPresent(unsigned int N) const
 {
-   if (N >= PTRIE_CHILDREN_PER_NODE)
+   if (N >= (1<<PTRIE_BITS_PER_LEVEL))
       return LangIDPackedMultiTrie::NULL_INDEX ;
    uint32_t children = m_children[N/32].load() ;
    uint32_t mask = (1U << (N % 32)) ;
@@ -264,7 +264,7 @@ double PackedTrieNode::probability(const PackedTrieFreq *base,
 
 void PackedTrieNode::setChild(unsigned N)
 {
-   if (N < PTRIE_CHILDREN_PER_NODE)
+   if (N < (1<<PTRIE_BITS_PER_LEVEL))
       {
       uint32_t mask = (1U << (N % 32)) ;
       m_children[N/32] |= mask ;
@@ -287,43 +287,6 @@ void PackedTrieNode::setPopCounts()
    return ;
 }
 
-//----------------------------------------------------------------------
-
-bool PackedTrieNode::enumerateChildren(const LangIDPackedMultiTrie *trie,
-				       uint8_t *keybuf,
-				       unsigned max_keylength_bits,
-				       unsigned curr_keylength_bits,
-				       PackedTrieEnumFn *fn,
-				       void *user_data) const
-{
-   if (leaf() && !fn(this,keybuf,curr_keylength_bits/8,user_data))
-      return false ;
-   else if (trie->terminalNode(this))
-      return true ;
-   if (curr_keylength_bits < max_keylength_bits)
-      {
-      unsigned curr_bits = curr_keylength_bits + PTRIE_BITS_PER_LEVEL ;
-      for (unsigned i = 0 ; i < PTRIE_CHILDREN_PER_NODE ; i++)
-	 {
-	 uint32_t child = childIndexIfPresent(i) ;
-	 if (child != LangIDPackedMultiTrie::NULL_INDEX)
-	    {
-	    auto childnode = trie->node(child) ;
-	    if (childnode)
-	       {
-	       unsigned byte = curr_keylength_bits / 8 ;
-	       keybuf[byte] = i ;
-	       if (!childnode->enumerateChildren(trie,keybuf,
-						 max_keylength_bits,
-						 curr_bits,fn,user_data))
-		  return false ;
-	       }
-	    }
-	 }
-      }
-   return true ;
-}
-
 /************************************************************************/
 /*	Methods for class PackedMultiTrie				*/
 /************************************************************************/
@@ -343,10 +306,10 @@ LangIDPackedMultiTrie::LangIDPackedMultiTrie(const LangIDMultiTrie *multrie)
       if (m_nodes && m_freq)
 	 {
 	 const auto mroot = multrie->rootNode() ;
-	 auto proot = &m_nodes[PTRIE_ROOT_INDEX] ;
+	 auto proot = &m_nodes[ROOT_INDEX] ;
 	 new (proot) PackedTrieNode ;
 	 m_used = 1 ;
-	 if (!insertChildren(proot,multrie,mroot,PTRIE_ROOT_INDEX))
+	 if (!insertChildren(proot,multrie,mroot,ROOT_INDEX))
 	    {
 	    m_size = 0 ;
 	    m_numfreq = 0 ;
@@ -516,7 +479,7 @@ bool LangIDPackedMultiTrie::insertTerminals(PackedTrieNode *parent,
       return false ;
       }
    unsigned index = 0 ;
-   for (unsigned i = 0 ; i < PTRIE_CHILDREN_PER_NODE ; i++)
+   for (unsigned i = 0 ; i < (1<<PTRIE_BITS_PER_LEVEL) ; i++)
       {
       uint32_t nodeindex = mnode_index ;
       if (mtrie->extendKey(nodeindex,(uint8_t)i))
@@ -578,7 +541,7 @@ bool LangIDPackedMultiTrie::insertChildren(PackedTrieNode *parent,
       return false ;
       }
    unsigned index = 0 ;
-   for (unsigned i = 0 ; i < PTRIE_CHILDREN_PER_NODE ; i++)
+   for (unsigned i = 0 ; i < (1<<PTRIE_BITS_PER_LEVEL) ; i++)
       {
       uint32_t nodeindex = mnode_index ;
       if (mtrie->extendKey(nodeindex,(uint8_t)i))
@@ -669,10 +632,9 @@ bool LangIDPackedMultiTrie::parseHeader(Fr::CFile& f)
 
 //----------------------------------------------------------------------
 
-PackedTrieNode* LangIDPackedMultiTrie::findNode(const uint8_t *key,
-					  unsigned keylength) const
+PackedTrieNode* LangIDPackedMultiTrie::findNode(const uint8_t *key, unsigned keylength) const
 {
-   uint32_t cur_index = PTRIE_ROOT_INDEX ;
+   uint32_t cur_index = ROOT_INDEX ;
    while (keylength > 0)
       {
       if (!extendKey(cur_index,*key))
@@ -751,13 +713,44 @@ uint32_t LangIDPackedMultiTrie::extendKey(uint8_t keybyte, uint32_t nodeindex) c
 bool LangIDPackedMultiTrie::enumerate(uint8_t *keybuf, unsigned maxkeylength,
 				PackedTrieEnumFn *fn, void *user_data) const
 {
-   if (keybuf && fn && m_nodes && m_nodes[0].firstChild())
+   if (keybuf && fn && m_nodes && m_nodes[ROOT_INDEX].firstChild())
       {
       memset(keybuf,'\0',maxkeylength) ;
-      return m_nodes[0].enumerateChildren(this,keybuf,maxkeylength*8,0,fn,
-					  user_data) ;
+      return enumerateChildren(ROOT_INDEX,keybuf,maxkeylength*8,0,fn,user_data) ;
       }
    return false ;
+}
+
+//----------------------------------------------------------------------
+
+bool LangIDPackedMultiTrie::enumerateChildren(uint32_t nodeindex,
+				       uint8_t *keybuf,
+				       unsigned max_keylength_bits,
+				       unsigned curr_keylength_bits,
+				       PackedTrieEnumFn *fn,
+				       void *user_data) const
+{
+   auto n = node(nodeindex) ;
+   if (n->leaf() && !fn(n,keybuf,curr_keylength_bits/8,user_data))
+      return false ;
+   else if (terminalNode(n))
+      return true ;
+   if (curr_keylength_bits < max_keylength_bits)
+      {
+      unsigned curr_bits = curr_keylength_bits + PTRIE_BITS_PER_LEVEL ;
+      for (unsigned i = 0 ; i < (1<<PTRIE_BITS_PER_LEVEL) ; i++)
+	 {
+	 uint32_t child = n->childIndexIfPresent(i) ;
+	 if (child != LangIDPackedMultiTrie::NULL_INDEX)
+	    {
+	    unsigned byte = curr_keylength_bits / 8 ;
+	    keybuf[byte] = i ;
+	    if (!enumerateChildren(child,keybuf,max_keylength_bits,curr_bits,fn,user_data))
+	       return false ;
+	    }
+	 }
+      }
+   return true ;
 }
 
 //----------------------------------------------------------------------
