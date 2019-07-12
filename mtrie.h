@@ -170,8 +170,6 @@ class LangIDMultiTrie : public NybbleTrie
       bool enumerate(uint8_t* keybuf, unsigned maxkeylength, EnumFn* fn, void *user_data) const ;
       bool enumerateChildren(NodeIndex nodeindex, uint8_t* keybuf, unsigned max_keylength_bits,
 			     unsigned curr_keylength_bits, EnumFn* fn, void *user_data) const ;
-      bool enumerateFullByteNodes(NodeIndex nodeindex, uint32_t& count, unsigned keylen_bits = 0) const ;
-      bool countTerminalNodes(NodeIndex nodeindex, uint32_t& count, unsigned keylen_bits = 0) const ;
       unsigned numExtensions(NodeIndex nodeindex, unsigned = 0) const ;
       bool allChildrenAreTerminals(NodeIndex nodeindex, unsigned = 0) const ;
       uint32_t countFreqRecords() const ;
@@ -184,6 +182,11 @@ class LangIDMultiTrie : public NybbleTrie
       bool write(Fr::CFile& f) const ;
       bool write(const char *filename) const ;
       bool dump(Fr::CFile& f) const ;
+
+   protected:
+      size_t countTerminalNodes(NodeIndex nodeindex, unsigned keylen_bits = 0) const ;
+      size_t countFullByteNodes(NodeIndex nodeindex, unsigned keylen_bits = 0) const ;
+
    private:
       void init(uint32_t capacity) ;
       bool writeHeader(Fr::CFile& f) const ;

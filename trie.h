@@ -145,8 +145,6 @@ class NybbleTrie
       bool enumerate(uint8_t* keybuf, unsigned maxkeylength, EnumFn *fn, void *user_data) const ;
       bool enumerateChildren(NodeIndex nodeindex, uint8_t *keybuf, unsigned max_keylength_bits,
 			     unsigned curr_keylength_bits, EnumFn *fn, void *user_data) const ;
-      unsigned numExtensions(NodeIndex nodeindex, uint32_t min_freq = 0, unsigned = 0) const ;
-      bool allChildrenAreTerminals(NodeIndex nodeindex, uint32_t min_freq = 0, unsigned = 0) const ;
       bool singleChild(NodeIndex nodeindex) const ;
       bool singleChildSameFreq(NodeIndex nodeindex, bool allow_nonleaf, double ratio) const ;
 

@@ -636,43 +636,6 @@ bool NybbleTrie::singleChildSameFreq(NodeIndex nodeindex, bool allow_nonleaf, do
 
 //----------------------------------------------------------------------
 
-unsigned NybbleTrie::numExtensions(NodeIndex nodeindex, uint32_t min_freq, unsigned bits) const
-{
-   unsigned count = 0 ;
-   auto node = this->node(nodeindex) ;
-   if (bits >= 8)
-      {
-      return (node && node->frequency() >= min_freq) ? 1 : 0 ;
-      }
-   for (size_t i = 0 ; i < (1<<BITS_PER_LEVEL) ; ++i)
-      {
-      auto childindex = node->childIndex(i) ;
-      if (childindex != NULL_INDEX)
-	 count += numExtensions(childindex,min_freq,bits+BITS_PER_LEVEL) ;
-      }
-   return count ;
-}
-
-//----------------------------------------------------------------------
-
-bool NybbleTrie::allChildrenAreTerminals(NodeIndex nodeindex, uint32_t min_freq, unsigned bits) const
-{
-   auto node = this->node(nodeindex) ;
-   if (bits >= 8)
-      {
-      return ! ((!node->leaf() || node->frequency() >= min_freq) && numExtensions(nodeindex,min_freq) > 0) ;
-      }
-   for (size_t i = 0 ; i < (1<<BITS_PER_LEVEL) ; ++i)
-      {
-      auto childindex = node->childIndex(i) ;
-      if (childindex != NULL_INDEX && !allChildrenAreTerminals(childindex,min_freq,bits+BITS_PER_LEVEL))
-	 return false ;
-      }
-   return true ;
-}
-
-//----------------------------------------------------------------------
-
 bool NybbleTrie::enumerate(uint8_t *keybuf, unsigned maxkeylength, EnumFn *fn, void *user_data) const
 {
    if (keybuf && fn)
