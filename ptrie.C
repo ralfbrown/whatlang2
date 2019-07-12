@@ -364,38 +364,14 @@ void LangIDPackedMultiTrie::init()
 
 uint32_t LangIDPackedMultiTrie::allocateChildNodes(unsigned numchildren)
 {
-   uint32_t index = m_used ;
-   m_used += numchildren ;
-   if (m_used > size())
-      {
-      m_used = size() ;
-      return NOCHILD_INDEX ;		// error!  should never happen!
-      }
-   // initialize each of the new children
-   for (size_t i = 0 ; i < numchildren ; i++)
-      {
-      new (&m_nodes[index + i]) PackedTrieNode ;
-      }
-   return index ;
+   return m_nodes.allocBatch(numchildren) ;
 }
 
 //----------------------------------------------------------------------
 
 uint32_t LangIDPackedMultiTrie::allocateTerminalNodes(unsigned numchildren)
 {
-   uint32_t index = m_termused ;
-   m_termused += numchildren ;
-   if (m_termused > m_numterminals)
-      {
-      m_termused = m_numterminals ;
-      return NOCHILD_INDEX ;		// error!  should never happen!
-      }
-   // initialize each of the new children
-   for (size_t i = 0 ; i < numchildren ; i++)
-      {
-      new (&m_terminals[index + i]) PackedTrieTerminalNode ;
-      }
-   return (index | PTRIE_TERMINAL_MASK) ;
+   return m_terminals.allocBatch(numchildren) | PTRIE_TERMINAL_MASK ;
 }
 
 //----------------------------------------------------------------------
