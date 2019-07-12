@@ -5,7 +5,7 @@
 /*									*/
 /*  File:     langid.C							*/
 /*  Version:  1.30							*/
-/*  LastEdit: 2019-07-07						*/
+/*  LastEdit: 2019-07-12						*/
 /*                                                                      */
 /*  (c) Copyright 2010,2011,2012,2013,2014,2015,2019			*/
 /*		 Ralf Brown/Carnegie Mellon University			*/
@@ -270,18 +270,16 @@ static void parse_language_description(const char *descript,
 
 static double length_factor(unsigned len)
 {
-//   return 400.0 * ::pow(len,0.20) ;
    return 270.0 * ::pow(len,0.75) ;
 }
 
 //----------------------------------------------------------------------
 
-static double *make_length_factors(unsigned max_length,
-				   double bigram_weight)
+static NewPtr<double> make_length_factors(unsigned max_length, double bigram_weight)
 {
    if (max_length < 3)
       max_length = 3 ;
-   double *factors = New<double>(max_length+1) ;
+   NewPtr<double> factors(max_length+1) ;
    if (factors)
       {
       factors[0] = 0.0 ;
@@ -293,14 +291,6 @@ static double *make_length_factors(unsigned max_length,
 	 }
       }
    return factors ;
-}
-
-//----------------------------------------------------------------------
-
-static void free_length_factors(double *length_factors)
-{
-   Free(length_factors) ;
-   return ;
 }
 
 //----------------------------------------------------------------------
@@ -406,14 +396,13 @@ const
 
 //----------------------------------------------------------------------
 
-BigramCounts *BigramCounts::load(Fr::CFile& f)
+BigramCounts* BigramCounts::load(Fr::CFile& f)
 {
    if (f)
       {
-      auto model = new BigramCounts ;
+      NewPtr<BigramCounts> model(1) ;
       if (model->read(f))
-	 return model ;
-      delete model ;
+	 return model.move() ;
       }
    return nullptr ;
 }
@@ -537,6 +526,26 @@ LanguageID::LanguageID(const LanguageID *orig)
       setMatchFactor(orig->matchFactor()) ;
       }
    return ;
+}
+
+//----------------------------------------------------------------------
+
+LanguageID& LanguageID::operator = (LanguageID&& orig)
+{
+   m_language = orig.m_language.move() ;
+   m_region = orig.m_region.move() ;
+   m_encoding = orig.m_encoding.move() ;
+   m_source = orig.m_source.move() ;
+   m_script = orig.m_script.move() ;
+   m_friendlyname = orig.m_friendlyname ;
+   m_coverage = orig.m_coverage ;
+   m_countcover = orig.m_countcover ;
+   m_trainbytes = orig.m_trainbytes ;
+   m_alignment = orig.m_alignment ;
+   m_freqcover = orig.m_freqcover ;
+   m_matchfactor = orig.m_matchfactor ;
+   m_alignment = orig.m_alignment ;
+   return *this ;
 }
 
 //----------------------------------------------------------------------
@@ -770,17 +779,16 @@ bool LanguageID::guessScript()
 
 //----------------------------------------------------------------------
 
-LanguageID *LanguageID::read(Fr::CFile& f, unsigned file_version)
+LanguageID* LanguageID::read(Fr::CFile& f, unsigned file_version)
 {
    if (!f)
       return nullptr ;
-   auto langID = new LanguageID() ;
-   if (!read(f,langID,file_version))
+   NewPtr<LanguageID> langID(1) ;
+   if (!read(f,*langID,file_version))
       {
-      delete langID ;
       langID = nullptr ;
       }
-   return langID ;
+   return langID.move() ;
 }
 
 //----------------------------------------------------------------------
@@ -1202,7 +1210,7 @@ void LanguageScores::sort(double cutoff_ratio)
 {
    if (!sorted() && numLanguages() > 0)
       {
-      ScopedPtr<ScoreAndID> scores_and_ids(numLanguages()) ;
+      NewPtr<ScoreAndID> scores_and_ids(numLanguages()) ;
       if (!scores_and_ids)
 	 {
 	 //!!!
@@ -1292,7 +1300,7 @@ void LanguageScores::sort(double cutoff_ratio, unsigned max_langs)
       sort(cutoff_ratio) ;
    else if (!sorted() && numLanguages() > 0)
       {
-      ScopedPtr<ScoreAndID> scores_and_ids(max_langs) ;
+      NewPtr<ScoreAndID> scores_and_ids(max_langs) ;
       if (!scores_and_ids)
 	 {
 	 //!!!
@@ -1368,7 +1376,7 @@ void LanguageScores::sortByName(const LanguageID *langinfo)
 {
    if (numLanguages() > 0 && langinfo != nullptr)
       {
-      ScopedPtr<ScoreAndID> scores_and_ids(numLanguages()) ;
+      NewPtr<ScoreAndID> scores_and_ids(numLanguages()) ;
       if (!scores_and_ids)
 	 {
 	 //!!!
@@ -1504,15 +1512,14 @@ LanguageIdentifier::LanguageIdentifier(const char *language_data_file,
 	    m_num_languages = read_uint32(fp,0) ;
 	    if (numLanguages() > 0)
 	       {
-	       m_langinfo = NewC<LanguageID>(numLanguages()) ;
-	       if (!m_langinfo)
+	       m_langinfo = NewPtr<LanguageID>(numLanguages()) ;
+	       if (m_langinfo)
 		  {
-		  m_num_languages = 0 ;
-		  Free(m_langinfo) ;	m_langinfo = nullptr ;
+		  m_alloc_languages = numLanguages() ;
 		  }
 	       else
 		  {
-		  m_alloc_languages = numLanguages() ;
+		  m_num_languages = 0 ;
 		  }
 	       uint8_t have_bigrams = false ;
 	       (void)fp.readValue(&have_bigrams) ;
@@ -1546,14 +1553,15 @@ LanguageIdentifier::LanguageIdentifier(const char *language_data_file,
       {
       PackedTrieFreq::initDataMapping(scale_score) ;
       }
-   m_unaligned = nullptr ;
    setAlignments() ;
    setAdjustmentFactors() ;
    if (!m_langdata)
       m_langdata = new LangIDPackedMultiTrie ;
    if (!m_langinfo)
-      m_langinfo = NewC<LanguageID>(1) ;
-   m_string_counts = NewC<size_t>(numLanguages()) ;
+      m_langinfo = NewPtr<LanguageID>(1) ;
+   m_string_counts = NewPtr<size_t>(numLanguages()) ;
+   if (m_string_counts)
+      std::fill_n(m_string_counts.begin(),numLanguages(),0) ;
    if (m_langdata)
       m_length_factors = make_length_factors(m_langdata->longestKey(),m_bigram_weight) ;
    return ;
@@ -1563,18 +1571,6 @@ LanguageIdentifier::LanguageIdentifier(const char *language_data_file,
 
 LanguageIdentifier::~LanguageIdentifier()
 {
-   free_length_factors(m_length_factors) ;
-   m_length_factors = nullptr ;
-   delete m_langdata ;		m_langdata = nullptr ;
-   delete m_uncomplangdata ;	m_uncomplangdata = nullptr ;
-   for (size_t i = 0 ; i < numLanguages() ; i++)
-      {
-      m_langinfo[i].LanguageID::~LanguageID() ;
-      }
-   Free(m_langinfo) ;		m_langinfo = nullptr ;
-   Free(m_alignments) ; 	m_alignments = nullptr ;
-   Free(m_unaligned) ;		m_unaligned = nullptr ;
-   Free(m_string_counts) ;	m_string_counts = nullptr ;
    m_num_languages = 0 ;
    m_alloc_languages = 0 ;
    return ;
@@ -1584,8 +1580,7 @@ LanguageIdentifier::~LanguageIdentifier()
 
 void LanguageIdentifier::setAlignments()
 {
-   Free(m_alignments) ;
-   m_alignments = New<uint8_t>(PACKED_TRIE_LANGID_MASK + 1) ;
+   m_alignments = NewPtr<uint8_t>(PACKED_TRIE_LANGID_MASK + 1) ;
    for (size_t i = 0 ; i < numLanguages() ; i++)
       {
       m_alignments[i] = languageInfo(i)->alignment() ;
@@ -1596,8 +1591,8 @@ void LanguageIdentifier::setAlignments()
       }
    if (!m_unaligned)
       {
-      m_unaligned = New<uint8_t>(PACKED_TRIE_LANGID_MASK + 1) ;
-      std::fill_n(m_unaligned,numLanguages(),1) ;
+      m_unaligned = NewPtr<uint8_t>(PACKED_TRIE_LANGID_MASK + 1) ;
+      std::fill_n(m_unaligned.begin(),numLanguages(),1) ;
       for (size_t i = numLanguages() ; i <= PACKED_TRIE_LANGID_MASK ; i++)
 	 {
 	 m_unaligned[i] = (uint8_t)~0 ;
@@ -1610,8 +1605,7 @@ void LanguageIdentifier::setAlignments()
 
 bool LanguageIdentifier::setAdjustmentFactors()
 {
-   Free(m_adjustments) ;
-   m_adjustments = New<double>(numLanguages()) ;
+   m_adjustments = NewPtr<double>(numLanguages()) ;
    if (!m_adjustments)
       return false ;
    for (size_t i = 0 ; i < numLanguages() ; i++)
@@ -1641,33 +1635,31 @@ bool LanguageIdentifier::setAdjustmentFactors()
 
 //----------------------------------------------------------------------
 
-LangIDPackedMultiTrie *LanguageIdentifier::packedTrie()
+LangIDPackedMultiTrie* LanguageIdentifier::packedTrie()
 {
    if (!m_langdata && m_uncomplangdata)
       {
       m_langdata = new LangIDPackedMultiTrie(m_uncomplangdata) ;
-      delete m_uncomplangdata ;
       m_uncomplangdata = nullptr ;
       }
-   return m_langdata ;
+   return m_langdata.get() ;
 }
 
 //----------------------------------------------------------------------
 
-LangIDMultiTrie *LanguageIdentifier::unpackedTrie()
+LangIDMultiTrie* LanguageIdentifier::unpackedTrie()
 {
    if (!m_uncomplangdata && m_langdata)
       {
       m_uncomplangdata = new LangIDMultiTrie(m_langdata) ;
-      delete m_langdata ;
       m_langdata = nullptr ;
       }
-   return m_uncomplangdata ;
+   return m_uncomplangdata.get() ;
 }
 
 //----------------------------------------------------------------------
 
-const char *LanguageIdentifier::languageName(size_t N) const
+const char* LanguageIdentifier::languageName(size_t N) const
 {
    if (N < numLanguages())
       {
@@ -1903,7 +1895,7 @@ bool LanguageIdentifier::identify(LanguageScores *scores,
       freeScores(scores) ;
       scores = new LanguageScores(numLanguages()) ;
       }
-   m_langdata->ignoreWhiteSpace(ignore_whitespace) ;
+   m_langdata.get()->ignoreWhiteSpace(ignore_whitespace) ;
    if (m_length_factors)
       m_length_factors[2] = m_bigram_weight * length_factor(2) ;
    if (!alignments_)
@@ -1913,7 +1905,7 @@ bool LanguageIdentifier::identify(LanguageScores *scores,
    identify_languages(buffer,buflen,m_langdata,scores,alignments_,
 		      m_length_factors,apply_stop_grams,
 		      length_normalization) ;
-   m_langdata->ignoreWhiteSpace(false) ;
+   m_langdata.get()->ignoreWhiteSpace(false) ;
    return true ;
 }
 
@@ -1928,7 +1920,7 @@ LanguageScores *LanguageIdentifier::identify(const char *buffer,
    if (!buffer || !buflen || !m_langdata)
       return nullptr ;
    auto scores = new LanguageScores(numLanguages()) ;
-   const uint8_t *align = enforce_alignment ? m_alignments : nullptr ;
+   const auto align = enforce_alignment ? m_alignments.get() : nullptr ;
    if (!identify(scores,buffer,buflen,align,ignore_whitespace,
 		 apply_stop_grams,0))
       {
@@ -1958,7 +1950,7 @@ LanguageScores *LanguageIdentifier::identify(LanguageScores *scores,
       freeScores(scores) ;
       scores = new LanguageScores(numLanguages()) ;
       }
-   const uint8_t *align = enforce_alignment ? m_alignments : nullptr ;
+   const auto align = enforce_alignment ? m_alignments.get() : nullptr ;
    if (!identify(scores,buffer,buflen,align,ignore_whitespace,
 		 apply_stop_grams,0))
       {
@@ -2085,16 +2077,15 @@ uint32_t LanguageIdentifier::addLanguage(const LanguageID &info,
       if (m_langinfo[i] == info)
 	 return i ;
       }
-   LanguageID *new_info ;
    if (numLanguages() >= allocLanguages())
       {
       auto nlang = numLanguages() ;
       size_t new_alloc = nlang ? 2 * nlang : 120 ;
-      new_info = Fr::New<LanguageID>(new_alloc) ;
+      NewPtr<LanguageID> new_info(new_alloc) ;
       if (!new_info)
 	 return unknown_lang ;
       if (nlang)
-	 std::memcpy((char*)new_info,(char*)m_langinfo,nlang*sizeof(LanguageID)) ;
+	 std::move(m_langinfo.begin(),m_langinfo.begin()+nlang,new_info.begin()) ;
       m_langinfo = new_info ;
       m_alloc_languages = new_alloc ;
       }

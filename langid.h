@@ -5,7 +5,7 @@
 /*									*/
 /*  File:     langid.h							*/
 /*  Version:  1.30							*/
-/*  LastEdit: 2019-07-07						*/
+/*  LastEdit: 2019-07-12						*/
 /*                                                                      */
 /*  (c) Copyright 2010,2011,2012,2013,2014,2015,2019			*/
 /*		 Ralf Brown/Carnegie Mellon University			*/
@@ -31,7 +31,6 @@
 #include "framepac/cstring.h"
 
 using namespace std ;
-using namespace Fr ;
 
 /************************************************************************/
 /*	Manifest Constants						*/
@@ -190,22 +189,6 @@ class BigramCounts
 
 class LanguageID
    {
-   private:
-//      static Fr::Allocator allocator ;
-      Fr::CharPtr m_language ;
-      Fr::CharPtr m_region ;
-      Fr::CharPtr m_encoding ;
-      Fr::CharPtr m_source ;
-      Fr::CharPtr m_script ;
-      const char *m_friendlyname ;
-      double m_coverage ;		// percent of training covered by ngrams
-      double m_countcover ;		// coverage weighted by count of matches
-      double m_freqcover ;		// coverage weighted by frequencies of matches
-      double m_matchfactor ;
-      unsigned m_alignment ;
-      uint64_t m_trainbytes ;
-   protected:
-      void clear() ;
    public:
 //      void *operator new(size_t) { return allocator.allocate() ; }
 //      void *operator new(size_t, void *where) { return where ; }
@@ -215,6 +198,7 @@ class LanguageID
 		 const char *source = nullptr, const char *script = "UNKNOWN") ;
       LanguageID(const LanguageID &orig) ;
       LanguageID(const LanguageID *orig) ;
+      LanguageID& operator= (LanguageID&& orig) ;
       ~LanguageID() ;
 
       // accessors
@@ -256,26 +240,30 @@ class LanguageID
       static LanguageID* read(Fr::CFile& f, unsigned version) ;
       static bool read(Fr::CFile& f, LanguageID *langID, unsigned version) ;
       bool write(Fr::CFile& f) const ;
+
+   protected:
+      void clear() ;
+
+   private:
+//      static Fr::Allocator allocator ;
+      Fr::CharPtr m_language ;
+      Fr::CharPtr m_region ;
+      Fr::CharPtr m_encoding ;
+      Fr::CharPtr m_source ;
+      Fr::CharPtr m_script ;
+      const char *m_friendlyname ;
+      double m_coverage ;		// percent of training covered by ngrams
+      double m_countcover ;		// coverage weighted by count of matches
+      double m_freqcover ;		// coverage weighted by frequencies of matches
+      double m_matchfactor ;
+      uint64_t m_trainbytes ;
+      unsigned m_alignment ;
    } ;
 
 //----------------------------------------------------------------------
 
 class LanguageScores
    {
-   private:
-//      static Fr::Allocator allocator ;
-      unsigned short 	*m_lang_ids ;
-      double   		*m_scores ;
-      void		*m_userdata ;
-   protected: // members
-      unsigned	 	 m_num_languages ;
-      unsigned		 m_max_languages ;
-      unsigned		 m_active_language ;
-      bool      	 m_sorted ;
-   protected: // methods
-      void sortByName(const LanguageID *langinfo) ;
-      void invalidate() { m_lang_ids = nullptr ; m_scores = nullptr ; m_num_languages = m_max_languages = 0 ; }
-
    public:
 //      void *operator new(size_t) { return allocator.allocate() ; }
 //      void operator delete(void *blk) { allocator.release(blk) ; }
@@ -326,15 +314,27 @@ class LanguageScores
 			    bool ignore_region = false) ;
       void setLanguage(unsigned lang)
 	 { m_active_language = lang ; }
+
+   protected: // methods
+      void sortByName(const LanguageID *langinfo) ;
+      void invalidate() { m_lang_ids = nullptr ; m_scores = nullptr ; m_num_languages = m_max_languages = 0 ; }
+
+   private:
+//      static Fr::Allocator allocator ;
+      unsigned short 	*m_lang_ids ;
+      double   		*m_scores ;
+      void		*m_userdata ;
+   protected: // members
+      unsigned	 	 m_num_languages ;
+      unsigned		 m_max_languages ;
+      unsigned		 m_active_language ;
+      bool      	 m_sorted ;
    } ;
 
 //----------------------------------------------------------------------
 
 class WeightedLanguageScores : public LanguageScores
    {
-   private:
-//      static Fr::Allocator  allocator ;
-      Fr::NewPtr<double>	m_weights ;
    public:
 //      void *operator new(size_t) { return allocator.allocate() ; }
 //      void operator delete(void *blk) { allocator.release(blk) ; }
@@ -352,20 +352,18 @@ class WeightedLanguageScores : public LanguageScores
       void incrWeight(size_t N, double wt)
 	 { if (N < numLanguages()) m_weights[N] += wt ; }
       void sqrtWeights() ;
+
+   private:
+//      static Fr::Allocator  allocator ;
+      Fr::NewPtr<double>	m_weights ;
    } ;
 
 //----------------------------------------------------------------------
-
-class MultiTrie ;
 
 class LanguageIdentifier
    {
    public:
       static const uint32_t unknown_lang = (uint32_t)~0 ;
-
-   private:
-      void setAlignments() ;
-      bool setAdjustmentFactors() ;
    public:
       LanguageIdentifier(const char *language_data_file,
 			 bool verbose = false) ;
@@ -379,7 +377,7 @@ class LanguageIdentifier
       size_t numLanguages() const { return m_num_languages ; }
       double adjustmentFactor(size_t N) const { return m_adjustments[N] ; }
       LanguageIdentifier *charsetIdentifier() const { return m_charsetident ; }
-      class LangIDPackedMultiTrie* trie() const { return m_langdata ; }
+      class LangIDPackedMultiTrie* trie() const { return m_langdata.get() ; }
       LangIDPackedMultiTrie *packedTrie() ;
       class LangIDMultiTrie *unpackedTrie() ;
       const char *databaseLocation() const { return m_directory ; }
@@ -438,22 +436,26 @@ class LanguageIdentifier
       bool dump(Fr::CFile& f, bool show_ngrams = false) const ;
 
    private:
-      LangIDPackedMultiTrie *m_langdata { nullptr } ;
-      LangIDMultiTrie       *m_uncomplangdata { nullptr } ;
-      LanguageID      *m_langinfo { nullptr } ;
-      uint8_t 	      *m_alignments { nullptr } ;
-      double	      *m_length_factors { nullptr } ;
-      uint8_t	      *m_unaligned ;
-      size_t	      *m_string_counts ;
-      double	      *m_adjustments ;
-      Fr::CharPtr      m_directory ;
-      LanguageIdentifier *m_charsetident ;
-      double 	       m_bigram_weight ;
-      size_t	       m_alloc_languages ;
-      size_t 	       m_num_languages ;
-      bool   	       m_friendly_name ;
-      bool	       m_apply_cover_factor ;
-      bool             m_verbose ;
+      void setAlignments() ;
+      bool setAdjustmentFactors() ;
+
+   private:
+      Fr::NewPtr<LangIDPackedMultiTrie> m_langdata ;
+      Fr::NewPtr<LangIDMultiTrie> m_uncomplangdata ;
+      Fr::NewPtr<LanguageID> m_langinfo ;
+      Fr::NewPtr<double>     m_length_factors ;
+      Fr::NewPtr<double>     m_adjustments ;
+      Fr::NewPtr<uint8_t>    m_alignments ;
+      Fr::NewPtr<uint8_t>    m_unaligned ;
+      Fr::NewPtr<size_t>     m_string_counts ;
+      Fr::CharPtr            m_directory ;
+      LanguageIdentifier*    m_charsetident ;
+      double 	             m_bigram_weight ;
+      size_t	             m_alloc_languages ;
+      size_t 	             m_num_languages ;
+      bool   	             m_friendly_name ;
+      bool	             m_apply_cover_factor ;
+      bool                   m_verbose ;
    } ;
 
 /************************************************************************/

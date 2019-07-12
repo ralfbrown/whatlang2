@@ -33,6 +33,8 @@
 #include "framepac/texttransforms.h"
 #include "framepac/unicode.h"
 
+using namespace Fr ;
+
 /************************************************************************/
 /*	Manifest Constants						*/
 /************************************************************************/

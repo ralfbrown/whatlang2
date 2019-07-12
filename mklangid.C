@@ -44,6 +44,7 @@
 #include "framepac/texttransforms.h"
 
 using namespace std ;
+using namespace Fr ;
 
 /************************************************************************/
 /*	Configuration and Manifest Constants				*/
