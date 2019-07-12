@@ -5,7 +5,7 @@
 /*									*/
 /*  File: mtrie.C - bit-slice-based Word-frequency multi-trie		*/
 /*  Version:  1.30				       			*/
-/*  LastEdit: 2019-07-07						*/
+/*  LastEdit: 2019-07-12						*/
 /*									*/
 /*  (c) Copyright 2011,2012,2015,2019 Carnegie Mellon University	*/
 /*      This program is free software; you can redistribute it and/or   */
@@ -717,7 +717,7 @@ LangIDMultiTrie *LangIDMultiTrie::load(Fr::CFile& f)
       return nullptr ;
       }
    uint32_t used = val_used.load() ;
-   auto trie = new LangIDMultiTrie(used) ;
+   Fr::NewPtr<LangIDMultiTrie> trie(new LangIDMultiTrie(used)) ;
    if (!trie)
       return nullptr ;
    trie->m_nodes.allocBatch(used) ;
@@ -731,17 +731,15 @@ LangIDMultiTrie *LangIDMultiTrie::load(Fr::CFile& f)
       auto node = trie->node(i) ;
       if (!node->load(f))
 	 {
-	 delete trie ;
 	 return nullptr ;
 	 }
       }
    // finally, read the frequency information
    if (!MultiTrieFrequency::readAll(f))
       {
-      delete trie ;
       return nullptr ;
       }
-   return trie ;
+   return trie.move() ;
 }
 
 //----------------------------------------------------------------------

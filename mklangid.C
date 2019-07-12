@@ -2186,9 +2186,8 @@ static bool merge_ngrams(const PackedTrieNode *node, const uint8_t *key,
 
 //----------------------------------------------------------------------
 
-static NybbleTrie *find_encoding(const char *enc_name,
-				 NybbleTrie **&encodings,
-				 LanguageID **&enc_info,
+static NybbleTrie *find_encoding(const char *enc_name, NewPtr<NybbleTrie*>& encodings,
+				 NewPtr<LanguageID*>& enc_info,
 				 unsigned &num_encs, unsigned &encs_alloc)
 {
    if (!enc_name || !*enc_name)
@@ -2206,14 +2205,11 @@ static NybbleTrie *find_encoding(const char *enc_name,
    if (num_encs >= encs_alloc)
       {
       unsigned new_alloc = 2 * encs_alloc ;
-      NybbleTrie **new_encs = Fr::NewR<NybbleTrie*>(encodings,new_alloc) ;
-      LanguageID **new_info = Fr::NewR<LanguageID*>(enc_info,new_alloc) ;
-      if (new_encs)
-	 encodings = new_encs ;
-      if (new_info)
-	 enc_info = new_info ;
-      if (new_encs && new_info)
+      if (encodings.reallocate(encs_alloc,new_alloc) &&
+	  enc_info.reallocate(encs_alloc,new_alloc))
+	 {
 	 encs_alloc = new_alloc ;
+	 }
       }
    if (num_encs < encs_alloc)
       {
@@ -2232,8 +2228,8 @@ static bool cluster_models_by_charset(LanguageIdentifier *clusterdb,
 {
    unsigned num_encs = 0 ;
    unsigned encs_alloc = 50 ;
-   NybbleTrie **encodings = Fr::NewC<NybbleTrie*>(encs_alloc) ;
-   LanguageID **enc_info = Fr::NewC<LanguageID*>(encs_alloc) ;
+   NewPtr<NybbleTrie*> encodings(encs_alloc) ;
+   NewPtr< LanguageID*> enc_info(encs_alloc) ;
    // make a mapping from language ID to per-encoding merged models
    unsigned numlangs = language_identifier->numLanguages() ;
    NybbleTrie **merged = Fr::NewC<NybbleTrie*>(numlangs) ;
@@ -2242,8 +2238,7 @@ static bool cluster_models_by_charset(LanguageIdentifier *clusterdb,
       // get the character encoding for the current model and find the
       //   merged trie for that encoding
       const char *enc_name = language_identifier->languageEncoding(langid) ;
-      merged[langid]
-	 = find_encoding(enc_name,encodings,enc_info,num_encs,encs_alloc) ;
+      merged[langid] = find_encoding(enc_name,encodings,enc_info,num_encs,encs_alloc) ;
       if (!merged[langid])
 	 {
 	 SystemMessage::no_memory("while merging language models") ;
@@ -2278,19 +2273,15 @@ static bool cluster_models_by_charset(LanguageIdentifier *clusterdb,
       {
       bool have_max_length = true ;
       cerr << "adding encoding " << i << "  " << enc_info[i]->encoding() << endl;
-      NybbleTrie *clustered = restrict_ngrams(encodings[i],2*max_sizes[i],
-					      1,maxkey,1,have_max_length) ;
+      NewPtr<NybbleTrie> clustered { restrict_ngrams(encodings[i],2*max_sizes[i],1,maxkey,1,have_max_length) } ;
       delete encodings[i] ;
       uint64_t total_bytes = 1 ; //FIXME!!!
       add_ngrams(clustered,total_bytes,*(enc_info[i]),"???") ;
-      delete clustered ;
       delete enc_info[i] ;
       }
    save_database(cluster_dbfile) ;
    language_identifier = ident ;
    Fr::Free(model_sizes) ; model_sizes = nullptr ;
-   Fr::Free(encodings) ;
-   Fr::Free(enc_info) ;
    return true ;
 }
 

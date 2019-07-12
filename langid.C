@@ -1885,7 +1885,7 @@ bool LanguageIdentifier::identify(LanguageScores *scores,
       }
    else
       {
-      delete[] scores ;
+      delete scores ;
       scores = new LanguageScores(numLanguages()) ;
       }
    m_langdata.get()->ignoreWhiteSpace(ignore_whitespace) ;
@@ -1938,14 +1938,14 @@ LanguageScores *LanguageIdentifier::identify(LanguageScores *scores,
       }
    else
       {
-      delete[] scores ;
+      delete scores ;
       scores = new LanguageScores(numLanguages()) ;
       }
    const auto align = enforce_alignment ? m_alignments.get() : nullptr ;
    if (!identify(scores,buffer,buflen,align,ignore_whitespace,
 		 apply_stop_grams,0))
       {
-      delete[] scores ;
+      delete scores ;
       scores = nullptr ;
       }
    return scores ;
