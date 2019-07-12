@@ -5,7 +5,7 @@
 /*									*/
 /*  File: ptrie.h - packed Word-frequency multi-trie			*/
 /*  Version:  1.30				       			*/
-/*  LastEdit: 2019-07-10						*/
+/*  LastEdit: 2019-07-11						*/
 /*									*/
 /*  (c) Copyright 2011,2012,2013,2015,2019 Carnegie Mellon University	*/
 /*      This program is free software; you can redistribute it and/or   */
@@ -228,25 +228,22 @@ class LangIDPackedMultiTrie // : public Fr::PackedMultiTrie<...>
       void caseSensitivity(PTrieCase cs) { m_casesensitivity = cs ; }
 
       // accessors
-      bool good() const
-	 { return (m_nodes != nullptr) && (m_freq != nullptr) && m_size > 0 ; }
-      bool terminalNode(const PackedTrieNode *n) const
-	 { return (n < m_nodes) || (n >= m_nodes + m_size) ; }
-      uint32_t size() const { return m_size ; }
-      uint32_t numFrequencies() const { return m_numfreq ; }
+      bool good() const { return size() > 0 && m_freq.size() ; }
+      bool terminalNode(const PackedTrieNode *n) const { return !m_nodes.inBuffer(n) ; }
+      uint32_t size() const { return m_nodes.size() ; }
+      uint32_t numFrequencies() const { return m_freq.size(); }
       unsigned longestKey() const { return m_maxkeylen ; }
       bool ignoringWhiteSpace() const { return m_ignorewhitespace ; }
       PTrieCase caseSensitivity() const { return m_casesensitivity ; }
-      const PackedTrieFreq *frequencyBaseAddress() const { return m_freq ; }
-      PackedTrieNode *node(uint32_t N) const
-	 { if (N < m_size) return &m_nodes[N] ;
-	   if ((N & PTRIE_TERMINAL_MASK) != 0)
+      const PackedTrieFreq* frequencyBaseAddress() const { return m_freq.begin() ; }
+      PackedTrieNode* node(uint32_t N) const
+	 { if ((N & PTRIE_TERMINAL_MASK) != 0)
 	      {
 	      uint32_t termindex = (N & ~PTRIE_TERMINAL_MASK) ;
-	      if (termindex < m_numterminals)
-		 return (PackedTrieNode*)&m_terminals[termindex] ; 
+	      return (PackedTrieNode*)m_terminals.item(termindex) ; 
 	      }
-	   return nullptr ;
+	   else
+	      return m_nodes.item(N) ;
 	 }
       PackedTrieNode *findNode(const uint8_t *key, unsigned keylength) const ;
       bool extendKey(uint32_t &nodeindex, uint8_t keybyte) const ;
@@ -274,9 +271,9 @@ class LangIDPackedMultiTrie // : public Fr::PackedMultiTrie<...>
       bool insertTerminals(PackedTrieNode *parent, const LangIDMultiTrie *mtrie,
 			   uint32_t mnode_index, unsigned keylen = 0) ;
    private:
-      PackedTrieNode    *m_nodes ;	 // array of nodes
-      PackedTrieTerminalNode *m_terminals ;
-      PackedTrieFreq    *m_freq ;	 // array of frequency records
+      Fr::ItemPool<PackedTrieNode> m_nodes ;
+      Fr::ItemPool<PackedTrieTerminalNode> m_terminals ;
+      Fr::ItemPool<PackedTrieFreq> m_freq ;
       Fr::MemMappedFile	*m_fmap ;	 // memory-map info
       uint32_t	 	 m_size ;	 // number of nodes in m_nodes
       uint32_t		 m_numterminals ;
@@ -287,7 +284,6 @@ class LangIDPackedMultiTrie // : public Fr::PackedMultiTrie<...>
       unsigned		 m_maxkeylen ;
       enum PTrieCase	 m_casesensitivity ;
       bool		 m_ignorewhitespace ;
-      bool		 m_terminals_contiguous ;
    } ;
 
 //----------------------------------------------------------------------
