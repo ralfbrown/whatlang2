@@ -5,7 +5,7 @@
 /*									*/
 /*  File: ptrie.h - packed Word-frequency multi-trie			*/
 /*  Version:  1.30				       			*/
-/*  LastEdit: 2019-07-11						*/
+/*  LastEdit: 2019-07-12						*/
 /*									*/
 /*  (c) Copyright 2011,2012,2013,2015,2019 Carnegie Mellon University	*/
 /*      This program is free software; you can redistribute it and/or   */
@@ -218,7 +218,7 @@ class LangIDPackedMultiTrie // : public Fr::PackedMultiTrie<...>
       LangIDPackedMultiTrie() { init() ; }
       LangIDPackedMultiTrie(const LangIDMultiTrie *trie) ;
       LangIDPackedMultiTrie(Fr::CFile& f, const char *filename) ;
-      ~LangIDPackedMultiTrie() ;
+      ~LangIDPackedMultiTrie() = default ;
 
       bool parseHeader(Fr::CFile& f, size_t& numfull, size_t& numfreq, size_t& numterminals) ;
 
@@ -261,7 +261,6 @@ class LangIDPackedMultiTrie // : public Fr::PackedMultiTrie<...>
       bool write(const char *filename) const ;
       bool dump(Fr::CFile& f) const ;
    private:
-      void init() ;
       bool writeHeader(Fr::CFile& f) const ;
       uint32_t allocateChildNodes(unsigned numchildren) ;
       uint32_t allocateTerminalNodes(unsigned numchildren) ;
@@ -273,10 +272,10 @@ class LangIDPackedMultiTrie // : public Fr::PackedMultiTrie<...>
       Fr::ItemPool<PackedTrieNode> m_nodes ;
       Fr::ItemPool<PackedTrieTerminalNode> m_terminals ;
       Fr::ItemPool<PackedTrieFreq> m_freq ;
-      Fr::MemMappedFile	*m_fmap ;	 // memory-map info
-      unsigned		 m_maxkeylen ;
-      enum PTrieCase	 m_casesensitivity ;
-      bool		 m_ignorewhitespace ;
+      Fr::MemMappedFile	 m_fmap ;	 // memory-map info
+      unsigned		 m_maxkeylen        { 0 } ;
+      enum PTrieCase	 m_casesensitivity  { CS_Full } ;
+      bool		 m_ignorewhitespace { false } ;
    } ;
 
 //----------------------------------------------------------------------

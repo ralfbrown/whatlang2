@@ -259,7 +259,6 @@ void PackedTrieNode::setPopCounts()
 
 LangIDPackedMultiTrie::LangIDPackedMultiTrie(const LangIDMultiTrie *multrie)
 {
-   init() ;
    if (multrie)
       {
       auto numterminals = multrie->numTerminalNodes() ;
@@ -293,19 +292,17 @@ LangIDPackedMultiTrie::LangIDPackedMultiTrie(const LangIDMultiTrie *multrie)
 
 LangIDPackedMultiTrie::LangIDPackedMultiTrie(Fr::CFile& f, const char *filename)
 {
-   init() ;
    size_t numfull ;
    size_t numfreq ;
    size_t numterminals ;
    if (f && parseHeader(f,numfull,numfreq,numterminals))
       {
       size_t offset = f.tell() ;
-      auto fmap = new Fr::MemMappedROFile(filename) ;
-      if (fmap)
+      m_fmap = new Fr::MemMappedROFile(filename) ;
+      if (m_fmap)
 	 {
 	 // we can memory-map the file, so just point our member variables
 	 //   at the mapped data
-	 m_fmap = fmap ;
 	 const char* base = **fmap + offset ;
 	 m_nodes.external_buffer(base,numfull) ;
 	 base += numfull * sizeof(PackedTrieNode) ;
@@ -325,30 +322,6 @@ LangIDPackedMultiTrie::LangIDPackedMultiTrie(Fr::CFile& f, const char *filename)
 	    }
 	 }
       }
-   return ;
-}
-
-//----------------------------------------------------------------------
-
-LangIDPackedMultiTrie::~LangIDPackedMultiTrie()
-{
-   if (m_fmap)
-      {
-      delete m_fmap ;
-      m_fmap = nullptr ;
-      }
-   init() ;				// clear all of the fields
-   return ;
-}
-
-//----------------------------------------------------------------------
-
-void LangIDPackedMultiTrie::init()
-{
-   m_fmap = nullptr ;
-   m_maxkeylen = 0 ;
-   m_casesensitivity = CS_Full ;
-   m_ignorewhitespace = false ;
    return ;
 }
 
