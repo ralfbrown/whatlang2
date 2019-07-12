@@ -262,31 +262,28 @@ LangIDPackedMultiTrie::LangIDPackedMultiTrie(const LangIDMultiTrie *multrie)
    init() ;
    if (multrie)
       {
-      m_numfreq = multrie->countFreqRecords() ;
       m_numterminals = multrie->numTerminalNodes() ;
       auto sz = multrie->numFullByteNodes() - m_numterminals ;
       m_terminals.reserve(m_numterminals) ;
       m_nodes.reserve(sz) ;
-      m_freq.reserve(m_numfreq) ;
-      if (m_nodes.size() && m_freq.size())
+      m_freq.reserve(multrie->countFreqRecords()) ;
+      if (m_nodes.capacity() && m_freq.capacity())
 	 {
-	 auto proot = &m_nodes[ROOT_INDEX] ;
-	 new (proot) PackedTrieNode ;
-	 m_used = 1 ;
-	 if (!insertChildren(proot,multrie,LangIDMultiTrie::ROOT_INDEX))
+	 auto proot = m_nodes.alloc() ;
+	 if (!insertChildren(node(proot),multrie,LangIDMultiTrie::ROOT_INDEX))
 	    {
 	    m_nodes.clear() ;
-	    m_numfreq = 0 ;
+	    m_freq.clear() ;
 	    m_numterminals = 0 ;
 	    }
-	 cout << "   converted " << m_used << " full nodes, "
-	      << m_termused << " terminals, and "
-	      << m_freqused << " frequencies" << endl ;
+	 cout << "   converted " << m_nodes.size() << " full nodes, "
+	      << m_terminals.size() << " terminals, and "
+	      << m_freq.size() << " frequencies" << endl ;
 	 }
       else
 	 {
 	 m_nodes.clear() ;
-	 m_numfreq = 0 ;
+	 m_freq.clear() ;
 	 }
       }
    return ;
@@ -297,7 +294,8 @@ LangIDPackedMultiTrie::LangIDPackedMultiTrie(const LangIDMultiTrie *multrie)
 LangIDPackedMultiTrie::LangIDPackedMultiTrie(Fr::CFile& f, const char *filename)
 {
    init() ;
-   if (f && parseHeader(f))
+   size_t numfreq ;
+   if (f && parseHeader(f,numfreq))
       {
       size_t offset = f.tell() ;
       auto fmap = new Fr::MemMappedROFile(filename) ;
@@ -309,7 +307,7 @@ LangIDPackedMultiTrie::LangIDPackedMultiTrie(Fr::CFile& f, const char *filename)
 	 const char* base = **fmap + offset ;
 	 m_nodes.external_buffer(base,m_size) ;
 	 base += m_size * sizeof(PackedTrieNode) ;
-	 m_freq.external_buffer(base,m_numfreq) ;
+	 m_freq.external_buffer(base,numfreq) ;
 	 base += m_size*sizeof(PackedTrieFreq) ;
 	 m_terminals.external_buffer(base,m_numterminals) ;
 	 }
@@ -317,9 +315,8 @@ LangIDPackedMultiTrie::LangIDPackedMultiTrie(Fr::CFile& f, const char *filename)
 	 {
 	 // unable to memory-map the file, so read its contents into buffers
 	 //   and point our variables at the buffers
-	 if (!m_nodes.load(f,m_size) || !m_freq.load(f,m_numfreq) || !m_terminals.load(f,m_numterminals))
+	 if (!m_nodes.load(f,m_size) || !m_freq.load(f,numfreq) || !m_terminals.load(f,m_numterminals))
 	    {
-	    m_numfreq = 0 ;
 	    m_numterminals = 0 ;
 	    m_nodes.clear() ;
 	    m_freq.clear() ;
@@ -349,11 +346,7 @@ void LangIDPackedMultiTrie::init()
 {
    m_fmap = nullptr ;
    m_size = 0 ;
-   m_used = 0 ;
    m_numterminals = 0 ;
-   m_termused = 0 ;
-   m_numfreq = 0 ;
-   m_freqused = 0 ;
    m_maxkeylen = 0 ;
    m_casesensitivity = CS_Full ;
    m_ignorewhitespace = false ;
@@ -411,8 +404,7 @@ bool LangIDPackedMultiTrie::insertTerminals(PackedTrieNode *parent,
 	 auto numfreq = mchild->numFrequencies() ;
 	 if (numfreq > 0)
 	    {
-	    uint32_t freq_index = m_freqused ;
-	    m_freqused += numfreq ;
+	    uint32_t freq_index = m_freq.allocBatch(numfreq) ;
 	    pchild->setFrequencies(freq_index) ;
 	    auto mfreq = mchild->frequencies() ;
 	    while (mfreq && numfreq > 0)
@@ -471,8 +463,7 @@ bool LangIDPackedMultiTrie::insertChildren(PackedTrieNode *parent,
 	 auto numfreq = mchild->numFrequencies() ;
 	 if (numfreq > 0)
 	    {
-	    uint32_t freq_index = m_freqused ;
-	    m_freqused += numfreq ;
+	    uint32_t freq_index = m_freq.allocBatch(numfreq) ;
 	    pchild->setFrequencies(freq_index) ;
 	    auto mfreq = mchild->frequencies() ;
 	    while (mfreq && numfreq > 0)
@@ -500,7 +491,7 @@ bool LangIDPackedMultiTrie::insertChildren(PackedTrieNode *parent,
 
 //----------------------------------------------------------------------
 
-bool LangIDPackedMultiTrie::parseHeader(Fr::CFile& f)
+bool LangIDPackedMultiTrie::parseHeader(Fr::CFile& f, size_t& numfreq)
 {
    const size_t siglen = sizeof(MULTITRIE_SIGNATURE) ;
    char signature[siglen] ;
@@ -542,7 +533,7 @@ bool LangIDPackedMultiTrie::parseHeader(Fr::CFile& f)
    m_maxkeylen = val_keylen.load() ;
    m_size = val_size.load() ;
    m_numterminals = val_numterm.load() ;
-   m_numfreq = val_numfreq.load() ;
+   numfreq = val_numfreq.load() ;
    return true ;
 }
 
@@ -706,7 +697,10 @@ bool LangIDPackedMultiTrie::writeHeader(Fr::CFile& f) const
    if (!f.writeValue(version) || !f.writeValue(bits))
       return false ;
    // write out the size of the trie
-   Fr::UInt32 val_used(size()), val_keylen(longestKey()), val_numfreq(m_numfreq), val_numterm(m_numterminals) ;
+   Fr::UInt32 val_used(size()) ;
+   Fr::UInt32 val_keylen(longestKey()) ;
+   Fr::UInt32 val_numfreq(m_freq.size());
+   Fr::UInt32 val_numterm(m_numterminals) ;
    char case_sens = caseSensitivity() ;
    if (!f.writeValue(val_used) ||
       !f.writeValue(val_keylen) ||

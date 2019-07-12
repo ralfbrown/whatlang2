@@ -220,7 +220,7 @@ class LangIDPackedMultiTrie // : public Fr::PackedMultiTrie<...>
       LangIDPackedMultiTrie(Fr::CFile& f, const char *filename) ;
       ~LangIDPackedMultiTrie() ;
 
-      bool parseHeader(Fr::CFile& f) ;
+      bool parseHeader(Fr::CFile& f, size_t& numfreq) ;
 
       // modifiers
       void ignoreWhiteSpace(bool ignore = true) { m_ignorewhitespace = ignore ; }
@@ -276,10 +276,6 @@ class LangIDPackedMultiTrie // : public Fr::PackedMultiTrie<...>
       Fr::MemMappedFile	*m_fmap ;	 // memory-map info
       uint32_t	 	 m_size ;	 // number of nodes in m_nodes
       uint32_t		 m_numterminals ;
-      uint32_t		 m_numfreq ;	 // number of records in m_freq
-      uint32_t		 m_used ;	 // #nodes in use (temp during ctor)
-      uint32_t		 m_termused ;
-      uint32_t		 m_freqused ;	 // #freq recs in use (ctor temp)
       unsigned		 m_maxkeylen ;
       enum PTrieCase	 m_casesensitivity ;
       bool		 m_ignorewhitespace ;
