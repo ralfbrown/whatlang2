@@ -5,7 +5,7 @@
 /*									*/
 /*  File:     whatlang.C  main program/wrapper for simple identifier	*/
 /*  Version:  1.30							*/
-/*  LastEdit: 2019-07-07 						*/
+/*  LastEdit: 2019-07-11 						*/
 /*                                                                      */
 /*  (c) Copyright 2011,2012,2013,2014,2019				*/
 /*		 Ralf Brown/Carnegie Mellon University			*/
@@ -29,6 +29,7 @@
 #include <cstring>
 #include "langid.h"
 #include "framepac/config.h"
+#include "framepac/file.h"
 #include "framepac/texttransforms.h"
 #include "framepac/unicode.h"
 
@@ -107,16 +108,15 @@ static bool same_language(const char *name1, const char *name2)
 
 //----------------------------------------------------------------------
 
-static void write_as_UTF8(const char *buf, int buflen, FILE *fp,
-			  LineMode line_mode)
+static void write_as_UTF8(CFile& f, const char *buf, int buflen, LineMode line_mode)
 {
    if (line_mode == LM_None || line_mode == LM_8bit)
       {
-      (void)fwrite(buf,1,buflen,stdout) ;
+      f.write(buf,buflen) ;
       }
    else
       {
-      const unsigned char *line = (unsigned char*)buf ;
+      auto line = (const unsigned char*)buf ;
       for (int i = 0 ; i < buflen ; i += 2)
 	 {
 	 char utf8[6] ;
@@ -136,7 +136,7 @@ static void write_as_UTF8(const char *buf, int buflen, FILE *fp,
 	    bytes = Fr::Unicode_surrogates_to_UTF8(codepoint,codepoint2,utf8,byteswap) ;
 	    }
 	 if (bytes > 0)
-	    (void)fwrite(utf8,sizeof(char),bytes,fp) ;
+	    f.write(utf8,bytes) ;
 	 }
       }
    return ;
@@ -165,10 +165,11 @@ static void identify(const char *buf, int buflen,
    if (!separate_sources && !(terse_language && echo_text))
       scores->filterDuplicates(&langid) ;
    double highest_score = scores->score(0) ;
+   CFile out(stdout) ;
    if (highest_score > LANGID_ZERO_SCORE)
       {
       if (!full_file && !echo_text)
-	 fprintf(stdout,"@ %8.08lX-%8.08lX ",offset,offset+buflen-1) ;
+	 out.printf("@ %8.08lX-%8.08lX ",offset,offset+buflen-1) ;
       unsigned shown = 0 ;
       double threshold = highest_score * cutoff_ratio ;
       for (size_t i = 0 ; i < scores->numLanguages() && shown < topN ; i++)
@@ -210,12 +211,11 @@ static void identify(const char *buf, int buflen,
 	       {
 	       if (shown > 0)
 		  {
-		  fprintf(stdout,",") ;
+		  out.putc(',') ;
 		  }
+	       out.puts(*langdesc) ;
 	       if (show_script)
-		  fprintf(stdout,"%s@%s",*langdesc,langid.languageScript(langnum)) ;
-	       else
-		  fprintf(stdout,"%s",*langdesc) ;
+		  out.printf("@%s",langid.languageScript(langnum)) ;
 	       shown++ ;
 	       }
 	    }
@@ -223,33 +223,32 @@ static void identify(const char *buf, int buflen,
 	    {
 	    if (shown > 0)
 	       {
-	       fprintf(stdout," ") ;
+	       out.putc(' ') ;
 	       }
 	    if (show_script)
-	       fprintf(stdout,"%s%s%s@%s:%f",*langdesc,sep,source,
-		  langid.languageScript(langnum),sc) ;
+	       out.printf("%s%s%s@%s:%f",*langdesc,sep,source,langid.languageScript(langnum),sc) ;
 	    else
-	       fprintf(stdout,"%s%s%s:%f",*langdesc,sep,source,sc) ;
+	       out.printf("%s%s%s:%f",*langdesc,sep,source,sc) ;
 	    shown++ ;
 	    }
 	 }
       if (echo_text)
 	 {
-	 fputc('\t',stdout) ;
-	 write_as_UTF8(buf,buflen,stdout,line_mode) ;
+	 out.putc('\t') ;
+	 write_as_UTF8(out,buf,buflen,line_mode) ;
 	 }
       else
-	 fprintf(stdout,"\n") ;
-      fflush(stdout) ;
+	 out.printf("\n") ;
+      out.flush() ;
       }
    else if (echo_text)
       {
-      fputs("??\t",stdout) ;
-      write_as_UTF8(buf,buflen,stdout,line_mode) ;
+      out.puts("??\t") ;
+      write_as_UTF8(out,buf,buflen,line_mode) ;
       }
    else if (verbose)
       {
-      fprintf(stdout,"@ %8.08lX-%8.08lX: no languages detected\n", offset,offset+buflen-1) ;
+      out.printf("@ %8.08lX-%8.08lX: no languages detected\n", offset,offset+buflen-1) ;
       }
    delete scores ;
    return ;
@@ -286,7 +285,7 @@ static const char* locate_newline(const char *buf, int buflen, LineMode line_mod
 
 //----------------------------------------------------------------------
 
-static void identify_languages(FILE *fp,
+static void identify_languages(CFile& f,
 			       const LanguageIdentifier &langid,
 			       int blocksize, unsigned topN,
 			       double cutoff_ratio, bool separate_sources,
@@ -303,7 +302,7 @@ static void identify_languages(FILE *fp,
    char *highwater = (bufsize > blocksize
 		      ? *bufbase + bufsize - blocksize
 		      : *bufbase + bufsize) ;
-   int buflen = fread(*bufbase,sizeof(char),bufsize,fp) ;
+   int buflen = f.read(*bufbase,bufsize) ;
    char *buf = *bufbase ;
    size_t offset = 0 ;
    while (buflen > 0)
@@ -331,7 +330,7 @@ static void identify_languages(FILE *fp,
 	 offset += to_read ;
 	 memcpy(*bufbase,buf,buflen) ;
 	 buf = *bufbase ;
-	 int additional = fread(buf + buflen,sizeof(char),to_read,fp) ;
+	 int additional = f.read(buf + buflen,to_read) ;
 	 // stop if we've already identified up to the end of the file, to
 	 //   prevent a small orphan block with inaccurate identification
 	 if (additional <= 0 && line_mode == LM_None)
@@ -350,21 +349,16 @@ static void identify_languages(const char *filename,
 			       double cutoff_ratio, bool separate_sources,
 			       bool show_filename, LineMode line_mode)
 {
-   if (filename && *filename)
+   CInputFile fp(filename) ;
+   if (fp)
       {
-      FILE *fp = fopen(filename,"rb") ;
-      if (fp)
-	 {
-	 if (show_filename)
-	    fprintf(stdout,"File %s\n",filename) ;
-	 identify_languages(fp,langid,blocksize,topN,cutoff_ratio,
-			    separate_sources,line_mode) ;
-	 fclose(fp) ;
-	 }
-      else
-	 {
-	 fprintf(stderr,"Unable to open '%s' for reading\n",filename) ;
-	 }
+      if (show_filename)
+	 printf("File %s\n",filename) ;
+      identify_languages(fp,langid,blocksize,topN,cutoff_ratio,separate_sources,line_mode) ;
+      }
+   else
+      {
+      fprintf(stderr,"Unable to open '%s' for reading\n",filename) ;
       }
    return ;
 }
@@ -527,8 +521,8 @@ int main(int argc, char **argv)
    if (argc == 1)
       {
       // no filename specified on command line, so use stdin
-      identify_languages(stdin,*langid,blocksize,topN,cutoff_ratio,
-			 separate_sources,line_mode) ;
+      CFile in(stdin) ;
+      identify_languages(in,*langid,blocksize,topN,cutoff_ratio,separate_sources,line_mode) ;
       }
    else
       {
