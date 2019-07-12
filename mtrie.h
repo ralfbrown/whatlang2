@@ -171,7 +171,7 @@ class LangIDMultiTrie : public NybbleTrie
       bool enumerateChildren(NodeIndex nodeindex, uint8_t* keybuf, unsigned max_keylength_bits,
 			     unsigned curr_keylength_bits, EnumFn* fn, void *user_data) const ;
       bool enumerateFullByteNodes(NodeIndex nodeindex, uint32_t& count, unsigned keylen_bits = 0) const ;
-      bool enumerateTerminalNodes(NodeIndex nodeindex, uint32_t& count, unsigned keylen_bits = 0) const ;
+      bool countTerminalNodes(NodeIndex nodeindex, uint32_t& count, unsigned keylen_bits = 0) const ;
       unsigned numExtensions(NodeIndex nodeindex, unsigned = 0) const ;
       bool allChildrenAreTerminals(NodeIndex nodeindex, unsigned = 0) const ;
       uint32_t countFreqRecords() const ;

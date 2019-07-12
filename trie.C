@@ -636,32 +636,6 @@ bool NybbleTrie::singleChildSameFreq(NodeIndex nodeindex, bool allow_nonleaf, do
 
 //----------------------------------------------------------------------
 
-bool NybbleTrie::countTerminalNodes(NodeIndex nodeindex, unsigned keylen_bits,
-				    uint32_t& count, uint32_t min_freq) const
-{
-   auto node = this->node(nodeindex) ;
-   if (!node->hasChildren())
-      return true ;
-   else if ((keylen_bits % 8) == 0 && allChildrenAreTerminals(nodeindex,min_freq))
-      {
-      count += numExtensions(nodeindex,min_freq) ;
-      return true ;
-      }
-   keylen_bits = keylen_bits + BITS_PER_LEVEL ;
-#if BITS_PER_LEVEL == 3
-   if (keylen_bits % 8 == 1) keylen_bits-- ;
-#endif
-   for (size_t i = 0 ; i < (1<<BITS_PER_LEVEL) ; ++i)
-      {
-      uint32_t child = node->childIndex(i) ;
-      if (child != NybbleTrie::NULL_INDEX && !countTerminalNodes(child,keylen_bits,count,min_freq))
-	 return false ;
-      }
-   return true ;
-}
-
-//----------------------------------------------------------------------
-
 unsigned NybbleTrie::numExtensions(NodeIndex nodeindex, uint32_t min_freq, unsigned bits) const
 {
    unsigned count = 0 ;
@@ -794,20 +768,11 @@ static bool scale_frequency_smoothed(const NybbleTrie* trie, NybbleTrie::NodeInd
 
 //----------------------------------------------------------------------
 
-bool NybbleTrie::scaleFrequencies(uint64_t total_count, double power,
-				  double log_power)
+bool NybbleTrie::scaleFrequencies(uint64_t total_count, double power, double log_power)
 {
    uint8_t keybuf[10000] ;
    CountAndPower c_p(total_count,power,log_power) ;
    return enumerateChildren(ROOT_INDEX,keybuf,8*sizeof(keybuf),0,scale_frequency_smoothed,&c_p) ;
-}
-
-//----------------------------------------------------------------------
-
-uint32_t NybbleTrie::numTerminalNodes(uint32_t min_freq) const
-{
-   uint32_t count = 0 ;
-   return countTerminalNodes(ROOT_INDEX,0,count,min_freq) ? count : 0 ;
 }
 
 //----------------------------------------------------------------------

@@ -213,23 +213,6 @@ uint32_t PackedTrieNode::childIndex(unsigned int N) const
 
 //----------------------------------------------------------------------
 
-uint32_t PackedTrieNode::childIndexIfPresent(uint8_t N) const
-{
-#if (1<<PTRIE_BITS_PER_LEVEL) < 256
-   if (N >= (1<<PTRIE_BITS_PER_LEVEL))
-      return LangIDPackedMultiTrie::NULL_INDEX ;
-#endif
-   uint32_t children = m_children[N/32].load() ;
-   uint32_t mask = (1U << (N % 32)) ;
-   if ((children & mask) == 0)
-      return LangIDPackedMultiTrie::NULL_INDEX ;
-   mask-- ;
-   children &= mask ;
-   return (firstChild() + m_popcounts[N/32] + Fr::popcount(children)) ;
-}
-
-//----------------------------------------------------------------------
-
 uint32_t PackedTrieNode::childIndexIfPresent(unsigned int N) const
 {
    if (N >= (1<<PTRIE_BITS_PER_LEVEL))
@@ -336,7 +319,6 @@ LangIDPackedMultiTrie::LangIDPackedMultiTrie(Fr::CFile& f, const char *filename)
 	 //   and point our variables at the buffers
 	 if (!m_nodes.load(f,m_size) || !m_freq.load(f,m_numfreq) || !m_terminals.load(f,m_numterminals))
 	    {
-	    m_size = 0 ; 
 	    m_numfreq = 0 ;
 	    m_numterminals = 0 ;
 	    m_nodes.clear() ;
@@ -384,9 +366,9 @@ uint32_t LangIDPackedMultiTrie::allocateChildNodes(unsigned numchildren)
 {
    uint32_t index = m_used ;
    m_used += numchildren ;
-   if (m_used > m_size)
+   if (m_used > size())
       {
-      m_used = m_size ;
+      m_used = size() ;
       return NOCHILD_INDEX ;		// error!  should never happen!
       }
    // initialize each of the new children
@@ -609,7 +591,7 @@ bool LangIDPackedMultiTrie::extendKey(uint32_t &nodeindex, uint8_t keybyte) cons
 {
    if ((nodeindex & PTRIE_TERMINAL_MASK) != 0)
       {
-      nodeindex = LangIDPackedMultiTrie::NULL_INDEX ;
+      nodeindex = NULL_INDEX ;
       return false ;
       }
 #if 0 // currently not used, so don't waste time
@@ -633,7 +615,7 @@ bool LangIDPackedMultiTrie::extendKey(uint32_t &nodeindex, uint8_t keybyte) cons
    auto n = node(nodeindex) ;
    auto  index = n->childIndexIfPresent(keybyte) ;
    nodeindex = index ;
-   return (index != LangIDPackedMultiTrie::NULL_INDEX) ;
+   return (index != NULL_INDEX) ;
 }
 
 //----------------------------------------------------------------------
@@ -642,7 +624,7 @@ uint32_t LangIDPackedMultiTrie::extendKey(uint8_t keybyte, uint32_t nodeindex) c
 {
    if ((nodeindex & PTRIE_TERMINAL_MASK) != 0)
       {
-      return LangIDPackedMultiTrie::NULL_INDEX ;
+      return NULL_INDEX ;
       }
 #if 0 // currently not used, so don't waste time
    if (ignoringWhiteSpace() && keybyte == ' ')
@@ -697,7 +679,7 @@ bool LangIDPackedMultiTrie::enumerateChildren(uint32_t nodeindex,
       for (unsigned i = 0 ; i < (1<<PTRIE_BITS_PER_LEVEL) ; i++)
 	 {
 	 uint32_t child = n->childIndexIfPresent(i) ;
-	 if (child != LangIDPackedMultiTrie::NULL_INDEX)
+	 if (child != NULL_INDEX)
 	    {
 	    unsigned byte = curr_keylength_bits / 8 ;
 	    keybuf[byte] = i ;

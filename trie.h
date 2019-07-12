@@ -145,8 +145,6 @@ class NybbleTrie
       bool enumerate(uint8_t* keybuf, unsigned maxkeylength, EnumFn *fn, void *user_data) const ;
       bool enumerateChildren(NodeIndex nodeindex, uint8_t *keybuf, unsigned max_keylength_bits,
 			     unsigned curr_keylength_bits, EnumFn *fn, void *user_data) const ;
-      bool countTerminalNodes(NodeIndex nodeindex, unsigned keylen_bits, uint32_t &count,
-			      uint32_t min_freq = 0) const ;
       unsigned numExtensions(NodeIndex nodeindex, uint32_t min_freq = 0, unsigned = 0) const ;
       bool allChildrenAreTerminals(NodeIndex nodeindex, uint32_t min_freq = 0, unsigned = 0) const ;
       bool singleChild(NodeIndex nodeindex) const ;
@@ -154,7 +152,6 @@ class NybbleTrie
 
       bool scaleFrequencies(uint64_t total_count) ;
       bool scaleFrequencies(uint64_t total_count, double power, double log_power) ;
-      uint32_t numTerminalNodes(uint32_t min_freq = 0) const ;
 
       // I/O
       static NybbleTrie *load(Fr::CFile& f) ;

@@ -567,7 +567,7 @@ bool LangIDMultiTrie::enumerateChildren(NodeIndex nodeindex,
 
 //----------------------------------------------------------------------
 
-bool LangIDMultiTrie::enumerateTerminalNodes(NodeIndex nodeindex, uint32_t &count, unsigned keylen_bits) const
+bool LangIDMultiTrie::countTerminalNodes(NodeIndex nodeindex, uint32_t &count, unsigned keylen_bits) const
 {
    auto n = node(nodeindex)   ;
    if (!n->hasChildren())
@@ -584,7 +584,7 @@ bool LangIDMultiTrie::enumerateTerminalNodes(NodeIndex nodeindex, uint32_t &coun
    for (size_t i = 0 ; i < (1<<BITS_PER_LEVEL) ; i++)
       {
       uint32_t child = n->childIndex(i) ;
-      if (child != LangIDMultiTrie::NULL_INDEX && !enumerateTerminalNodes(child,count,keylen_bits))
+      if (child != LangIDMultiTrie::NULL_INDEX && !countTerminalNodes(child,count,keylen_bits))
 	 return false ;
       }
    return true ;
@@ -663,7 +663,7 @@ uint32_t LangIDMultiTrie::numFullByteNodes() const
 uint32_t LangIDMultiTrie::numTerminalNodes() const
 {
    uint32_t count = 0 ;
-   return enumerateTerminalNodes(ROOT_INDEX,count) ? count : 0 ;
+   return countTerminalNodes(ROOT_INDEX,count) ? count : 0 ;
 }
 
 //----------------------------------------------------------------------

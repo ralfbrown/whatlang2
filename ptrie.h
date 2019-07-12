@@ -182,7 +182,6 @@ class PackedTrieNode : public PackedTrieTerminalNode
       bool childPresent(unsigned int N) const ;
       uint32_t firstChild() const { return m_firstchild.load() ; }
       uint32_t childIndex(unsigned int N) const ;
-      uint32_t childIndexIfPresent(uint8_t N) const ;
       uint32_t childIndexIfPresent(unsigned int N) const ;
 
       // modifiers
