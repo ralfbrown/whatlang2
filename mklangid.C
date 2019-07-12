@@ -763,14 +763,13 @@ static bool accumulate_confusible_ngrams(PreprocessedInputFile *infile, va_list 
    if (!infile || !infile->good() || !confusible)
       return false ;
    unsigned maxkey = confusible->longestKey() ;
-   NybbleTriePointer *states = new NybbleTriePointer[maxkey+2] ;
+   NewPtr<NybbleTriePointer> states(maxkey+2) ;
    if (states)
       {
       for (size_t i = 0 ; i < maxkey+2 ; ++i)
 	 states[i].setTrie(confusible) ;
-      accumulate_confusible_ngrams(infile,confusible,states) ;
+      accumulate_confusible_ngrams(infile,confusible,states.begin()) ;
       }
-   delete[] states ;
    return true ;
 }
 

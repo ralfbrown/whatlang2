@@ -270,7 +270,7 @@ class LanguageScores
       LanguageScores(size_t num_languages) ;
       LanguageScores(const LanguageScores *orig) ;
       LanguageScores(const LanguageScores *orig, double scale) ;
-      ~LanguageScores() ;
+      ~LanguageScores() = default ;
 
       // accessors
       void *userData() const { return m_userdata ; }
@@ -281,7 +281,7 @@ class LanguageScores
       unsigned topLanguage() const { return m_lang_ids[0] ; }
       unsigned languageNumber(size_t N) const
 	 { return (N < numLanguages()) ? m_lang_ids[N] : ~0 ; }
-      double *scoreArray() { return m_scores ; }
+      double *scoreArray() { return m_scores.begin() ; }
       double score(size_t N) const
 	 { return (N < numLanguages()) ? m_scores[N] : -1.0 ; }
       double highestScore() const ;
@@ -291,6 +291,7 @@ class LanguageScores
       // manipulators
       void setUserData(void *u) { m_userdata = u ; }
       void clear() ;
+      void reserve(size_t N) ;
       void setScore(size_t N, double val)
 	 { if (N < numLanguages()) m_scores[N] = val ; }
       void increment(size_t N, double incr = 1.0)
@@ -321,12 +322,12 @@ class LanguageScores
 
    private:
 //      static Fr::Allocator allocator ;
-      unsigned short 	*m_lang_ids ;
-      double   		*m_scores ;
-      void		*m_userdata ;
+      Fr::NewPtr<unsigned short> m_lang_ids ;
+      Fr::NewPtr<double>         m_scores ;
+      void*		         m_userdata ;
    protected: // members
-      unsigned	 	 m_num_languages ;
-      unsigned		 m_max_languages ;
+      unsigned	 	 m_num_languages { 0 } ;
+      unsigned		 m_max_languages { 0 } ;
       unsigned		 m_active_language ;
       bool      	 m_sorted ;
    } ;
@@ -410,7 +411,6 @@ class LanguageIdentifier
 			       bool enforce_alignments = true) const ;
       bool finishIdentification(LanguageScores *scores, unsigned select_highestN = 0,
 				double cutoff_ratio = 0.1) const ;
-      static void freeScores(LanguageScores *scores) ;
       LanguageScores *similarity(unsigned langid) const ;
       bool sameLanguage(size_t L1, size_t L2,
 			bool ignore_region = false) const ;
