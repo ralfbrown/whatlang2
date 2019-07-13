@@ -97,7 +97,7 @@ MultiTrieFrequency* MultiTrieFrequency::allocate(uint32_t freq, uint32_t lang, b
    if (s_curr_alloc >= s_max_alloc)
       {
       uint32_t new_alloc = s_max_alloc ? 2 * s_max_alloc : 1000000 ;
-      auto new_base = Fr::New<MultiTrieFrequency>(new_alloc) ;
+      auto new_base = new MultiTrieFrequency[new_alloc] ;
       if (new_base)
 	 {
 	 std::copy(s_base_address,s_base_address+s_max_alloc,new_base) ;
@@ -215,7 +215,7 @@ bool MultiTrieFrequency::readAll(Fr::CFile& f)
       MultiTrieFrequency* base = nullptr ;
       if (f.readValues(&base,count))
 	 {
-	 Fr::Free(s_base_address) ;
+	 delete[] s_base_address ;
 	 s_base_address = base ;
 	 s_max_alloc = s_curr_alloc = count ;
 	 return true ;

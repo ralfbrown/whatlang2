@@ -883,13 +883,13 @@ static unsigned count_languages(const LanguageIdentifier *id,
    if (id)
       {
       size_t num_langs = id->numLanguages() ;
-      LanguageID **langcodes = Fr::NewC<LanguageID*>(num_langs) ;
+      LocalAlloc<LanguageID*> langcodes(num_langs) ;
       for (size_t i = 0 ; i < num_langs ; i++)
 	 {
 	 langcodes[i] = (LanguageID*)id->languageInfo(i) ;
 	 }
       // sort the codes to get runs of equal codes
-      std::sort(langcodes,langcodes+num_langs,cmp) ;
+      std::sort(&langcodes,&langcodes+num_langs,cmp) ;
       count = 1 ;
       for (size_t i = 1 ; i < num_langs ; i++)
 	 {
@@ -898,7 +898,6 @@ static unsigned count_languages(const LanguageIdentifier *id,
 	 if (cmp(langcodes[i-1],langcodes[i]) != 0)
 	    count++ ;
 	 }
-      Fr::Free(langcodes) ;
       }
    return count ;
 }
@@ -2239,7 +2238,8 @@ static bool cluster_models_by_charset(LanguageIdentifier *clusterdb,
    //   record into the appropriate per-encoding model
    auto ptrie = language_identifier->packedTrie() ;
    base_frequency = ptrie->frequencyBaseAddress() ;
-   model_sizes = Fr::NewC<unsigned>(numlangs) ;
+   model_sizes = new unsigned[numlangs] ;
+   std::fill_n(model_sizes,numlangs,0) ;
    unsigned maxkey = ptrie->longestKey() ;
    Fr::LocalAlloc<uint8_t> keybuf(maxkey) ;
    ptrie->enumerate(keybuf,maxkey,merge_ngrams,merged) ;
@@ -2271,7 +2271,8 @@ static bool cluster_models_by_charset(LanguageIdentifier *clusterdb,
       }
    save_database(cluster_dbfile) ;
    language_identifier = ident ;
-   Fr::Free(model_sizes) ; model_sizes = nullptr ;
+   delete[] model_sizes ;
+   model_sizes = nullptr ;
    return true ;
 }
 
@@ -2582,7 +2583,7 @@ static void parse_translit(const char *spec, char *&from, char *&to)
 	 else
 	    {
 	    cerr << "You may not omit the FROM encoding for -T" << endl ;
-	    Fr::Free(from) ;
+	    delete[] from ;
 	    from = nullptr ;
 	    }
 	 }
@@ -2769,8 +2770,8 @@ static bool process_argument_group(int &argc, const char **&argv,
       delete stop_grams ;
       delete ngram_weights ;
       }
-   Fr::Free(from) ;
-   Fr::Free(to) ;
+   delete[] from ;
+   delete[] to ;
    return success ;
 }
 

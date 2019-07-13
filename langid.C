@@ -201,16 +201,12 @@ static bool write_uint64(Fr::CFile& f, uint64_t value)
 //----------------------------------------------------------------------
 
 static void parse_language_description(const char *descript,
-				       char *&language,
-				       char *&region,
-				       char *&encoding,
-				       char *&source)
+				       CharPtr &language,
+				       CharPtr &region,
+				       CharPtr &encoding,
+				       CharPtr &source)
 {
    // the format of a desciptor is lang_REG-encoding/source
-   language = nullptr ;
-   region = nullptr ;
-   encoding = nullptr ;
-   source = nullptr ;
    if (descript && *descript)
       {
       const char *underscore = strchr(descript,'_') ;
@@ -221,46 +217,29 @@ static void parse_language_description(const char *descript,
       if (!lang_end || (dash && dash < lang_end)) lang_end = dash ;
       if (!lang_end || (slash && slash < lang_end)) lang_end = slash ;
       if (!lang_end) lang_end = nul ;
-      language = New<char>(lang_end - descript + 1) ;
-      if (language)
-	 {
-	 memcpy(language,descript,lang_end - descript) ;
-	 language[lang_end - descript] = '\0' ;
-	 }
+      language = dup_string_n(descript,lang_end - descript) ;
       if (underscore)
 	 {
 	 // we have a region specified
 	 const char *reg_end = dash ;
 	 if (!reg_end || (slash && slash < reg_end)) reg_end = slash ;
 	 if (!reg_end) reg_end = nul ;
-	 region = New<char>(reg_end - underscore) ;
-	 if (region)
-	    {
-	    memcpy(region,underscore+1,reg_end - underscore) ;
-	    region[reg_end - (underscore + 1)] = '\0' ;
-	    }
+	 ++underscore ;
+	 region = dup_string_n(underscore,reg_end - underscore) ;
 	 }
       if (dash)
 	 {
 	 // we have an encoding specified
 	 const char *enc_end = slash ;
 	 if (!enc_end) enc_end = nul ;
-	 encoding = New<char>(enc_end - dash) ;
-	 if (encoding)
-	    {
-	    memcpy(encoding,dash+1,enc_end - dash) ;
-	    encoding[enc_end - (dash + 1)] = '\0' ;
-	    }
+	 ++dash ;
+	 encoding = dup_string_n(dash,enc_end - dash) ;
 	 }
       if (slash)
 	 {
 	 // we have a source specified
-	 source = New<char>(nul - slash) ;
-	 if (source)
-	    {
-	    memcpy(source,slash+1,nul - slash) ;
-	    source[nul - (slash + 1)] = '\0' ;
-	    }
+	 ++slash ;
+	 source = dup_string_n(slash,nul - slash) ;
 	 }
       }
    return ;
@@ -1748,10 +1727,10 @@ unsigned LanguageIdentifier::languageNumber(const char *langdescript) const
    if (langdescript)
       {
       // parse the description into language, region, encoding, and source
-      char *language = nullptr ;
-      char *region = nullptr ;
-      char *encoding = nullptr ;
-      char *source = nullptr ;
+      CharPtr language ;
+      CharPtr region ;
+      CharPtr encoding ;
+      CharPtr source ;
       parse_language_description(langdescript,language,region,encoding,source);
       // scan the list of models in the identifier for a uniquely-matching
       //   model
@@ -1773,10 +1752,6 @@ unsigned LanguageIdentifier::languageNumber(const char *langdescript) const
 	    modelnum = i ;
 	    }
 	 }
-      Free(language) ;
-      Free(region) ;
-      Free(encoding) ;
-      Free(source) ;
       }
    return modelnum ;
 }
