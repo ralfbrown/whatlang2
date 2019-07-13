@@ -215,7 +215,7 @@ class LangIDPackedMultiTrie // : public Fr::PackedMultiTrie<...>
       typedef bool EnumFn(const PackedTrieNode *node, const uint8_t *key, unsigned keylen, void *user_data) ;
 
    public:
-      LangIDPackedMultiTrie() { init() ; }
+      LangIDPackedMultiTrie() = default ;
       LangIDPackedMultiTrie(const LangIDMultiTrie *trie) ;
       LangIDPackedMultiTrie(Fr::CFile& f, const char *filename) ;
       ~LangIDPackedMultiTrie() = default ;

@@ -215,14 +215,13 @@ void TrigramCounts::filter(unsigned topK, unsigned max_len, bool verbose)
 
 //----------------------------------------------------------------------
 
-TrigramCounts *TrigramCounts::load(Fr::CFile& f)
+TrigramCounts* TrigramCounts::load(Fr::CFile& f)
 {
    if (f)
       {
-      auto model = new TrigramCounts ;
+      Fr::NewPtr<TrigramCounts> model(1) ;
       if (model->read(f))
-	 return model ;
-      delete model ;
+	 return model.move() ;
       }
    return nullptr ;
 }

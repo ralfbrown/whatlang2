@@ -30,6 +30,7 @@
 #include "langid.h"
 #include "framepac/config.h"
 #include "framepac/file.h"
+//#include "framepac/smartptr.h"
 #include "framepac/texttransforms.h"
 #include "framepac/unicode.h"
 
@@ -156,7 +157,7 @@ static void identify(const char *buf, int buflen,
       return ;
    LanguageScores *rawscores = langid.identify(buf,buflen) ;
    langid.finishIdentification(rawscores) ;
-   LanguageScores *scores = smoothed_language_scores(rawscores,buflen) ;
+   NewPtr<LanguageScores> scores { smoothed_language_scores(rawscores,buflen) } ;
    if (!scores)
       return ;
    unsigned num_scores = langid.numLanguages() ;
@@ -252,7 +253,6 @@ static void identify(const char *buf, int buflen,
       {
       out.printf("@ %8.08lX-%8.08lX: no languages detected\n", offset,offset+buflen-1) ;
       }
-   delete scores ;
    return ;
 }
 

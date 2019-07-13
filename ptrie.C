@@ -5,7 +5,7 @@
 /*									*/
 /*  File: ptrie.C - packed Word-frequency multi-trie			*/
 /*  Version:  1.30				       			*/
-/*  LastEdit: 2019-07-11						*/
+/*  LastEdit: 2019-07-12						*/
 /*									*/
 /*  (c) Copyright 2011,2012,2015,2019 Ralf Brown/CMU			*/
 /*      This program is free software; you can redistribute it and/or   */
@@ -298,12 +298,12 @@ LangIDPackedMultiTrie::LangIDPackedMultiTrie(Fr::CFile& f, const char *filename)
    if (f && parseHeader(f,numfull,numfreq,numterminals))
       {
       size_t offset = f.tell() ;
-      m_fmap = new Fr::MemMappedROFile(filename) ;
+      m_fmap = std::move(*new Fr::MemMappedROFile(filename)) ;
       if (m_fmap)
 	 {
 	 // we can memory-map the file, so just point our member variables
 	 //   at the mapped data
-	 const char* base = **fmap + offset ;
+	 const char* base = *m_fmap + offset ;
 	 m_nodes.external_buffer(base,numfull) ;
 	 base += numfull * sizeof(PackedTrieNode) ;
 	 m_freq.external_buffer(base,numfreq) ;
@@ -636,13 +636,9 @@ LangIDPackedMultiTrie *LangIDPackedMultiTrie::load(Fr::CFile& f, const char *fil
 {
    if (f)
       {
-      auto trie = new LangIDPackedMultiTrie(f,filename) ;
-      if (!trie || !trie->good())
-	 {
-	 delete trie ;
-	 return nullptr ;
-	 }
-      return trie ;
+      Fr::NewPtr<LangIDPackedMultiTrie> trie { new LangIDPackedMultiTrie(f,filename) } ;
+      if (trie && trie->good())
+	 return trie.move() ;
       }
    return nullptr ;
 }
