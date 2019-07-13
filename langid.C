@@ -1614,7 +1614,7 @@ LangIDPackedMultiTrie* LanguageIdentifier::packedTrie()
       m_langdata = new LangIDPackedMultiTrie(m_uncomplangdata) ;
       m_uncomplangdata = nullptr ;
       }
-   return m_langdata.get() ;
+   return m_langdata ;
 }
 
 //----------------------------------------------------------------------
@@ -1680,10 +1680,7 @@ Fr::CharPtr LanguageIdentifier::languageDescriptor(size_t N) const
 {
    if (N < numLanguages())
       {
-      return aprintf("%s_%s-%s",
-			m_langinfo[N].language(),
-			m_langinfo[N].region(),
-			m_langinfo[N].encoding()) ;
+      return aprintf("%s_%s-%s", m_langinfo[N].language(), m_langinfo[N].region(), m_langinfo[N].encoding()) ;
       }
    return nullptr ;
 }
@@ -1919,8 +1916,7 @@ LanguageScores *LanguageIdentifier::identify(LanguageScores *scores,
       scores = new LanguageScores(numLanguages()) ;
       }
    const auto align = enforce_alignment ? m_alignments.get() : nullptr ;
-   if (!identify(scores,buffer,buflen,align,ignore_whitespace,
-		 apply_stop_grams,0))
+   if (!identify(scores,buffer,buflen,align,ignore_whitespace,apply_stop_grams,0))
       {
       delete scores ;
       scores = nullptr ;

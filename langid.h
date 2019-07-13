@@ -190,9 +190,6 @@ class BigramCounts
 class LanguageID
    {
    public:
-//      void *operator new(size_t) { return allocator.allocate() ; }
-//      void *operator new(size_t, void *where) { return where ; }
-//      void operator delete(void *blk) { allocator.release(blk) ; }
       LanguageID() ;
       LanguageID(const char *lang, const char *reg, const char *enc,
 		 const char *source = nullptr, const char *script = "UNKNOWN") ;
@@ -245,7 +242,6 @@ class LanguageID
       void clear() ;
 
    private:
-//      static Fr::Allocator allocator ;
       Fr::CharPtr m_language ;
       Fr::CharPtr m_region ;
       Fr::CharPtr m_encoding ;
@@ -265,8 +261,6 @@ class LanguageID
 class LanguageScores
    {
    public:
-//      void *operator new(size_t) { return allocator.allocate() ; }
-//      void operator delete(void *blk) { allocator.release(blk) ; }
       LanguageScores(size_t num_languages) ;
       LanguageScores(const LanguageScores *orig) ;
       LanguageScores(const LanguageScores *orig, double scale) ;
@@ -320,12 +314,11 @@ class LanguageScores
       void sortByName(const LanguageID *langinfo) ;
       void invalidate() { m_lang_ids = nullptr ; m_scores = nullptr ; m_num_languages = m_max_languages = 0 ; }
 
-   private:
-//      static Fr::Allocator allocator ;
+   private: // members
       Fr::UShortPtr      m_lang_ids ;
       Fr::DoublePtr      m_scores ;
       void*		 m_userdata ;
-   protected: // members
+   protected:
       unsigned	 	 m_num_languages { 0 } ;
       unsigned		 m_max_languages { 0 } ;
       unsigned		 m_active_language ;
@@ -337,8 +330,6 @@ class LanguageScores
 class WeightedLanguageScores : public LanguageScores
    {
    public:
-//      void *operator new(size_t) { return allocator.allocate() ; }
-//      void operator delete(void *blk) { allocator.release(blk) ; }
       WeightedLanguageScores(size_t num_languages,
 			     double def_weight = 1.0) ;
       ~WeightedLanguageScores() = default ;
@@ -355,7 +346,6 @@ class WeightedLanguageScores : public LanguageScores
       void sqrtWeights() ;
 
    private:
-//      static Fr::Allocator  allocator ;
       Fr::DoublePtr	m_weights ;
    } ;
 
@@ -440,8 +430,8 @@ class LanguageIdentifier
       bool setAdjustmentFactors() ;
 
    private:
-      Fr::NewPtr<LangIDPackedMultiTrie> m_langdata ;
-      Fr::NewPtr<LangIDMultiTrie> m_uncomplangdata ;
+      Fr::Owned<LangIDPackedMultiTrie> m_langdata ;
+      Fr::Owned<LangIDMultiTrie> m_uncomplangdata ;
       Fr::NewPtr<LanguageID> m_langinfo ;
       Fr::DoublePtr          m_length_factors ;
       Fr::DoublePtr          m_adjustments ;

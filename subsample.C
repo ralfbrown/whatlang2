@@ -28,7 +28,6 @@
 #include <iostream>
 #include <memory.h>
 #include <stdlib.h>
-//#include "framepac/smartptr.h"
 #include "framepac/random.h"
 
 using namespace std ;
