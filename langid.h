@@ -322,9 +322,9 @@ class LanguageScores
 
    private:
 //      static Fr::Allocator allocator ;
-      Fr::NewPtr<unsigned short> m_lang_ids ;
-      Fr::NewPtr<double>         m_scores ;
-      void*		         m_userdata ;
+      Fr::UShortPtr      m_lang_ids ;
+      Fr::DoublePtr      m_scores ;
+      void*		 m_userdata ;
    protected: // members
       unsigned	 	 m_num_languages { 0 } ;
       unsigned		 m_max_languages { 0 } ;
@@ -356,7 +356,7 @@ class WeightedLanguageScores : public LanguageScores
 
    private:
 //      static Fr::Allocator  allocator ;
-      Fr::NewPtr<double>	m_weights ;
+      Fr::DoublePtr	m_weights ;
    } ;
 
 //----------------------------------------------------------------------
@@ -443,10 +443,10 @@ class LanguageIdentifier
       Fr::NewPtr<LangIDPackedMultiTrie> m_langdata ;
       Fr::NewPtr<LangIDMultiTrie> m_uncomplangdata ;
       Fr::NewPtr<LanguageID> m_langinfo ;
-      Fr::NewPtr<double>     m_length_factors ;
-      Fr::NewPtr<double>     m_adjustments ;
-      Fr::NewPtr<uint8_t>    m_alignments ;
-      Fr::NewPtr<uint8_t>    m_unaligned ;
+      Fr::DoublePtr          m_length_factors ;
+      Fr::DoublePtr          m_adjustments ;
+      Fr::UInt8Ptr           m_alignments ;
+      Fr::UInt8Ptr           m_unaligned ;
       Fr::NewPtr<size_t>     m_string_counts ;
       Fr::CharPtr            m_directory ;
       LanguageIdentifier*    m_charsetident ;

@@ -254,11 +254,11 @@ static double length_factor(unsigned len)
 
 //----------------------------------------------------------------------
 
-static NewPtr<double> make_length_factors(unsigned max_length, double bigram_weight)
+static DoublePtr make_length_factors(unsigned max_length, double bigram_weight)
 {
    if (max_length < 3)
       max_length = 3 ;
-   NewPtr<double> factors(max_length+1) ;
+   DoublePtr factors(max_length+1) ;
    if (factors)
       {
       factors[0] = 0.0 ;
@@ -379,7 +379,7 @@ BigramCounts* BigramCounts::load(Fr::CFile& f)
 {
    if (f)
       {
-      NewPtr<BigramCounts> model(1) ;
+      OwnPtr<BigramCounts> model ;
       if (model->read(f))
 	 return model.move() ;
       }
@@ -762,7 +762,7 @@ LanguageID* LanguageID::read(Fr::CFile& f, unsigned file_version)
 {
    if (!f)
       return nullptr ;
-   NewPtr<LanguageID> langID(1) ;
+   OwnPtr<LanguageID> langID ;
    if (!read(f,*langID,file_version))
       {
       langID = nullptr ;
@@ -969,8 +969,8 @@ LanguageScores::LanguageScores(const LanguageScores *orig)
       {
       unsigned nlang = orig->numLanguages() ;
       m_num_languages = nlang ;
-      m_lang_ids = NewPtr<unsigned short>(nlang) ;
-      m_scores = NewPtr<double>(nlang) ;
+      m_lang_ids = UShortPtr(nlang) ;
+      m_scores = DoublePtr(nlang) ;
       if (m_lang_ids && m_scores)
 	 {
 	 m_sorted = orig->m_sorted ;
@@ -989,8 +989,8 @@ LanguageScores::LanguageScores(const LanguageScores *orig, double scale)
       {
       unsigned nlang = orig->numLanguages() ;
       m_num_languages = nlang ;
-      m_lang_ids = NewPtr<unsigned short>(nlang) ;
-      m_scores = NewPtr<double>(nlang) ;
+      m_lang_ids = UShortPtr(nlang) ;
+      m_scores = DoublePtr(nlang) ;
       if (m_lang_ids && m_scores)
 	 {
 	 m_sorted = orig->m_sorted ;
@@ -1075,8 +1075,8 @@ void LanguageScores::clear()
 
 void LanguageScores::reserve(size_t N)
 {
-   m_scores = NewPtr<double>(N) ;
-   m_lang_ids = NewPtr<unsigned short>(N) ;
+   m_scores = DoublePtr(N) ;
+   m_lang_ids = UShortPtr(N) ;
    m_num_languages = m_max_languages = N ;
    m_sorted = false ;
    return ;
@@ -1552,7 +1552,7 @@ LanguageIdentifier::~LanguageIdentifier()
 
 void LanguageIdentifier::setAlignments()
 {
-   m_alignments = NewPtr<uint8_t>(PACKED_TRIE_LANGID_MASK + 1) ;
+   m_alignments = UInt8Ptr(PACKED_TRIE_LANGID_MASK + 1) ;
    for (size_t i = 0 ; i < numLanguages() ; i++)
       {
       m_alignments[i] = languageInfo(i)->alignment() ;
@@ -1563,7 +1563,7 @@ void LanguageIdentifier::setAlignments()
       }
    if (!m_unaligned)
       {
-      m_unaligned = NewPtr<uint8_t>(PACKED_TRIE_LANGID_MASK + 1) ;
+      m_unaligned = UInt8Ptr(PACKED_TRIE_LANGID_MASK + 1) ;
       std::fill_n(m_unaligned.begin(),numLanguages(),1) ;
       for (size_t i = numLanguages() ; i <= PACKED_TRIE_LANGID_MASK ; i++)
 	 {
@@ -1577,7 +1577,7 @@ void LanguageIdentifier::setAlignments()
 
 bool LanguageIdentifier::setAdjustmentFactors()
 {
-   m_adjustments = NewPtr<double>(numLanguages()) ;
+   m_adjustments = DoublePtr(numLanguages()) ;
    if (!m_adjustments)
       return false ;
    for (size_t i = 0 ; i < numLanguages() ; i++)
@@ -1854,14 +1854,13 @@ bool LanguageIdentifier::identify(LanguageScores *scores,
 {
    if (!buffer || !scores || !m_langdata)
       return false ;
-   if (scores && scores->maxLanguages() == numLanguages())
+   if (scores->maxLanguages() == numLanguages())
       {
       scores->clear() ;
       }
    else
       {
-      delete scores ;
-      scores = new LanguageScores(numLanguages()) ;
+      scores->reserve(numLanguages()) ;
       }
    m_langdata.get()->ignoreWhiteSpace(ignore_whitespace) ;
    if (m_length_factors)
@@ -1887,9 +1886,9 @@ LanguageScores* LanguageIdentifier::identify(const char* buffer,
 {
    if (!buffer || !buflen || !m_langdata)
       return nullptr ;
-   NewPtr<LanguageScores> scores(new LanguageScores(numLanguages())) ;
+   OwnPtr<LanguageScores> scores(numLanguages()) ;
    const auto align = enforce_alignment ? m_alignments.begin() : nullptr ;
-   if (!identify(scores.begin(),buffer,buflen,align,ignore_whitespace, apply_stop_grams,0))
+   if (!identify(scores,buffer,buflen,align,ignore_whitespace, apply_stop_grams,0))
       {
       scores = nullptr ;
       }
@@ -1911,9 +1910,12 @@ LanguageScores *LanguageIdentifier::identify(LanguageScores *scores,
       {
       scores->clear() ;
       }
+   else if (scores)
+      {
+      scores->reserve(numLanguages()) ;
+      }
    else
       {
-      delete scores ;
       scores = new LanguageScores(numLanguages()) ;
       }
    const auto align = enforce_alignment ? m_alignments.get() : nullptr ;
@@ -2290,7 +2292,7 @@ static LanguageIdentifier* try_loading(const char* database_file, bool verbose)
       }
    if (!db_filename)
       db_filename = dup_string(database_file) ;
-   auto id = new LanguageIdentifier(db_filename,verbose) ;
+   Fr::OwnPtr<LanguageIdentifier> id(db_filename,verbose) ;
    if (!id)
       {
       SystemMessage::no_memory("loading language database") ;
@@ -2300,14 +2302,13 @@ static LanguageIdentifier* try_loading(const char* database_file, bool verbose)
       {
       if (verbose)
 	 cerr << "Unsuccessfully tried to open " << database_file << endl ;
-      delete id ;
       return nullptr ;
       }
    else if (verbose)
       {
       cerr << "Opened language database " << database_file << endl ;
       }
-   return id ;
+   return id.move() ;
 }
 
 //----------------------------------------------------------------------

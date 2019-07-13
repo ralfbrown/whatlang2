@@ -632,11 +632,12 @@ bool LangIDPackedMultiTrie::enumerateChildren(uint32_t nodeindex,
 
 //----------------------------------------------------------------------
 
-LangIDPackedMultiTrie *LangIDPackedMultiTrie::load(Fr::CFile& f, const char *filename)
+LangIDPackedMultiTrie* LangIDPackedMultiTrie::load(Fr::CFile& f, const char *filename)
 {
    if (f)
       {
-      Fr::NewPtr<LangIDPackedMultiTrie> trie { new LangIDPackedMultiTrie(f,filename) } ;
+      //(if we use OwnPtr trie(f,filename), template deduction tries to send 'f' by value instead of reference...)
+      Fr::OwnPtr<LangIDPackedMultiTrie> trie = new LangIDPackedMultiTrie(f,filename) ;
       if (trie && trie->good())
 	 return trie.move() ;
       }

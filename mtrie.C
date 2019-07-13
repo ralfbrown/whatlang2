@@ -717,7 +717,7 @@ LangIDMultiTrie *LangIDMultiTrie::load(Fr::CFile& f)
       return nullptr ;
       }
    uint32_t used = val_used.load() ;
-   Fr::NewPtr<LangIDMultiTrie> trie(new LangIDMultiTrie(used)) ;
+   Fr::OwnPtr<LangIDMultiTrie> trie(used) ;
    if (!trie)
       return nullptr ;
    trie->m_nodes.allocBatch(used) ;

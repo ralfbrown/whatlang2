@@ -157,7 +157,7 @@ static void identify(const char *buf, int buflen,
       return ;
    LanguageScores *rawscores = langid.identify(buf,buflen) ;
    langid.finishIdentification(rawscores) ;
-   NewPtr<LanguageScores> scores { smoothed_language_scores(rawscores,buflen) } ;
+   OwnPtr<LanguageScores> scores = smoothed_language_scores(rawscores,buflen) ;
    if (!scores)
       return ;
    unsigned num_scores = langid.numLanguages() ;
