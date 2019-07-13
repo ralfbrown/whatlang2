@@ -161,7 +161,7 @@ void WildcardSet::removeAll()
 
 WildcardCollection::WildcardCollection(unsigned max_ref, bool allow_all)
 {
-   m_wildcards = Fr::New<WildcardSet>(max_ref) ;
+   m_wildcards = new WildcardSet[max_ref] ;
    if (!m_wildcards)
       {
       m_numsets = 0 ;
@@ -194,7 +194,7 @@ WildcardCollection::WildcardCollection(const WildcardCollection *orig,
       m_numsets = 0 ;
       return  ;
       }
-   m_wildcards = Fr::New<WildcardSet>(orig->numSets()) ;
+   m_wildcards = new WildcardSet[orig->numSets()] ;
    if (!m_wildcards)
       {
       m_numsets = 0 ;
