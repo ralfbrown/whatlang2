@@ -31,6 +31,7 @@
 #include <stdint.h>
 #include "trie.h"
 #include "framepac/byteorder.h"
+#include "framepac/itempool.h"
 #include "framepac/file.h"
 #include "framepac/trie.h"
 
@@ -64,24 +65,18 @@ class MultiTrieFrequency
 					  bool stopgram = false) ;
 
       // accessors
-      static MultiTrieFrequency *baseAddress()
-	 { return s_base_address.begin() ; }
       uint32_t frequency() const { return m_frequency ; }
       uint32_t frequency(uint32_t langID) const ;
       uint32_t languageID() const { return m_langID & LID_LANGID_MASK ; }
       bool isStopgram() const { return (m_langID & LID_STOPGRAM_MASK) != 0 ; }
-      static MultiTrieFrequency *getAddress(uint32_t index)
-         { return (index == INVALID_FREQ) ? nullptr : baseAddress() + index ; }
+      static MultiTrieFrequency *getAddress(uint32_t index) { return s_freq_records.item(index) ; }
       static uint32_t getIndex(MultiTrieFrequency *f)
-         { return f ? (uint32_t)(f - baseAddress()) : INVALID_FREQ ; }
+         { return f >= s_freq_records.begin() ? (uint32_t)(f - s_freq_records.begin()) : INVALID_FREQ ; }
       MultiTrieFrequency *next() const { return getAddress(m_next) ; }
 
       // manipulators
-      static void setBaseAddress(MultiTrieFrequency *base,
-				 uint32_t max_alloc)
-	 { s_base_address = base ; s_max_alloc = max_alloc ; }
       void setNext(MultiTrieFrequency *nxt)
-	 { m_next = nxt ? (nxt - s_base_address) : INVALID_FREQ ; }
+	 { m_next = nxt ? (nxt - s_freq_records.begin()) : INVALID_FREQ ; }
       void setNext(uint32_t nxt) { m_next = nxt ; }
       void setFrequency(uint32_t freq) { m_frequency = freq ; }
       void setFrequency(uint32_t ID, uint32_t freq, bool stopgram) ;
@@ -95,9 +90,7 @@ class MultiTrieFrequency
       bool write(Fr::CFile& f) const ;
       static bool writeAll(Fr::CFile& f) ;
    private:
-      static Fr::NewPtr<MultiTrieFrequency> s_base_address ;
-      static uint32_t s_max_alloc ;
-      static uint32_t s_curr_alloc ;
+      static Fr::ItemPool<MultiTrieFrequency> s_freq_records ;
       uint32_t m_next ;
       uint32_t m_frequency ;
       uint32_t m_langID ;

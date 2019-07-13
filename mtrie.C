@@ -29,8 +29,6 @@
 #include <stdlib.h>
 #include <cstring>
 #include "mtrie.h"
-#include "framepac/byteorder.h"
-#include "framepac/file.h"
 #include "framepac/memory.h"
 #include "framepac/texttransforms.h"
 
@@ -40,8 +38,6 @@ using namespace Fr ;
 /************************************************************************/
 /*	Manifest Constants						*/
 /************************************************************************/
-
-#define BUCKET_SIZE 65536	// must be power of 2
 
 #define MULTITRIE_SIGNATURE "MulTrie\0"
 #define MULTITRIE_FORMAT_VERSION 2
@@ -63,9 +59,7 @@ using namespace Fr ;
 /*	Global variables						*/
 /************************************************************************/
 
-NewPtr<MultiTrieFrequency> MultiTrieFrequency::s_base_address ;
-uint32_t MultiTrieFrequency::s_max_alloc = 0 ;
-uint32_t MultiTrieFrequency::s_curr_alloc = 0 ;
+ItemPool<MultiTrieFrequency> MultiTrieFrequency::s_freq_records(100000) ;
 
 /************************************************************************/
 /*	Helper functions						*/
@@ -95,21 +89,8 @@ MultiTrieFrequency::~MultiTrieFrequency()
 
 MultiTrieFrequency* MultiTrieFrequency::allocate(uint32_t freq, uint32_t lang, bool stopgram)
 {
-   if (s_curr_alloc >= s_max_alloc)
-      {
-      uint32_t new_alloc = s_max_alloc ? 2 * s_max_alloc : 1000000 ;
-      auto new_base = new MultiTrieFrequency[new_alloc] ;
-      if (new_base)
-	 {
-	 std::copy(s_base_address.begin(),s_base_address.begin()+s_max_alloc,new_base) ;
-	 s_base_address = new_base ;
-	 s_max_alloc = new_alloc ;
-	 }
-      else
-	 return nullptr ;
-      }
-   MultiTrieFrequency *freq_record = baseAddress() + s_curr_alloc ;
-   s_curr_alloc++ ;
+   size_t recnum = s_freq_records.alloc() ;
+   auto freq_record = &s_freq_records[recnum] ;
    new (freq_record) MultiTrieFrequency(freq,lang,stopgram) ;
    return freq_record ;
 }
@@ -146,7 +127,7 @@ void MultiTrieFrequency::setFrequency(uint32_t ID, uint32_t freq,
       // because the allocation might reallocate the array containing
       //   'this', we need to get our index and use it to re-establish
       //   the correct object address after the allocation
-      uint32_t index = (this - baseAddress()) ;
+      uint32_t index = (this - s_freq_records.begin()) ;
       MultiTrieFrequency *f = allocate(freq,ID,stopgram) ;
       MultiTrieFrequency *prev = getAddress(index) ;
       prev->setNext(f) ;
@@ -212,14 +193,8 @@ bool MultiTrieFrequency::readAll(CFile& f)
    UInt32 cnt ;
    if (f && f.readValue(&cnt))
       {
-      uint32_t count = cnt.load() ;
-      MultiTrieFrequency* base = nullptr ;
-      if (f.readValues(&base,count))
-	 {
-	 s_base_address = base ;
-	 s_max_alloc = s_curr_alloc = count ;
+      if (s_freq_records.load(f,cnt.load()))
 	 return true ;
-	 }
       }
    return false ;
 }
@@ -235,10 +210,8 @@ bool MultiTrieFrequency::write(CFile& f) const
 
 bool MultiTrieFrequency::writeAll(CFile& f)
 {
-   UInt32 count(s_curr_alloc) ;
-   return (f &&
-           f.writeValue(count) &&
-           f.write(baseAddress(),s_curr_alloc,sizeof(MultiTrieFrequency)) == s_curr_alloc) ;
+   UInt32 count(s_freq_records.size()) ;
+   return f && f.writeValue(count) && s_freq_records.save(f) ;
 }
 
 /************************************************************************/
@@ -309,8 +282,6 @@ void MultiTrieNode::setFrequency(uint32_t langID, uint32_t freq,
 
 bool MultiTrieNode::setFrequencies(MultiTrieFrequency *freqs)
 {
-   if (freqs < MultiTrieFrequency::baseAddress())
-      return false ;
    auto idx = MultiTrieFrequency::getIndex(freqs) ;
    if (idx == LangIDMultiTrie::INVALID_FREQ)
       return false ;
