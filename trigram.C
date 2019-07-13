@@ -170,7 +170,7 @@ void TrigramCounts::filter(unsigned topK, unsigned max_len, bool verbose)
       cout << "Determining trigram cut-off-frequency" << endl ;
       }
    uint32_t top_frequencies[topK] ;
-   memset(top_frequencies,'\0',topK*sizeof(uint32_t)) ;
+   std::fill_n(top_frequencies,topK,0) ;
    uint32_t min_freq = 1 ;
    // force skipping 00/00/00 and FF/FF/FF, since they are common fillers
    //   in binary files and will thus tend to clog the top-K list with

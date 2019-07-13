@@ -330,7 +330,7 @@ static void identify_languages(CFile& f,
 	 {
 	 unsigned to_read = (buf - bufbase) ;
 	 offset += to_read ;
-	 memcpy(*bufbase,buf,buflen) ;
+	 std::copy_n(buf,buflen,bufbase.begin()) ;
 	 buf = *bufbase ;
 	 int additional = f.read(buf + buflen,to_read) ;
 	 // stop if we've already identified up to the end of the file, to

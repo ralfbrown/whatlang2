@@ -57,7 +57,7 @@ int main(int argc, const char **argv)
       if (bufpos >= highwater)
 	 {
 	 // refill the buffer
-	 memcpy(buffer,buffer+bufpos,buflen - bufpos) ;
+	 std::copy_n(buffer+bufpos,buflen-bufpos,buffer) ;
 	 buflen -= bufpos ;
 	 bufpos = 0 ;
 	 buflen += fread(buffer+buflen,1,sizeof(buffer)-buflen,stdin) ;

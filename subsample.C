@@ -78,7 +78,7 @@ StringList::StringList(const char *strng)
       m_length = strlen(strng) ;
       m_string.reallocate(0,m_length+1) ;
       if (m_string)
-	 memcpy(m_string.begin(),strng,m_length+1) ;
+	 std::copy_n(strng,m_length+1,m_string.begin()) ;
       else
 	 m_length = 0 ;
       }

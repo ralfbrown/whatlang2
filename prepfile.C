@@ -5,7 +5,7 @@
 /*									*/
 /*  File:     prepfile.C	preprocessed file input			*/
 /*  Version:  1.30							*/
-/*  LastEdit: 27jun2019							*/
+/*  LastEdit: 2019-07-13						*/
 /*                                                                      */
 /*  (c) Copyright 2010,2011,2012,2013,2014,2015,2019			*/
 /*		 Ralf Brown/Carnegie Mellon University			*/
@@ -24,7 +24,8 @@
 /*                                                                      */
 /************************************************************************/
 
-#include  <errno.h>
+#include <algorithm>
+#include <errno.h>
 #include "prepfile.h"
 #include "framepac/file.h"
 #include "framepac/list.h"
@@ -244,12 +245,11 @@ int PreprocessedInputFile::readInput(unsigned char *buf, size_t buflen)
 	 size_t len = ((String*)m_buffered_lines->front())->c_len() ;
 	 if (count + len > buflen)
 	    break ;
-	 String *line = (String*)poplist(m_buffered_lines) ;
+	 StringPtr line = (String*)poplist(m_buffered_lines) ;
 	 if (!line) continue ;
-	 memcpy(buf,line->c_str(),len) ;
+	 std::copy_n(line->c_str(),len,buf) ;
 	 buf += len ;
 	 count += len ;
-	 line->free() ;
 	 }
       return count ;
       }
@@ -313,7 +313,7 @@ int PreprocessedInputFile::fillBuffer()
 	 translit_buffer_len = original_buffer_len ;
 	 if (original_buffer_len)
 	    {
-	    memcpy(translit_buffer,original_buffer,original_buffer_len) ;
+	    std::copy_n(original_buffer,original_buffer_len,translit_buffer) ;
 	    original_buffer_len = 0 ;
 	    }
 	 translit_buffer_ptr = 0 ;
@@ -323,7 +323,7 @@ int PreprocessedInputFile::fillBuffer()
 	 {
 	 // we have data remaining in the input buffer, so
 	 //  copy it to the beginning for the next refill
-	 memcpy(original_buffer,origbuf,orig_len) ;
+	 std::copy_n(origbuf,orig_len,original_buffer) ;
 	 }
       original_buffer_len = orig_len ;
       translit_buffer_ptr = 0 ;

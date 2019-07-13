@@ -591,7 +591,7 @@ bool LangIDPackedMultiTrie::enumerate(uint8_t *keybuf, unsigned maxkeylength, En
 {
    if (keybuf && fn && m_nodes && m_nodes[ROOT_INDEX].firstChild())
       {
-      memset(keybuf,'\0',maxkeylength) ;
+      std::fill_n(keybuf,maxkeylength,'\0') ;
       return enumerateChildren(ROOT_INDEX,keybuf,maxkeylength*8,0,fn,user_data) ;
       }
    return false ;
