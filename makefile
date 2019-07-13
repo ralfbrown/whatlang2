@@ -261,9 +261,9 @@ bin/whatlang: build/whatlang.o $(LIBRARY) $(INCDIR)/framepacng.a
 	@mkdir -p bin
 	$(CCLINK) $(LINKFLAGS) $(CFLAGEXE) -o $@ $^
 
-bin/subsample: build/subsample.o
+bin/subsample: build/subsample.o $(INCDIR)/framepacng.a
 	@mkdir -p bin
-	$(CCLINK) $(LINKFLAGS) $(CFLAGEXE) -o $@ $<
+	$(CCLINK) $(LINKFLAGS) $(CFLAGEXE) -o $@ $^
 
 #########################################################################
 ## object modules

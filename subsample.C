@@ -5,7 +5,7 @@
 /*									*/
 /*  File:     subsample.C  utility program to sample lines of text	*/
 /*  Version:  1.30							*/
-/*  LastEdit: 2019-07-07 						*/
+/*  LastEdit: 2019-07-12 						*/
 /*                                                                      */
 /*  (c) Copyright 2012,2013,2014,2019 Carnegie Mellon University	*/
 /*      This program is free software; you can redistribute it and/or   */
@@ -28,8 +28,11 @@
 #include <iostream>
 #include <memory.h>
 #include <stdlib.h>
+//#include "framepac/smartptr.h"
+#include "framepac/random.h"
+
 using namespace std ;
-#define FrHAVE_SRAND48
+using namespace Fr ;
 
 /************************************************************************/
 /*	Manifest Constants						*/
@@ -45,11 +48,11 @@ class StringList
    {
    private:
       StringList *m_next ;
-      char       *m_string ;
+      CharPtr     m_string ;
       unsigned	  m_length ;
    public:
       StringList(const char *strng) ;
-      ~StringList() ;
+      ~StringList() = default ;
 
       // accessors
       StringList *next() const { return m_next ; }
@@ -62,7 +65,6 @@ class StringList
 
       // factory
       static void append(const char *strng, StringList **&last_string) ;
-      static void append(StringList *strng, StringList **&last_string) ;
    } ;
 
 /************************************************************************/
@@ -75,9 +77,9 @@ StringList::StringList(const char *strng)
    if (strng)
       {
       m_length = strlen(strng) ;
-      m_string = (char*)malloc(m_length+1) ;
+      m_string.reallocate(0,m_length+1) ;
       if (m_string)
-	 memcpy(m_string,strng,m_length+1) ;
+	 memcpy(m_string.begin(),strng,m_length+1) ;
       else
 	 m_length = 0 ;
       }
@@ -86,17 +88,6 @@ StringList::StringList(const char *strng)
       m_length = 0 ;
       m_string = nullptr ;
       }
-   return ;
-}
-
-//----------------------------------------------------------------------
-
-StringList::~StringList()
-{
-   free(m_string) ;
-   m_string = nullptr ;
-   m_length = 0 ;
-   m_next = nullptr ;
    return ;
 }
 
@@ -127,91 +118,6 @@ void StringList::append(const char *strng, StringList **&last_string)
    return ;
 }
 
-//----------------------------------------------------------------------
-
-void StringList::append(StringList *strng, StringList **&last_string)
-{
-   if (!last_string)
-      return ;				// no list, so we can't do anything
-   if (!strng)
-      return ;				// Out of memory!  Ignore line
-   strng->next(0) ;
-   *last_string = strng ;
-   StringList **end_ptr = &strng->m_next ;
-   last_string = end_ptr ;
-   return ;
-}
-
-/************************************************************************/
-/*	Random sampling							*/
-/************************************************************************/
-
-size_t random_number(size_t range)
-{
-#ifdef FrHAVE_SRAND48
-   long rn = lrand48() ;
-#else
-   if (range > RAND_MAX)
-      {
-      static bool warned = false ;
-      if (!warned)
-	 {
-	 fprintf(stderr,"Warning: random number generator does not have a\n"
-		 "\tsufficiently large range.") ;
-	 warned = true ;
-	 }
-      }
-   long rn = (long)rand() ;
-#endif /* FrHAVE_SRAND48 */
-   return rn % range ;
-}
-
-//----------------------------------------------------------------------
-
-char* random_sample(size_t total_size, size_t sample_size)
-{
-   char *selected = (char*)calloc(total_size+1,sizeof(char)) ;
-   if (!selected)
-      {
-      fprintf(stderr,"Out of memory while generating random sampling") ;
-      return nullptr ;
-      }
-   // seed random number gen from time
-#ifdef FrHAVE_SRAND48
-   srand48(time(0)) ;
-#else
-   srand(time(0)) ;
-#endif /* FrHAVE_SRAND48 */
-   if (sample_size > total_size / 2)
-      {
-      // to avoid looping nearly forever on big samples, turn it into the
-      //   equivalent problem of *deselecting* a small portion of the complete
-      //   set of documents
-      memset(selected,1,total_size) ;
-      sample_size = total_size - sample_size ;
-      for ( ; sample_size > 0 ; sample_size--)
-	 {
-	 size_t select ;
-	 do {
-	    select = random_number(total_size) ;
-	    } while (!selected[select]) ;
-	 selected[select] = (char)0 ;
-	 }
-      }
-   else
-      {
-      for ( ; sample_size > 0 ; sample_size--)
-	 {
-	 size_t select ;
-	 do {
-	    select = random_number(total_size) ;
-	    } while (selected[select]) ;
-	 selected[select] = (char)1 ;
-	 }
-      }
-   return selected ;
-}
-
 /************************************************************************/
 /************************************************************************/
 
@@ -233,8 +139,7 @@ static void usage(const char *argv0)
 
 //----------------------------------------------------------------------
 
-static void take_uniform_bytes(StringList *lines, size_t sample_size,
-			       FILE *rejectfp)
+static void take_uniform_bytes(StringList *lines, size_t sample_size, FILE *rejectfp)
 {
    if (!lines)
       return ;
@@ -248,7 +153,7 @@ static void take_uniform_bytes(StringList *lines, size_t sample_size,
    total_bytes = 0 ;
    while (lines)
       {
-      StringList *line = lines ;
+      Owned<StringList> line = lines ;
       lines = lines->next() ;
       size_t len = line->length() ;
       if (sampled_bytes <= (total_bytes * sample_rate))
@@ -261,7 +166,6 @@ static void take_uniform_bytes(StringList *lines, size_t sample_size,
 	 fputs(line->string(),rejectfp) ;
 	 }
       total_bytes += len ;
-      delete line ;
       }
    return ;
 }
@@ -278,7 +182,7 @@ static void take_uniform_sample(StringList *lines, size_t sample_size,
    double count = interval/2.0 ;
    while (lines)
       {
-      StringList *line = lines ;
+      Owned<StringList> line = lines ;
       lines = lines->next() ;
       double increment = interval ;
       if ((size_t)(count + increment) > (size_t)count)
@@ -290,7 +194,6 @@ static void take_uniform_sample(StringList *lines, size_t sample_size,
 	 fputs(line->string(),rejectfp) ;
 	 }
       count += increment ;
-      delete line ;
       }
    return ;
 }
@@ -304,26 +207,23 @@ static void take_random_sample(StringList *lines, size_t sample_size, FILE *reje
       {
       while (lines)
 	 {
-         StringList *line = lines ;
+         Owned<StringList> line = lines ;
 	 lines = lines->next() ;
 	 fputs(line->string(),stdout) ;
-	 delete line ;
          }
       }
    else
       {
-      char *selected = random_sample(numlines,sample_size) ;
+      auto selected = RandomSample(numlines,sample_size) ;
       for (unsigned i = 0 ; i < numlines ; i++)
 	 {
-         StringList *line = lines ;
+         Owned<StringList> line = lines ;
 	 lines = lines->next() ;
 	 if (selected[i])
 	    fputs(line->string(),stdout) ;
 	 else if (rejectfp)
 	    fputs(line->string(),rejectfp) ;
-	 delete line ;
 	 }
-      free(selected) ;
       }
    return ;
 }
