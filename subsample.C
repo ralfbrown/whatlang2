@@ -23,6 +23,7 @@
 /*                                                                      */
 /************************************************************************/
 
+#include <algorithm>
 #include <iostream>
 #include <stdio.h>
 #include <iostream>

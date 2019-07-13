@@ -141,19 +141,15 @@ Fr::CFile* PreprocessedInputFile::open_sampled_input_file(const char *filename,
       m_buffered_lines = Fr::List::emptyList() ;
       while (lines)
 	 {
-	 auto line = reinterpret_cast<String*>(poplist(lines)) ;
+	 StringPtr line = reinterpret_cast<String*>(poplist(lines)) ;
 	 if (!line) continue ; //FIXME
 	 size_t len = line->c_len() ;
 	 double increment = interval * len / avgline ;
 	 if (((size_t)(count + increment) > (size_t)count) ||
 	     interval >= 1.0)
 	    {
-	    pushlist(line,m_buffered_lines) ;
+	    pushlist(line.move(),m_buffered_lines) ;
 	    sampled += len ;
-	    }
-	 else
-	    {
-	    line->free() ;
 	    }
 	 count += increment ;
 	 }
