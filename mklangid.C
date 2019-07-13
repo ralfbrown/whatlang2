@@ -2220,7 +2220,7 @@ static bool cluster_models_by_charset(LanguageIdentifier *clusterdb,
    NewPtr< LanguageID*> enc_info(encs_alloc) ;
    // make a mapping from language ID to per-encoding merged models
    unsigned numlangs = language_identifier->numLanguages() ;
-   NybbleTrie **merged = Fr::NewC<NybbleTrie*>(numlangs) ;
+   NybbleTrie **merged = new NybbleTrie*[numlangs] ;
    for (unsigned langid = 0 ; langid < numlangs ; langid++)
       {
       // get the character encoding for the current model and find the
