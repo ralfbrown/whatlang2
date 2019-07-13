@@ -466,18 +466,15 @@ bool LangIDPackedMultiTrie::insertChildren(PackedTrieNode *parent,
 
 bool LangIDPackedMultiTrie::parseHeader(CFile& f, size_t& numfull, size_t& numfreq, size_t& numterminals)
 {
-   const size_t siglen = sizeof(MULTITRIE_SIGNATURE) ;
-   char signature[siglen] ;
-   if (f.read(signature,siglen,sizeof(char)) != siglen ||
-       memcmp(signature,MULTITRIE_SIGNATURE,siglen) != 0)
+   int version = f.verifySignature(MULTITRIE_SIGNATURE) ;
+   if (version < 0)
       {
-      // error: wrong file type
+      if (version == -1) { /* read error */ }
+      if (version == -2) { /* error: wrong file type */ }
+      if (version == -3) { /* error: wrong byte order */ }
       return false ;
       }
-   unsigned char version ;
-   if (!f.readValue(&version)
-       || version < MULTITRIE_FORMAT_MIN_VERSION
-       || version > MULTITRIE_FORMAT_VERSION)
+   if (version < MULTITRIE_FORMAT_MIN_VERSION || version > MULTITRIE_FORMAT_VERSION)
       {
       // error: wrong version of data file
       return false ;
@@ -658,13 +655,11 @@ LangIDPackedMultiTrie *LangIDPackedMultiTrie::load(const char *filename)
 bool LangIDPackedMultiTrie::writeHeader(CFile& f) const
 {
    // write the signature string
-   const size_t siglen = sizeof(MULTITRIE_SIGNATURE) ;
-   if (f.write(MULTITRIE_SIGNATURE,siglen,sizeof(char)) != siglen)
-      return false; 
-   // follow with the format version number
-   unsigned char version = MULTITRIE_FORMAT_VERSION ;
+   if (!f.writeSignature(MULTITRIE_SIGNATURE,MULTITRIE_FORMAT_VERSION))
+      return false ;
+   // follow with the number of bits per level of the trie
    unsigned char bits = PTRIE_BITS_PER_LEVEL ;
-   if (!f.writeValue(version) || !f.writeValue(bits))
+   if (!f.writeValue(bits))
       return false ;
    // write out the size of the trie
    UInt32 val_used(size()) ;
