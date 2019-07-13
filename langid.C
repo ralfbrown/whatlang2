@@ -379,7 +379,7 @@ BigramCounts* BigramCounts::load(Fr::CFile& f)
 {
    if (f)
       {
-      OwnPtr<BigramCounts> model ;
+      Owned<BigramCounts> model ;
       if (model->read(f))
 	 return model.move() ;
       }
@@ -762,7 +762,7 @@ LanguageID* LanguageID::read(Fr::CFile& f, unsigned file_version)
 {
    if (!f)
       return nullptr ;
-   OwnPtr<LanguageID> langID ;
+   Owned<LanguageID> langID ;
    if (!read(f,*langID,file_version))
       {
       langID = nullptr ;
@@ -1886,7 +1886,7 @@ LanguageScores* LanguageIdentifier::identify(const char* buffer,
 {
    if (!buffer || !buflen || !m_langdata)
       return nullptr ;
-   OwnPtr<LanguageScores> scores(numLanguages()) ;
+   Owned<LanguageScores> scores(numLanguages()) ;
    const auto align = enforce_alignment ? m_alignments.begin() : nullptr ;
    if (!identify(scores,buffer,buflen,align,ignore_whitespace, apply_stop_grams,0))
       {
@@ -2292,7 +2292,7 @@ static LanguageIdentifier* try_loading(const char* database_file, bool verbose)
       }
    if (!db_filename)
       db_filename = dup_string(database_file) ;
-   Fr::OwnPtr<LanguageIdentifier> id(db_filename,verbose) ;
+   Owned<LanguageIdentifier> id(db_filename,verbose) ;
    if (!id)
       {
       SystemMessage::no_memory("loading language database") ;

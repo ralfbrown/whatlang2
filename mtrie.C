@@ -35,6 +35,7 @@
 #include "framepac/texttransforms.h"
 
 using namespace std ;
+using namespace Fr ;
 
 /************************************************************************/
 /*	Manifest Constants						*/
@@ -190,7 +191,7 @@ void MultiTrieFrequency::scaleFrequency(uint64_t total_count,
 
 //----------------------------------------------------------------------
 
-MultiTrieFrequency *MultiTrieFrequency::read(Fr::CFile& f)
+MultiTrieFrequency *MultiTrieFrequency::read(CFile& f)
 {
    if (f)
       {
@@ -206,9 +207,9 @@ MultiTrieFrequency *MultiTrieFrequency::read(Fr::CFile& f)
 
 //----------------------------------------------------------------------
 
-bool MultiTrieFrequency::readAll(Fr::CFile& f)
+bool MultiTrieFrequency::readAll(CFile& f)
 {
-   Fr::UInt32 cnt ;
+   UInt32 cnt ;
    if (f && f.readValue(&cnt))
       {
       uint32_t count = cnt.load() ;
@@ -226,16 +227,16 @@ bool MultiTrieFrequency::readAll(Fr::CFile& f)
 
 //----------------------------------------------------------------------
 
-bool MultiTrieFrequency::write(Fr::CFile& f) const
+bool MultiTrieFrequency::write(CFile& f) const
 {
    return f && f.writeValue(*this) ;
 }
 
 //----------------------------------------------------------------------
 
-bool MultiTrieFrequency::writeAll(Fr::CFile& f)
+bool MultiTrieFrequency::writeAll(CFile& f)
 {
-   Fr::UInt32 count(s_curr_alloc) ;
+   UInt32 count(s_curr_alloc) ;
    return (f &&
            f.writeValue(count) &&
            f.write(baseAddress(),s_curr_alloc,sizeof(MultiTrieFrequency)) == s_curr_alloc) ;
@@ -341,14 +342,14 @@ uint32_t MultiTrieNode::insertChild(unsigned int N, LangIDMultiTrie *trie)
 
 //----------------------------------------------------------------------
 
-bool MultiTrieNode::load(Fr::CFile& f)
+bool MultiTrieNode::load(CFile& f)
 {
    return f && f.readValue(this) ;
 }
 
 //----------------------------------------------------------------------
 
-bool MultiTrieNode::write(Fr::CFile& f) const
+bool MultiTrieNode::write(CFile& f) const
 {
    return f && f.writeValue(*this) ;
 }
@@ -394,13 +395,13 @@ void LangIDMultiTrie::init(uint32_t cap)
 
 bool LangIDMultiTrie::loadWords(const char *filename, uint32_t langID, bool verbose)
 {
-   Fr::CInputFile fp(filename) ;
+   CInputFile fp(filename) ;
    if (fp)
       {
       bool warned = false;
       unsigned linenumber = 0 ;
       unsigned wc = 0 ;
-      while (Fr::CharPtr line = fp.getTrimmedLine())
+      while (CharPtr line = fp.getTrimmedLine())
 	 {
 	 linenumber++ ;
 	 char *lineptr = (char*)line ;
@@ -421,7 +422,7 @@ bool LangIDMultiTrie::loadWords(const char *filename, uint32_t langID, bool verb
 	    continue ;
 	    }
 	 // trim leading and trailing whitespace from rest of line
-	 lineptr = Fr::trim_whitespace(freq_end) ;
+	 lineptr = trim_whitespace(freq_end) ;
 	 unsigned len = strlen(lineptr) ;
 	 insert((uint8_t*)lineptr,len,langID,freq,false) ;
 	 wc++ ;
@@ -684,7 +685,7 @@ uint32_t LangIDMultiTrie::countFreqRecords() const
 
 //----------------------------------------------------------------------
 
-LangIDMultiTrie *LangIDMultiTrie::load(Fr::CFile& f)
+LangIDMultiTrie *LangIDMultiTrie::load(CFile& f)
 {
    if (!f)
       return nullptr ;
@@ -708,7 +709,7 @@ LangIDMultiTrie *LangIDMultiTrie::load(Fr::CFile& f)
       // error: wrong type of trie
       return nullptr ;
       }
-   Fr::UInt32 val_used, val_tokens, val_keylen ;
+   UInt32 val_used, val_tokens, val_keylen ;
    if (!f.readValue(&val_used) ||
       !f.readValue(&val_tokens) ||
       !f.readValue(&val_keylen))
@@ -717,7 +718,7 @@ LangIDMultiTrie *LangIDMultiTrie::load(Fr::CFile& f)
       return nullptr ;
       }
    uint32_t used = val_used.load() ;
-   Fr::OwnPtr<LangIDMultiTrie> trie(used) ;
+   Owned<LangIDMultiTrie> trie(used) ;
    if (!trie)
       return nullptr ;
    trie->m_nodes.allocBatch(used) ;
@@ -746,13 +747,13 @@ LangIDMultiTrie *LangIDMultiTrie::load(Fr::CFile& f)
 
 LangIDMultiTrie *LangIDMultiTrie::load(const char *filename)
 {
-   Fr::CInputFile fp(filename) ;
+   CInputFile fp(filename) ;
    return load(fp) ;
 }
 
 //----------------------------------------------------------------------
 
-bool LangIDMultiTrie::writeHeader(Fr::CFile& f) const
+bool LangIDMultiTrie::writeHeader(CFile& f) const
 {
    // write the signature string
    const size_t siglen = sizeof(MULTITRIE_SIGNATURE) ;
@@ -765,7 +766,7 @@ bool LangIDMultiTrie::writeHeader(Fr::CFile& f) const
       !f.writeValue(bits))
       return false ;
    // write out the size of the trie
-   Fr::UInt32 val_used(size()), val_tokens(totalTokens()), val_keylen(longestKey()) ;
+   UInt32 val_used(size()), val_tokens(totalTokens()), val_keylen(longestKey()) ;
    if (!f.writeValue(val_used) ||
       !f.writeValue(val_tokens) ||
       !f.writeValue(val_keylen))
@@ -776,7 +777,7 @@ bool LangIDMultiTrie::writeHeader(Fr::CFile& f) const
 
 //----------------------------------------------------------------------
 
-bool LangIDMultiTrie::write(Fr::CFile& f) const
+bool LangIDMultiTrie::write(CFile& f) const
 {
    if (!f || !writeHeader(f))
       return false ;
@@ -798,7 +799,7 @@ bool LangIDMultiTrie::write(Fr::CFile& f) const
 
 bool LangIDMultiTrie::write(const char *filename) const
 {
-   Fr::COutputFile fp(filename,Fr::CFile::safe_rewrite) ;
+   COutputFile fp(filename,CFile::safe_rewrite) ;
    return this->write(fp) ? fp.close() : false ;
 }
 
@@ -806,7 +807,7 @@ bool LangIDMultiTrie::write(const char *filename) const
 
 static const char hexdigit[] = "0123456789ABCDEF" ;
 
-void write_escaped_char(uint8_t c, Fr::CFile& f)
+void write_escaped_char(uint8_t c, CFile& f)
 {
    switch (c)
       {
@@ -832,7 +833,7 @@ void write_escaped_char(uint8_t c, Fr::CFile& f)
 
 //----------------------------------------------------------------------
 
-void write_escaped_key(Fr::CFile& f, const uint8_t* key, unsigned keylen)
+void write_escaped_key(CFile& f, const uint8_t* key, unsigned keylen)
 {
    for (size_t i = 0 ; i < keylen ; i++)
       {
@@ -847,7 +848,7 @@ static bool dump_ngram(const LangIDMultiTrie* trie, NybbleTrie::NodeIndex nodein
 		       unsigned keylen, void *user_data)
 {
    auto node = trie->node(nodeindex) ;
-   Fr::CFile& f = *((Fr::CFile*)user_data) ;
+   CFile& f = *((CFile*)user_data) ;
    if (f && node)
       {
       f.printf("   ") ;
@@ -866,9 +867,9 @@ static bool dump_ngram(const LangIDMultiTrie* trie, NybbleTrie::NodeIndex nodein
 
 //----------------------------------------------------------------------
 
-bool LangIDMultiTrie::dump(Fr::CFile& f) const
+bool LangIDMultiTrie::dump(CFile& f) const
 {
-   Fr::LocalAlloc<uint8_t,10000> keybuf(longestKey()) ;
+   LocalAlloc<uint8_t,10000> keybuf(longestKey()) ;
    return keybuf ? enumerate(keybuf,longestKey(),dump_ngram,&f) : false ;
 }
 

@@ -219,7 +219,7 @@ TrigramCounts* TrigramCounts::load(Fr::CFile& f)
 {
    if (f)
       {
-      Fr::OwnPtr<TrigramCounts> model ;
+      Fr::Owned<TrigramCounts> model ;
       if (model->read(f))
 	 return model.move() ;
       }

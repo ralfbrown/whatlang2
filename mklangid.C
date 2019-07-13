@@ -686,7 +686,7 @@ static NybbleTrie *load_stop_grams(const LanguageID *lang_info,
    cout << "Computing similarities relative to "
 	<< lang_info->language() << "_" << lang_info->region()
 	<< "-" << lang_info->encoding() << endl ;
-   Fr::OwnPtr<LanguageScores> weights = language_identifier->similarity(langid) ;
+   Fr::Owned<LanguageScores> weights = language_identifier->similarity(langid) ;
    Fr::ScopedObject<Fr::BitVector> selected(language_identifier->numLanguages()) ;
    bool selected_models ;
    if (languages && *languages == '@')
@@ -2262,7 +2262,7 @@ static bool cluster_models_by_charset(LanguageIdentifier *clusterdb,
       {
       bool have_max_length = true ;
       cerr << "adding encoding " << i << "  " << enc_info[i]->encoding() << endl;
-      OwnPtr<NybbleTrie> clustered = restrict_ngrams(encodings[i],2*max_sizes[i],1,maxkey,1,have_max_length) ;
+      Owned<NybbleTrie> clustered = restrict_ngrams(encodings[i],2*max_sizes[i],1,maxkey,1,have_max_length) ;
       delete encodings[i] ;
       uint64_t total_bytes = 1 ; //FIXME!!!
       add_ngrams(clustered,total_bytes,*(enc_info[i]),"???") ;
