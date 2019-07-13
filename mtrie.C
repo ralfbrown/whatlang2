@@ -63,7 +63,7 @@ using namespace Fr ;
 /*	Global variables						*/
 /************************************************************************/
 
-MultiTrieFrequency *MultiTrieFrequency::s_base_address = nullptr ;
+NewPtr<MultiTrieFrequency> MultiTrieFrequency::s_base_address ;
 uint32_t MultiTrieFrequency::s_max_alloc = 0 ;
 uint32_t MultiTrieFrequency::s_curr_alloc = 0 ;
 
@@ -101,7 +101,7 @@ MultiTrieFrequency* MultiTrieFrequency::allocate(uint32_t freq, uint32_t lang, b
       auto new_base = new MultiTrieFrequency[new_alloc] ;
       if (new_base)
 	 {
-	 std::copy(s_base_address,s_base_address+s_max_alloc,new_base) ;
+	 std::copy(s_base_address.begin(),s_base_address.begin()+s_max_alloc,new_base) ;
 	 s_base_address = new_base ;
 	 s_max_alloc = new_alloc ;
 	 }
@@ -216,7 +216,6 @@ bool MultiTrieFrequency::readAll(CFile& f)
       MultiTrieFrequency* base = nullptr ;
       if (f.readValues(&base,count))
 	 {
-	 delete[] s_base_address ;
 	 s_base_address = base ;
 	 s_max_alloc = s_curr_alloc = count ;
 	 return true ;

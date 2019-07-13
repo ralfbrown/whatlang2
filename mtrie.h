@@ -65,7 +65,7 @@ class MultiTrieFrequency
 
       // accessors
       static MultiTrieFrequency *baseAddress()
-	 { return s_base_address ; }
+	 { return s_base_address.begin() ; }
       uint32_t frequency() const { return m_frequency ; }
       uint32_t frequency(uint32_t langID) const ;
       uint32_t languageID() const { return m_langID & LID_LANGID_MASK ; }
@@ -95,7 +95,7 @@ class MultiTrieFrequency
       bool write(Fr::CFile& f) const ;
       static bool writeAll(Fr::CFile& f) ;
    private:
-      static MultiTrieFrequency *s_base_address ;
+      static Fr::NewPtr<MultiTrieFrequency> s_base_address ;
       static uint32_t s_max_alloc ;
       static uint32_t s_curr_alloc ;
       uint32_t m_next ;

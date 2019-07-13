@@ -597,8 +597,8 @@ static NybbleTrie *load_stop_grams_selected(unsigned langid,
 					    LanguageScores *weights,
    					    LangIDPackedMultiTrie *ptrie,
 					    const BitVector *selected,
-					    NybbleTrie *&curr_ngrams,
-					    NybbleTrie *&ngram_weights)
+					    Owned<NybbleTrie>& curr_ngrams,
+					    Owned<NybbleTrie>& ngram_weights)
 {
    // further discount the selected other languages by the absolute
    //   amount of training data in the primary language (since less
@@ -658,8 +658,7 @@ static NybbleTrie *load_stop_grams_selected(unsigned langid,
    auto freq_base = ptrie->frequencyBaseAddress() ;
    StopGramInfo stop_gram_info(stop_grams,curr_ngrams,ngram_weights,
 			       freq_base,weights,selected,langid) ;
-   ptrie->enumerate(key,maxkey,collect_language_ngrams_packed,
-		    &stop_gram_info) ;
+   ptrie->enumerate(key,maxkey,collect_language_ngrams_packed,&stop_gram_info) ;
    return stop_grams ;
 }
 
@@ -667,8 +666,8 @@ static NybbleTrie *load_stop_grams_selected(unsigned langid,
 
 static NybbleTrie *load_stop_grams(const LanguageID *lang_info,
 				   const char *languages,
-				   NybbleTrie *&curr_ngrams,
-				   NybbleTrie *&ngram_weights,
+				   Owned<NybbleTrie>& curr_ngrams,
+				   Owned<NybbleTrie>& ngram_weights,
 				   uint64_t &training_bytes)
 {
    curr_ngrams = nullptr ;
@@ -700,8 +699,8 @@ static NybbleTrie *load_stop_grams(const LanguageID *lang_info,
    NybbleTrie *stop_grams ;
    if (selected_models || 1) //!!! we need to run regardless, to create curr_ngrams
       {
-      delete curr_ngrams ;
-      delete ngram_weights ;
+      curr_ngrams = nullptr ;
+      ngram_weights = nullptr ;
       stop_grams = load_stop_grams_selected(langid,weights,ptrie,&selected,curr_ngrams,ngram_weights) ;
       }
    else
@@ -1816,10 +1815,8 @@ static void compute_coverage(LanguageID &lang_info,
 
 //----------------------------------------------------------------------
 
-static bool load_frequencies(CFile& f, NybbleTrie *ngrams,
-			     uint64_t &total_bytes, bool textcat_format,
-			     LanguageID &opts,
-			     BigramCounts *&bigrams, bool &scaled)
+static bool load_frequencies(CFile& f, NybbleTrie* ngrams, uint64_t& total_bytes, bool textcat_format,
+   			     LanguageID& opts, Owned<BigramCounts>& bigrams, bool& scaled)
 {
    scaled = false ;
    if (!f)
@@ -1828,9 +1825,7 @@ static bool load_frequencies(CFile& f, NybbleTrie *ngrams,
    bool first_line = true ;
    bool have_bigram_counts = false ;
    double codepoint_discount = 1.0 ;
-   BigramCounts *crubadan_bigrams = nullptr ;
-   if (crubadan_format)
-      crubadan_bigrams = new BigramCounts ;
+   Owned<BigramCounts> crubadan_bigrams { crubadan_format ? new BigramCounts : nullptr } ;
    bool have_script = false ;
    bool try_guessing_script = false ;
    opts.setCoverageFactor(1.0) ;
@@ -2058,12 +2053,10 @@ static bool load_frequencies(CFile& f, NybbleTrie *ngrams,
       }
    if (have_bigram_counts)
       {
-      delete crubadan_bigrams ;
       bigrams = new BigramCounts ;
       if (!bigrams->read(f))
 	 {
 	 cerr << "Error reading bigram counts in vocabulary file" << endl ;
-	 delete bigrams ;
 	 bigrams = nullptr ;
 	 }
       }
@@ -2071,7 +2064,7 @@ static bool load_frequencies(CFile& f, NybbleTrie *ngrams,
       {
       if (crubadan_bigrams)
 	 crubadan_bigrams->scaleTotal(100) ;
-      bigrams = crubadan_bigrams ;
+      bigrams = crubadan_bigrams.move() ;
       }
    total_bytes = (uint64_t)(total_bytes * codepoint_discount) ;
    return true ;
@@ -2096,8 +2089,9 @@ static bool load_frequencies(const char **filelist, unsigned num_files,
       return false ;
       }
    uint64_t total_bytes = 0 ;
-   BigramCounts *bigrams = nullptr ;
    bool scaled = false ;
+   { // start scope for bigrams
+   OwnedNull<BigramCounts> bigrams ;
    for (size_t i = 0 ; i < num_files ; i++)
       {
       const char *filename = filelist[i] ;
@@ -2108,20 +2102,18 @@ static bool load_frequencies(const char **filelist, unsigned num_files,
 	 load_frequencies(fp,*ngrams,total_bytes,textcat_format,opts,bigrams,scaled) ;
 	 if (textcat_format || num_files > 1)
 	    {
-	    delete bigrams ;
 	    bigrams = nullptr ;
 	    }
 	 }
       }
    merge_bigrams(*ngrams,bigrams,scaled,total_bytes) ;
-   delete bigrams ;
+   } // end scope of bigrams
    if (ngrams->size() > 0)
       {
       // output the merged vocabulary list as text if requested
       minimum_length = 1 ;
       if (vocabulary_file)
-	 dump_vocabulary(ngrams,scaled,vocabulary_file,1000,total_bytes,
-			 opts) ;
+	 dump_vocabulary(ngrams,scaled,vocabulary_file,1000,total_bytes,opts) ;
       // now that we have read in the n-grams, augment the database with that
       //   list for the indicated language and encoding
       if (no_save)
@@ -2310,8 +2302,7 @@ static bool cluster_models(const char *cluster_db_name, double cluster_thresh)
 
 //----------------------------------------------------------------------
 
-static bool compute_ngrams(const char **filelist, unsigned num_files,
-			   NybbleTrie *&ngrams,
+static bool compute_ngrams(const char **filelist, unsigned num_files, Owned<NybbleTrie> &ngrams,
 			   bool skip_newlines, bool omit_bigrams,
 			   bool ignore_whitespace, uint64_t &total_bytes,
 			   bool aligned)
@@ -2324,27 +2315,23 @@ static bool compute_ngrams(const char **filelist, unsigned num_files,
    //   4. filtering down the result of step 3 to the K most frequent overall
    // since we get bigrams counts essentially for free after step 1, also
    // add in the complete set of nonzero bigram counts while we're at it
-   auto counts = new TrigramCounts ;
+   Owned<TrigramCounts> counts ;
    ngrams = nullptr ;
    if (!counts)
       return false ;
    ngrams = new NybbleTrie ;
    if (!ngrams)
       {
-      delete counts ;
       return false ;
       }
    BigramCounts *bi_counts = nullptr ;
    BigramCounts **bigram_ptr = omit_bigrams ? nullptr : &bi_counts ;
-   total_bytes = count_trigrams(filelist,num_files,*counts,
-				skip_newlines,aligned,bigram_ptr) ;
-   unsigned top_K = set_oversampling(topK,ABSOLUTE_MIN_LENGTH,minimum_length,
-				     aligned) ;
+   total_bytes = count_trigrams(filelist,num_files,**counts,skip_newlines,aligned,bigram_ptr) ;
+   unsigned top_K = set_oversampling(topK,ABSOLUTE_MIN_LENGTH,minimum_length,aligned) ;
    counts->filter(top_K,maximum_length,verbose) ;
    ngrams->ignoreWhiteSpace(ignore_whitespace) ;
-   if (counts->enumerate(*ngrams) && ngrams->longestKey() > 0)
+   if (counts->enumerate(*ngrams.get()) && ngrams->longestKey() > 0)
       {
-      delete counts ;
       counts = nullptr ;
       bool small_data = (total_bytes * top_K) < 1E11 ;
       // start with five-grams, and continue increasing length until we
@@ -2364,7 +2351,6 @@ static bool compute_ngrams(const char **filelist, unsigned num_files,
 			   aligned) ;
 	 if (new_ngrams)
 	    {
-	    delete ngrams ;
 	    ngrams = new_ngrams ;
 	    }
 	 else
@@ -2387,28 +2373,26 @@ static bool compute_ngrams(const char **filelist, unsigned num_files,
       merge_bigrams(ngrams,bi_counts,false,total_bytes) ;
       }
    delete bi_counts ;
-   delete counts ;
    return true ;
 }
 
 //----------------------------------------------------------------------
 
-static bool process_files(const char **filelist, unsigned num_files,
-			  const LanguageID &base_opts, NybbleTrie *curr_ngrams,
-			  uint64_t training_bytes,
-			  bool skip_newlines, bool omit_bigrams,
-			  bool ignore_whitespace, NybbleTrie *stop_grams,
-			  const NybbleTrie *ngram_weights, bool no_save,
+static bool process_files(const char** filelist, unsigned num_files,
+   			  const LanguageID& base_opts, Owned<NybbleTrie> curr_ngrams,
+			  uint64_t training_bytes, bool skip_newlines, bool omit_bigrams,
+			  bool ignore_whitespace, NybbleTrie* stop_grams,
+			  const NybbleTrie* ngram_weights, bool no_save,
 			  bool /*check_script TODO*/)
 {
    LanguageID opts(base_opts) ;
-   NybbleTrie *ngrams ;
+   OwnedNull<NybbleTrie> ngrams ;
    uint64_t total_bytes = 0 ;
    bool scaled = false ;
    if (curr_ngrams && curr_ngrams->size() > 0)
       {
       cout << "Using baseline n-gram model from language database" << endl ;
-      ngrams = curr_ngrams ;
+      ngrams = std::move(curr_ngrams) ;
       scaled = true ;
       total_bytes = training_bytes ;
       }
@@ -2437,7 +2421,6 @@ static bool process_files(const char **filelist, unsigned num_files,
       {
       cerr << "*** N-grams WERE NOT SAVED (read-only database) ***" << endl ;
       }
-   delete ngrams ;
    return true ;
 }
 
@@ -2565,14 +2548,14 @@ static void parse_smoothing_power(const char *spec)
 
 //----------------------------------------------------------------------
 
-static void parse_translit(const char *spec, char *&from, char *&to)
+static void parse_translit(const char *spec, CharPtr& from, CharPtr& to)
 {
    from = nullptr ;
    to = nullptr ;
    if (spec)
       {
       from = dup_string(spec).move() ;
-      char *comma = strchr(from,',') ;
+      char *comma = strchr(*from,',') ;
       if (comma)
 	 {
 	 if (comma[1])
@@ -2582,7 +2565,6 @@ static void parse_translit(const char *spec, char *&from, char *&to)
 	 else
 	    {
 	    cerr << "You may not omit the FROM encoding for -T" << endl ;
-	    delete[] from ;
 	    from = nullptr ;
 	    }
 	 }
@@ -2607,8 +2589,8 @@ static bool process_argument_group(int &argc, const char **&argv,
    const char *related_langs = nullptr ;
    const char *cluster_db = nullptr ;
    double cluster_thresh = -1.0 ;  // never cluster
-   char *from = nullptr ;
-   char *to = nullptr ;
+   CharPtr from ;
+   CharPtr to ;
    crubadan_format = false ;
    PreprocessedInputFile::setDefaultConvertLatin1(false) ;
    byte_limit = ~0 ;
@@ -2749,28 +2731,20 @@ static bool process_argument_group(int &argc, const char **&argv,
    else
       {
       // check for a transliteration request
-      CharPtr translit_to
-	 = from ? aprintf("%s//TRANSLIT",to ? to : lang_info.encoding()) : nullptr ;
+      CharPtr translit_to = from ? aprintf("%s//TRANSLIT",to ? *to : lang_info.encoding()) : nullptr ;
       if (!PreprocessedInputFile::setDefaultTransliteration(from,translit_to))
 	 {
-	 cerr << "Unable to perform conversion from " << from << " to " << translit_to
-	      << endl ;
+	 cerr << "Unable to perform conversion from " << from << " to " << translit_to << endl ;
 	 }
-      NybbleTrie *curr_ngrams = nullptr ;
-      NybbleTrie *ngram_weights = nullptr ;
+      OwnedNull<NybbleTrie> curr_ngrams ;
+      OwnedNull<NybbleTrie> ngram_weights ;
       uint64_t training_bytes = 0 ;
-      NybbleTrie *stop_grams = load_stop_grams(&lang_info,related_langs,
-					       curr_ngrams,ngram_weights,
-					       training_bytes) ;
-      success = process_files(filelist,argv-filelist+1,lang_info,
-			      curr_ngrams,training_bytes,
+      Owned<NybbleTrie> stop_grams = load_stop_grams(&lang_info,related_langs,curr_ngrams,ngram_weights,
+	 					     training_bytes) ;
+      success = process_files(filelist,argv-filelist+1,lang_info,curr_ngrams.move(),training_bytes,
 			      skip_newlines,omit_bigrams,ignore_whitespace,
 			      stop_grams,ngram_weights,no_save,check_script) ;
-      delete stop_grams ;
-      delete ngram_weights ;
       }
-   delete[] from ;
-   delete[] to ;
    return success ;
 }
 
