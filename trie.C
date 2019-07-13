@@ -30,21 +30,15 @@
 #include <cstring>
 #include <iostream>
 #include "trie.h"
-#include "wildcard.h"
 #include "framepac/config.h"
 #include "framepac/texttransforms.h"
 
 using namespace std ;
+using namespace Fr ;
 
 /************************************************************************/
 /*	Manifest Constants						*/
 /************************************************************************/
-
-#if BITS_PER_LEVEL == 2
-# define BUCKET_SIZE 65536	// must be power of 2
-#else
-# define BUCKET_SIZE 16384	// must be power of 2
-#endif
 
 #if BITS_PER_LEVEL == 3
 #  define LEVEL_SIZE 9
@@ -66,15 +60,6 @@ using namespace std ;
 #ifndef lengthof
 #  define lengthof(x) (sizeof(x)/sizeof((x)[0]))
 #endif /* lengthof */
-
-//----------------------------------------------------------------------
-
-#ifndef round_up
-uint32_t round_up(uint32_t value, uint32_t granularity)
-{
-   return granularity * ((value + granularity - 1) / granularity) ;
-}
-#endif
 
 //----------------------------------------------------------------------
 
@@ -308,13 +293,13 @@ void NybbleTrie::init(uint32_t cap)
 
 bool NybbleTrie::loadWords(const char *filename, bool verbose)
 {
-   Fr::CInputFile fp(filename) ;
+   CInputFile fp(filename) ;
    if (fp)
       {
       bool warned = false;
       unsigned linenumber = 0 ;
       unsigned wc = 0 ;
-      while (Fr::CharPtr line = fp.getTrimmedLine())
+      while (CharPtr line = fp.getTrimmedLine())
 	 {
 	 linenumber++ ;
 	 char *lineptr = (char*)line ;
@@ -335,7 +320,7 @@ bool NybbleTrie::loadWords(const char *filename, bool verbose)
 	    continue ;
 	    }
 	 // trim leading and trailing whitespace from rest of line
-	 lineptr = Fr::trim_whitespace(freq_end) ;
+	 lineptr = trim_whitespace(freq_end) ;
 	 unsigned len = strlen(lineptr) ;
 	 insert((uint8_t*)lineptr,len,freq,false) ;
 	 wc++ ;
@@ -740,7 +725,7 @@ bool NybbleTrie::scaleFrequencies(uint64_t total_count, double power, double log
 
 //----------------------------------------------------------------------
 
-NybbleTrie *NybbleTrie::load(Fr::CFile& f)
+NybbleTrie *NybbleTrie::load(CFile& f)
 {
    if (f)
       {
@@ -753,13 +738,13 @@ NybbleTrie *NybbleTrie::load(Fr::CFile& f)
 
 NybbleTrie *NybbleTrie::load(const char *filename)
 {
-   Fr::CInputFile fp(filename) ;
+   CInputFile fp(filename) ;
    return load(fp) ;
 }
 
 //----------------------------------------------------------------------
 
-bool NybbleTrie::write(Fr::CFile& f) const
+bool NybbleTrie::write(CFile& f) const
 {
    if (f)
       {

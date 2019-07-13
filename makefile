@@ -10,8 +10,7 @@ OBJS = 	build/langid.o build/scan_langid.o \
 	build/mtrie.o build/prepfile.o \
 	build/ptrie.o \
 	build/roman.o build/smooth.o \
-	build/trie.o build/trigram.o \
-	build/wildcard.o
+	build/trie.o build/trigram.o
 
 EXES =	bin/mklangid \
 	bin/romanize \
@@ -289,11 +288,9 @@ build/smooth.o: smooth.C langid.h
 
 build/subsample.o: subsample.C
 
-build/trie.o: trie.C trie.h wildcard.h
+build/trie.o: trie.C trie.h
 
 build/trigram.o: trigram.C langid.h trie.h
-
-build/wildcard.o: wildcard.C wildcard.h
 
 #########################################################################
 ## header files -- touching to ensure proper recompilation

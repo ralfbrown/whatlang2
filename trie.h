@@ -55,9 +55,6 @@ using namespace std ;
 
 class NybbleTrie ;
 
-class WildcardSet ;
-class WildcardCollection ;
-
 //----------------------------------------------------------------------
 
 class NybbleTrieNode
