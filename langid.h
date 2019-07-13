@@ -28,7 +28,6 @@
 #define __LANGID_H_INCLUDED
 
 #include "ptrie.h"
-#include "framepac/cstring.h"
 
 using namespace std ;
 
@@ -37,11 +36,11 @@ using namespace std ;
 /************************************************************************/
 
 // current binary file format version
-#define LANGID_FILE_VERSION 5
+#define LANGID_FILE_VERSION 6
 #define LANGID_FILE_SIGNATURE "Language Identification Database\r\n\x1A\004\0"
 
 // minimum file version still supported
-#define LANGID_MIN_FILE_VERSION 4
+#define LANGID_MIN_FILE_VERSION 6
 
 // reserved space for future additions to the file header
 #define LANGID_PADBYTES_1  63
@@ -57,7 +56,6 @@ using namespace std ;
 
 #ifndef DEFAULT_LANGID_DATABASE
 #define DEFAULT_LANGID_DATABASE DBDIR "/languages.db"
-//#define DEFAULT_LANGID_DATABASE "/tmp/languages.db"
 #endif
 
 #ifndef ALTERNATE_LANGID_DATABASE

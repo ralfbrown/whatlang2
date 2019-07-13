@@ -89,12 +89,6 @@ class ScoreAndID
 /*	Global variables						*/
 /************************************************************************/
 
-//Fr::Allocator LanguageID::allocator("LanguageID",sizeof(LanguageID)) ;
-
-//Fr::Allocator LanguageScores::allocator("LanguageScores",sizeof(LanguageScores)) ;
-
-//Fr::Allocator WeightedLanguageScores::allocator("WtLanguageScores", sizeof(WeightedLanguageScores)) ;
-
 static double stop_gram_penalty = -9.0 ;
 
 /************************************************************************/
@@ -109,7 +103,7 @@ inline double clamp(double v, double lo, double hi)
 
 //----------------------------------------------------------------------
 
-static uint8_t read_byte(Fr::CFile& f, uint32_t default_value = (uint8_t)~0)
+static uint8_t read_byte(CFile& f, uint32_t default_value = (uint8_t)~0)
 {
    uint8_t valbuf ;
    return f.readValue(&valbuf) ? valbuf : default_value ;
@@ -117,15 +111,14 @@ static uint8_t read_byte(Fr::CFile& f, uint32_t default_value = (uint8_t)~0)
 
 //----------------------------------------------------------------------
 
-static bool write_uint8(Fr::CFile& f, uint8_t value)
+static bool write_uint8(CFile& f, uint8_t value)
 {
-   uint8_t valbuf = value ;
-   return f.writeValue(valbuf) ;
+   return f.writeValue(value) ;
 }
 
 //----------------------------------------------------------------------
 
-static uint32_t read_uint32(Fr::CFile& f, uint32_t default_value = (uint32_t)~0)
+static uint32_t read_uint32(CFile& f, uint32_t default_value = (uint32_t)~0)
 {
    UInt32 val ;
    return f.readValue(&val) ? val.load() : default_value ;
@@ -133,7 +126,7 @@ static uint32_t read_uint32(Fr::CFile& f, uint32_t default_value = (uint32_t)~0)
 
 //----------------------------------------------------------------------
 
-static bool write_uint32(Fr::CFile& f, uint32_t value)
+static bool write_uint32(CFile& f, uint32_t value)
 {
    UInt32 val(value) ;
    return f.writeValue(val) ;
@@ -141,7 +134,7 @@ static bool write_uint32(Fr::CFile& f, uint32_t value)
 
 //----------------------------------------------------------------------
 
-static CharPtr read_fixed_field(Fr::CFile& f, size_t len)
+static CharPtr read_fixed_field(CFile& f, size_t len)
 {
    if (len == 0)
       return nullptr ;
@@ -157,7 +150,7 @@ static CharPtr read_fixed_field(Fr::CFile& f, size_t len)
 
 //----------------------------------------------------------------------
 
-static bool read_uint64(Fr::CFile& f, uint64_t &value)
+static bool read_uint64(CFile& f, uint64_t &value)
 {
    UInt64 val ;
    if (f.readValue(&val))
@@ -174,7 +167,7 @@ static bool read_uint64(Fr::CFile& f, uint64_t &value)
 
 //----------------------------------------------------------------------
 
-static bool write_fixed_field(Fr::CFile& f, const char *s, size_t len)
+static bool write_fixed_field(CFile& f, const char *s, size_t len)
 {
    if (len == 0)
       return false ;
@@ -192,7 +185,7 @@ static bool write_fixed_field(Fr::CFile& f, const char *s, size_t len)
 
 //----------------------------------------------------------------------
 
-static bool write_uint64(Fr::CFile& f, uint64_t value)
+static bool write_uint64(CFile& f, uint64_t value)
 {
    UInt64 val(value) ;
    return f.writeValue(val) ;
@@ -305,12 +298,8 @@ int ScoreAndID::compare(const ScoreAndID &s1, const ScoreAndID &s2)
 
 void ScoreAndID::swap(ScoreAndID &s1, ScoreAndID &s2)
 {
-   double tmpscore = s1.score() ;
-   s1.m_score = s2.score() ;
-   s2.m_score = tmpscore ;
-   unsigned tmpid = s1.id() ;
-   s1.m_id = s2.id() ;
-   s2.m_id = tmpid ;
+   std::swap(s1.m_score,s2.m_score) ;
+   std::swap(s1.m_id,s2.m_id) ;
    return ;
 }
 
@@ -326,7 +315,7 @@ BigramCounts::BigramCounts(const BigramCounts *orig)
 
 //----------------------------------------------------------------------
 
-BigramCounts::BigramCounts(Fr::CFile& f)
+BigramCounts::BigramCounts(CFile& f)
 {
    if (!f || f.read(m_counts,sizeof(m_counts),1) < sizeof(m_counts))
       {
@@ -375,7 +364,7 @@ const
 
 //----------------------------------------------------------------------
 
-BigramCounts* BigramCounts::load(Fr::CFile& f)
+BigramCounts* BigramCounts::load(CFile& f)
 {
    if (f)
       {
@@ -388,7 +377,7 @@ BigramCounts* BigramCounts::load(Fr::CFile& f)
 
 //----------------------------------------------------------------------
 
-bool BigramCounts::read(Fr::CFile& f)
+bool BigramCounts::read(CFile& f)
 {
    memset(m_counts,'\0',sizeof(m_counts)) ;
    m_total = 0 ;
@@ -416,14 +405,14 @@ bool BigramCounts::read(Fr::CFile& f)
 
 //----------------------------------------------------------------------
 
-bool BigramCounts::readBinary(Fr::CFile& f)
+bool BigramCounts::readBinary(CFile& f)
 {
    return f && f.read(m_counts,lengthof(m_counts),sizeof(m_counts[0])) == lengthof(m_counts) ;
 }
 
 //----------------------------------------------------------------------
 
-bool BigramCounts::dumpCounts(Fr::CFile& f) const
+bool BigramCounts::dumpCounts(CFile& f) const
 {
    if (!f)
       return false ;
@@ -439,7 +428,7 @@ bool BigramCounts::dumpCounts(Fr::CFile& f) const
 
 //----------------------------------------------------------------------
 
-bool BigramCounts::save(Fr::CFile& f) const
+bool BigramCounts::save(CFile& f) const
 {
    return f && f.write(m_counts,sizeof(m_counts),1) == sizeof(m_counts) ;
 }
@@ -758,7 +747,7 @@ bool LanguageID::guessScript()
 
 //----------------------------------------------------------------------
 
-LanguageID* LanguageID::read(Fr::CFile& f, unsigned file_version)
+LanguageID* LanguageID::read(CFile& f, unsigned file_version)
 {
    if (!f)
       return nullptr ;
@@ -858,7 +847,7 @@ bool LanguageID::operator == (const LanguageID &info) const
 
 //----------------------------------------------------------------------
 
-bool LanguageID::read(Fr::CFile& f, LanguageID *langID, unsigned version)
+bool LanguageID::read(CFile& f, LanguageID *langID, unsigned /*version*/)
 {
    if (!langID)
       return false ;
@@ -877,15 +866,12 @@ bool LanguageID::read(Fr::CFile& f, LanguageID *langID, unsigned version)
    cover = read_uint32(f,0) ;
    double cover_factor = ((double)cover) / (double)UINT32_MAX ;
    langID->setCoverageFactor(cover_factor) ;
-   if (version > 4)
-      {
-      cover = read_uint32(f,0) ;
-      langID->setCountedCoverage(cover * MAX_WEIGHTED_COVER / UINT32_MAX ) ;
-      cover = read_uint32(f,0) ;
-      langID->setFreqCoverage(cover * MAX_FREQ_COVER / UINT32_MAX ) ;
-      cover = read_uint32(f,0) ;
-      langID->setMatchFactor(cover * MAX_MATCH_FACTOR / UINT32_MAX ) ;
-      }
+   cover = read_uint32(f,0) ;
+   langID->setCountedCoverage(cover * MAX_WEIGHTED_COVER / UINT32_MAX ) ;
+   cover = read_uint32(f,0) ;
+   langID->setFreqCoverage(cover * MAX_FREQ_COVER / UINT32_MAX ) ;
+   cover = read_uint32(f,0) ;
+   langID->setMatchFactor(cover * MAX_MATCH_FACTOR / UINT32_MAX ) ;
    langID->m_friendlyname = langID->m_language ;
    langID->setAlignment(align) ;
    if (langID->m_language)
@@ -902,7 +888,7 @@ bool LanguageID::read(Fr::CFile& f, LanguageID *langID, unsigned version)
 
 //----------------------------------------------------------------------
 
-bool LanguageID::write(Fr::CFile& f) const
+bool LanguageID::write(CFile& f) const
 {
    if (!f)
       return false ;
@@ -915,7 +901,7 @@ bool LanguageID::write(Fr::CFile& f) const
    double count_cover = m_countcover / MAX_WEIGHTED_COVER ;
    double freq_cover = m_freqcover / MAX_FREQ_COVER ;
    double match_factor = matchFactor() / MAX_MATCH_FACTOR ;
-   // to simplify the version 1-5 file formats, we'll use fixed-size fields
+   // to simplify the version 1-6 file formats, we'll use fixed-size fields
    if (write_fixed_field(f,m_language,LANGID_STRING_LENGTH) &&
        write_fixed_field(f,m_region,LANGID_STRING_LENGTH) &&
        write_fixed_field(f,m_encoding,LANGID_STRING_LENGTH) &&
@@ -1349,11 +1335,6 @@ void LanguageScores::sortByName(const LanguageID *langinfo)
    if (numLanguages() > 0 && langinfo != nullptr)
       {
       NewPtr<ScoreAndID> scores_and_ids(numLanguages()) ;
-      if (!scores_and_ids)
-	 {
-	 //!!!
-	 return ;
-	 }
       unsigned num_scores = 0 ;
       for (unsigned i = 0 ; i < numLanguages() ; i++)
 	 {
@@ -1479,8 +1460,8 @@ LanguageIdentifier::LanguageIdentifier(const char *language_data_file,
 	 unsigned version = 0 ;
 	 if (checkSignature(fp,&version))
 	    {
-	    Fr::FilePath path(language_data_file) ;
-	    m_directory = Fr::dup_string(path.directory()) ;
+	    FilePath path(language_data_file) ;
+	    m_directory = dup_string(path.directory()) ;
 	    m_num_languages = read_uint32(fp,0) ;
 	    if (numLanguages() > 0)
 	       {
@@ -1676,7 +1657,7 @@ const char *LanguageIdentifier::languageScript(size_t N) const
 
 //----------------------------------------------------------------------
 
-Fr::CharPtr LanguageIdentifier::languageDescriptor(size_t N) const
+CharPtr LanguageIdentifier::languageDescriptor(size_t N) const
 {
    if (N < numLanguages())
       {
@@ -2062,7 +2043,7 @@ void LanguageIdentifier::incrStringCount(size_t langnum)
 
 //----------------------------------------------------------------------
 
-bool LanguageIdentifier::checkSignature(Fr::CFile& f, unsigned *file_version)
+bool LanguageIdentifier::checkSignature(CFile& f, unsigned *file_version)
 {
    if (file_version)
       *file_version = 0 ;
@@ -2091,7 +2072,7 @@ bool LanguageIdentifier::checkSignature(Fr::CFile& f, unsigned *file_version)
 
 //----------------------------------------------------------------------
 
-bool LanguageIdentifier::writeStatistics(Fr::CFile& f) const
+bool LanguageIdentifier::writeStatistics(CFile& f) const
 {
    if (!f || !m_string_counts)
       return false ;
@@ -2117,7 +2098,7 @@ bool LanguageIdentifier::writeStatistics(Fr::CFile& f) const
 
 //----------------------------------------------------------------------
 
-bool LanguageIdentifier::writeHeader(Fr::CFile& f) const
+bool LanguageIdentifier::writeHeader(CFile& f) const
 {
    // write the signature string
    const unsigned siglen = sizeof(LANGID_FILE_SIGNATURE) ;
@@ -2141,7 +2122,6 @@ bool LanguageIdentifier::writeHeader(Fr::CFile& f) const
 
 //----------------------------------------------------------------------
 
-#if FIXME
 static int compare_frequencies(const MultiTrieFrequency &f1,
 			       const MultiTrieFrequency &f2)
 {
@@ -2160,7 +2140,6 @@ static int compare_frequencies(const MultiTrieFrequency &f1,
    else
       return +1 ;
 }
-#endif
 
 //----------------------------------------------------------------------
 
@@ -2172,16 +2151,17 @@ static bool sort_frequencies(const LangIDMultiTrie* trie, NybbleTrie::NodeIndex 
    if (f)
       {
       // sort the frequency records
-//FIXME      f = std::stable_sort(f,compare_frequencies) ;
-      if (!node->setFrequencies(f))
-	 return false ;
+      size_t numfreq = node->numFrequencies() ;
+      std::stable_sort(f,f+numfreq,compare_frequencies) ;
+      //FIXME: move the end-of-list marker to the new end of the list
+
       }
    return true ;
 }
 
 //----------------------------------------------------------------------
 
-bool LanguageIdentifier::write(Fr::CFile& f)
+bool LanguageIdentifier::write(CFile& f)
 {
    if (!f)
       return false ;
@@ -2192,8 +2172,7 @@ bool LanguageIdentifier::write(Fr::CFile& f)
       //   come last
       LangIDMultiTrie *mtrie = unpackedTrie() ;
       uint8_t keybuf[500] ;
-      if (mtrie &&
-	  !mtrie->enumerate(keybuf,sizeof(keybuf),sort_frequencies,mtrie))
+      if (mtrie && !mtrie->enumerate(keybuf,sizeof(keybuf),sort_frequencies,mtrie))
 	 {
 	 success = false ;
 	 }
@@ -2239,7 +2218,7 @@ bool LanguageIdentifier::write(const char *filename) const
 
 //----------------------------------------------------------------------
 
-bool LanguageIdentifier::dump(Fr::CFile& f, bool show_ngrams) const
+bool LanguageIdentifier::dump(CFile& f, bool show_ngrams) const
 {
    f.printf("LanguageIdentifier Begin\n") ;
    for (size_t i = 0 ; i < numLanguages() ; i++)
