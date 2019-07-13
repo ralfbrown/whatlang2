@@ -686,13 +686,12 @@ static NybbleTrie *load_stop_grams(const LanguageID *lang_info,
    cout << "Computing similarities relative to "
 	<< lang_info->language() << "_" << lang_info->region()
 	<< "-" << lang_info->encoding() << endl ;
-   LanguageScores *weights = language_identifier->similarity(langid) ;
+   Fr::NewPtr<LanguageScores> weights { language_identifier->similarity(langid) } ;
    Fr::ScopedObject<Fr::BitVector> selected(language_identifier->numLanguages()) ;
    bool selected_models ;
    if (languages && *languages == '@')
       {
-      selected_models = select_models_by_similarity(langid,*selected,weights,
-						    languages+1) ;
+      selected_models = select_models_by_similarity(langid,*selected,weights.begin(),languages+1) ;
       }
    else
       {
@@ -703,14 +702,13 @@ static NybbleTrie *load_stop_grams(const LanguageID *lang_info,
       {
       delete curr_ngrams ;
       delete ngram_weights ;
-      stop_grams = load_stop_grams_selected(langid,weights,ptrie,&selected,
+      stop_grams = load_stop_grams_selected(langid,weights.begin(),ptrie,&selected,
 					    curr_ngrams,ngram_weights) ;
       }
    else
       {
       stop_grams = new NybbleTrie ;
       }
-   delete weights ;
    return stop_grams ;
 }
 
@@ -1424,9 +1422,9 @@ static NybbleTrie *restrict_ngrams(NybbleTrie *ngrams, unsigned top_K,
    if (minlen > max_length)
       minlen = max_length ;
    Fr::LocalAlloc<uint32_t> top_frequencies(top_K,true) ;
-   auto new_ngrams = new NybbleTrie ;
+   Fr::NewPtr<NybbleTrie> new_ngrams(1) ;
    NgramEnumerationData enum_data(have_max_length) ;
-   enum_data.m_ngrams = new_ngrams ;
+   enum_data.m_ngrams = new_ngrams.begin() ;
    enum_data.m_min_length = min_length ;
    enum_data.m_max_length = max_length ;
    enum_data.m_frequencies = top_frequencies ;
@@ -1444,9 +1442,7 @@ static NybbleTrie *restrict_ngrams(NybbleTrie *ngrams, unsigned top_K,
 	   << max_length << ": collect more data" << endl ;
       if (max_length < maximum_length)
 	 {
-	 delete new_ngrams ;
-	 new_ngrams = nullptr ;
-	 return new_ngrams ;
+	 return nullptr ;
 	 }
       }
 //   uint32_t threshold = adjusted_threshold(top_frequencies) ;
@@ -1464,11 +1460,10 @@ static NybbleTrie *restrict_ngrams(NybbleTrie *ngrams, unsigned top_K,
    if (!ngrams->enumerate(keybuf,max_length,filter_ngrams,&enum_data) ||
        !enum_data.m_inserted_ngram)
       {
-      delete new_ngrams ;
       new_ngrams = nullptr ;
       }
    Fr::gc() ;
-   return new_ngrams ;
+   return new_ngrams.move() ;
 }
 
 //----------------------------------------------------------------------
@@ -1486,9 +1481,9 @@ static NybbleTrie *count_ngrams(const char **filelist, unsigned num_files,
       minlen = max_length ;
    unsigned top_K = set_oversampling(topK,min_length,minimum_length,aligned) ;
    Fr::LocalAlloc<uint32_t> top_frequencies(top_K,true) ;
-   auto new_ngrams = new NybbleTrie ;
+   Fr::NewPtr<NybbleTrie> new_ngrams(1) ;
    NgramEnumerationData enum_data(have_max_length) ;
-   enum_data.m_ngrams = new_ngrams ;
+   enum_data.m_ngrams = new_ngrams.begin() ;
    enum_data.m_min_length = min_length ;
    enum_data.m_max_length = max_length ;
    enum_data.m_frequencies = top_frequencies ;
@@ -1522,9 +1517,7 @@ static NybbleTrie *count_ngrams(const char **filelist, unsigned num_files,
 	   << max_length << ": collect more data" << endl ;
       if (max_length < maximum_length)
 	 {
-	 delete new_ngrams ;
-	 new_ngrams = nullptr ;
-	 return new_ngrams ;
+	 return nullptr ;
 	 }
       }
    uint32_t threshold = adjusted_threshold(top_frequencies) ;
@@ -1538,11 +1531,10 @@ static NybbleTrie *count_ngrams(const char **filelist, unsigned num_files,
    if (!ngrams->enumerate(keybuf,max_length,filter_ngrams,&enum_data) ||
        !enum_data.m_inserted_ngram)
       {
-      delete new_ngrams ;
       new_ngrams = nullptr ;
       }
    Fr::gc() ;
-   return new_ngrams ;
+   return new_ngrams.move() ;
 }
 
 //----------------------------------------------------------------------
@@ -2099,7 +2091,7 @@ static bool load_frequencies(const char **filelist, unsigned num_files,
       cout << "(Crubadan format)" << endl ;
    else
       cout << "(MkLangID format)" << endl ;
-   auto ngrams = new NybbleTrie ;
+   Fr::NewPtr<NybbleTrie> ngrams(1) ;
    if (!ngrams)
       {
       SystemMessage::no_memory("while loading frequency lists") ;
@@ -2115,7 +2107,7 @@ static bool load_frequencies(const char **filelist, unsigned num_files,
       if (fp)
 	 {
 	 cout << "  Reading " << filename << endl ;
-	 load_frequencies(fp,ngrams,total_bytes,textcat_format,opts,bigrams,scaled) ;
+	 load_frequencies(fp,*ngrams,total_bytes,textcat_format,opts,bigrams,scaled) ;
 	 if (textcat_format || num_files > 1)
 	    {
 	    delete bigrams ;
@@ -2123,7 +2115,7 @@ static bool load_frequencies(const char **filelist, unsigned num_files,
 	    }
 	 }
       }
-   merge_bigrams(ngrams,bigrams,scaled,total_bytes) ;
+   merge_bigrams(*ngrams,bigrams,scaled,total_bytes) ;
    delete bigrams ;
    if (ngrams->size() > 0)
       {
@@ -2146,12 +2138,10 @@ static bool load_frequencies(const char **filelist, unsigned num_files,
 	    ngrams->scaleFrequencies(total_bytes,smoothing_power,log_smoothing_power) ;
 	 add_ngrams(ngrams,total_bytes,opts,filelist[0]) ;
 	 }
-      delete ngrams ;
       return true ;
       }
    else
       {
-      delete ngrams ;
       return false ;
       }
 }
