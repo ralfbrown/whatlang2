@@ -175,12 +175,7 @@ static bool write_fixed_field(CFile& f, const char *s, size_t len)
    size_t count = std::min(len-1,string_len) ;
    if (f.write(s,count) < count)
       return false ;
-   for (size_t i = string_len ; i+1 < len ; i++)
-      {
-      if (!f.putc('\0'))
-	 return false ;
-      }
-   return f.putc('\0') ;
+   return f.putNulls(len-count) ;
 }
 
 //----------------------------------------------------------------------
@@ -379,7 +374,7 @@ BigramCounts* BigramCounts::load(CFile& f)
 
 bool BigramCounts::read(CFile& f)
 {
-   memset(m_counts,'\0',sizeof(m_counts)) ;
+   std::fill_n(m_counts,lengthof(m_counts),0) ;
    m_total = 0 ;
    for (size_t c1 = 0 ; c1 <= 0xFF ; c1++)
       {
@@ -2047,20 +2042,13 @@ bool LanguageIdentifier::checkSignature(CFile& f, unsigned *file_version)
 {
    if (file_version)
       *file_version = 0 ;
-   const unsigned siglen = sizeof(LANGID_FILE_SIGNATURE) ;
-   char buffer[siglen] ;
-   if (f.read(buffer,siglen,sizeof(char)) != siglen)
+   int version = f.verifySignature(LANGID_FILE_SIGNATURE) ;
+   if (version < 0)
       {
-      errno = EACCES ;
+      errno = (version == -1) ? EACCES : EINVAL ;
       return false ;
       }
-   if (memcmp(buffer,LANGID_FILE_SIGNATURE,siglen) != 0)
-      {
-      errno = EINVAL ;
-      return false ;
-      }
-   unsigned char version ;
-   if (!f.readValue(&version) || version < LANGID_MIN_FILE_VERSION || version > LANGID_FILE_VERSION)
+   if (version < LANGID_MIN_FILE_VERSION || version > LANGID_FILE_VERSION)
       {
       errno = EINVAL ;
       return false ;
@@ -2101,14 +2089,9 @@ bool LanguageIdentifier::writeStatistics(CFile& f) const
 bool LanguageIdentifier::writeHeader(CFile& f) const
 {
    // write the signature string
-   const unsigned siglen = sizeof(LANGID_FILE_SIGNATURE) ;
-   if (f.write(LANGID_FILE_SIGNATURE,siglen) != siglen)
+   if (!f.writeSignature(LANGID_FILE_SIGNATURE,LANGID_FILE_VERSION))
       return false ;
-   // follow with the format version number
-   unsigned char version = LANGID_FILE_VERSION ;
-   if (f.write(&version,sizeof(version),1) != sizeof(version))
-      return false ;
-   // then the number of language info records
+   // followed by the number of language info records
    uint32_t n_lang = numLanguages() ;
       if (!f.writeValue(n_lang))
       return false ;

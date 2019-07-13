@@ -118,7 +118,7 @@ class TrigramCounts
    private:
       uint32_t m_counts[256 * 256 * 256] ;
    public:
-      TrigramCounts() { memset(m_counts,'\0',sizeof(m_counts)) ; }
+      TrigramCounts() { std::fill_n(m_counts,lengthof(m_counts),0) ; }
       TrigramCounts(const TrigramCounts *orig) ;
       ~TrigramCounts() {}
 
@@ -151,7 +151,7 @@ class BigramCounts
       uint64_t m_total ;
       uint32_t m_counts[256 * 256] ;
    public:
-      BigramCounts() { memset(m_counts,'\0',sizeof(m_counts)) ; m_total = 0 ; }
+      BigramCounts() { std::fill_n(m_counts,lengthof(m_counts),0) ; m_total = 0 ; }
       BigramCounts(Fr::CFile& f) ;
       BigramCounts(const BigramCounts *) ;
       BigramCounts(const TrigramCounts &) ;

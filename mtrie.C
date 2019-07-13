@@ -44,7 +44,7 @@ using namespace Fr ;
 #define BUCKET_SIZE 65536	// must be power of 2
 
 #define MULTITRIE_SIGNATURE "MulTrie\0"
-#define MULTITRIE_FORMAT_VERSION 1
+#define MULTITRIE_FORMAT_VERSION 2
 
 // reserve some space for future additions to the file format
 #define MULTITRIE_PADBYTES_1  64
@@ -518,7 +518,7 @@ bool LangIDMultiTrie::enumerate(uint8_t *keybuf, unsigned maxkeylength, EnumFn *
 {
    if (keybuf && fn)
       {
-      memset(keybuf,'\0',maxkeylength) ;
+      std::fill_n(keybuf,maxkeylength,'\0') ;
       return enumerateChildren(ROOT_INDEX,keybuf,maxkeylength*8,0,fn,user_data) ;
       }
    return false ;
@@ -688,16 +688,15 @@ LangIDMultiTrie *LangIDMultiTrie::load(CFile& f)
 {
    if (!f)
       return nullptr ;
-   const size_t siglen = sizeof(MULTITRIE_SIGNATURE) ;
-   char signature[siglen] ;
-   if (f.read(signature,siglen,sizeof(char)) != siglen ||
-      memcmp(signature,MULTITRIE_SIGNATURE,siglen) != 0)
+   int version = f.verifySignature(MULTITRIE_SIGNATURE) ;
+   if (version < 0)
       {
-      // error: wrong file type
+      if (version == -1) { /* read error */ }
+      if (version == -2) { /* wrong file type */ }
+      if (version == -3) { /* wrong byte order */ }
       return nullptr ;
       }
-   unsigned char version ;
-   if (!f.readValue(&version) || version != MULTITRIE_FORMAT_VERSION)
+   if (version != MULTITRIE_FORMAT_VERSION)
       {
       // error: wrong version of data file
       return nullptr ;
@@ -755,14 +754,11 @@ LangIDMultiTrie *LangIDMultiTrie::load(const char *filename)
 bool LangIDMultiTrie::writeHeader(CFile& f) const
 {
    // write the signature string
-   const size_t siglen = sizeof(MULTITRIE_SIGNATURE) ;
-   if (f.write(MULTITRIE_SIGNATURE,siglen,1) != siglen)
-      return false; 
-   // follow with the format version number
-   unsigned char version = MULTITRIE_FORMAT_VERSION ;
+   if (!f.writeSignature(MULTITRIE_SIGNATURE,MULTITRIE_FORMAT_VERSION))
+      return false ;
+   // follow with the number of bits per level of the trie
    unsigned char bits = BITS_PER_LEVEL ;
-   if (!f.writeValue(version) ||
-      !f.writeValue(bits))
+   if (!f.writeValue(bits))
       return false ;
    // write out the size of the trie
    UInt32 val_used(size()), val_tokens(totalTokens()), val_keylen(longestKey()) ;
