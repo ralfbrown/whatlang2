@@ -146,12 +146,12 @@ class StopGramInfo
       NybbleTrie	   *m_ngramweights ;
       const PackedTrieFreq *m_freqbase ;
       const LanguageScores *m_weights ;
-      const Fr::BitVector  *m_selected ;
+      const BitVector  *m_selected ;
       unsigned		    m_activelang ;
    public:
       StopGramInfo(NybbleTrie *t, NybbleTrie *t2, NybbleTrie *t3,
 		   const PackedTrieFreq *base,
-	           const LanguageScores *wt, const Fr::BitVector *sel,
+	           const LanguageScores *wt, const BitVector *sel,
 		   unsigned lang)
 	 { m_trie = t ; m_currngrams = t2 ; m_ngramweights = t3 ;
 	   m_freqbase = base ; m_weights = wt ; m_selected = sel ;
@@ -306,7 +306,7 @@ static const char *get_arg(int &argc, const char **&argv)
 
 //----------------------------------------------------------------------
 
-static void print_quoted_char(Fr::CFile& f, uint8_t ch)
+static void print_quoted_char(CFile& f, uint8_t ch)
 {
    switch (ch)
       {
@@ -515,9 +515,9 @@ static bool collect_language_ngrams_packed(const PackedTrieNode *node,
 
 //----------------------------------------------------------------------
 
-static bool select_models_by_name(const char *languages, Fr::BitVector &selected)
+static bool select_models_by_name(const char *languages, BitVector &selected)
 {
-   auto descriptions = Fr::dup_string(languages) ;
+   auto descriptions = dup_string(languages) ;
    char *desc = *descriptions ;
    bool did_select = false ;
    while (desc && *desc)
@@ -544,7 +544,7 @@ static bool select_models_by_name(const char *languages, Fr::BitVector &selected
 
 //----------------------------------------------------------------------
 
-static bool select_models_by_similarity(size_t langid, Fr::BitVector &selected,
+static bool select_models_by_similarity(size_t langid, BitVector &selected,
 					LanguageScores *weights,
 					const char *thresh)
 {
@@ -596,7 +596,7 @@ static bool select_models_by_similarity(size_t langid, Fr::BitVector &selected,
 static NybbleTrie *load_stop_grams_selected(unsigned langid,
 					    LanguageScores *weights,
    					    LangIDPackedMultiTrie *ptrie,
-					    const Fr::BitVector *selected,
+					    const BitVector *selected,
 					    NybbleTrie *&curr_ngrams,
 					    NybbleTrie *&ngram_weights)
 {
@@ -686,8 +686,8 @@ static NybbleTrie *load_stop_grams(const LanguageID *lang_info,
    cout << "Computing similarities relative to "
 	<< lang_info->language() << "_" << lang_info->region()
 	<< "-" << lang_info->encoding() << endl ;
-   Fr::Owned<LanguageScores> weights = language_identifier->similarity(langid) ;
-   Fr::ScopedObject<Fr::BitVector> selected(language_identifier->numLanguages()) ;
+   Owned<LanguageScores> weights = language_identifier->similarity(langid) ;
+   ScopedObject<BitVector> selected(language_identifier->numLanguages()) ;
    bool selected_models ;
    if (languages && *languages == '@')
       {
@@ -858,7 +858,7 @@ static bool add_stop_grams(const char **filelist, unsigned num_files,
    unsigned longkey = stop_grams->longestKey() ;
    if (ngrams->longestKey() > longkey)
       longkey = ngrams->longestKey() ;
-   Fr::LocalAlloc<uint8_t> ngram_buf(longkey+1) ;
+   LocalAlloc<uint8_t> ngram_buf(longkey+1) ;
    if (unique_boost > 1.0)
       {
       ngrams->enumerate(&ngram_buf,ngrams->longestKey(),boost_unique_ngram,stop_grams) ;
@@ -932,7 +932,7 @@ static bool save_database(const char *database_file)
 static bool dump_ngrams(const NybbleTrie* trie, uint32_t nodeindex, const uint8_t *key,
 			unsigned keylen, void *user_data)
 {
-   Fr::CFile& f = *((Fr::CFile*)user_data) ;
+   CFile& f = *((CFile*)user_data) ;
    auto node = trie->node(nodeindex) ;
    if (node->leaf())
       {
@@ -958,7 +958,7 @@ static bool dump_ngrams_scaled(const NybbleTrie* trie, uint32_t nodeindex,
 			       const uint8_t *key,
 			       unsigned keylen, void *user_data)
 {
-   Fr::CFile& f = *((Fr::CFile*)user_data) ;
+   CFile& f = *((CFile*)user_data) ;
    auto node = trie->node(nodeindex) ;
    if (node->leaf())
       {
@@ -982,7 +982,7 @@ static void dump_vocabulary(const NybbleTrie *ngrams, bool scaled,
 			    const char *vocab_file, unsigned max_length,
 			    uint64_t total_bytes, const LanguageID &opts)
 {
-   Fr::COutputFile f(vocab_file) ;
+   COutputFile f(vocab_file) ;
    if (!f)
       {
       cerr << "Unable to open '" << vocab_file << "' to write vocabulary"
@@ -1010,7 +1010,7 @@ static void dump_vocabulary(const NybbleTrie *ngrams, bool scaled,
       f.printf("FreqCoverage: %g\n",opts.freqCoverage()) ;
    if (opts.matchFactor() > 0.0)
       f.printf("MatchFactor: %g\n",opts.matchFactor()) ;
-   Fr::LocalAlloc<uint8_t> keybuf(max_length+1) ;
+   LocalAlloc<uint8_t> keybuf(max_length+1) ;
    if (scaled)
       {
       dump_total_bytes = total_bytes ;
@@ -1213,7 +1213,7 @@ static bool count_ngrams(PreprocessedInputFile *infile, va_list args)
    bool aligned = (bool)va_arg(args,int) ;
    if (max_length < min_length || max_length == 0)
       return false ;
-   Fr::LocalAlloc<uint8_t> ngram(max_length) ;
+   LocalAlloc<uint8_t> ngram(max_length) ;
    // fill the ngram buffer, except for the last byte
    for (size_t i = 0 ; i+1 < max_length ; i++)
       {
@@ -1419,15 +1419,15 @@ static NybbleTrie *restrict_ngrams(NybbleTrie *ngrams, unsigned top_K,
 {
    if (minlen > max_length)
       minlen = max_length ;
-   Fr::LocalAlloc<uint32_t> top_frequencies(top_K,true) ;
-   Fr::NewPtr<NybbleTrie> new_ngrams(1) ;
+   LocalAlloc<uint32_t> top_frequencies(top_K,true) ;
+   NewPtr<NybbleTrie> new_ngrams(1) ;
    NgramEnumerationData enum_data(have_max_length) ;
    enum_data.m_ngrams = new_ngrams.begin() ;
    enum_data.m_min_length = min_length ;
    enum_data.m_max_length = max_length ;
    enum_data.m_frequencies = top_frequencies ;
    enum_data.m_topK = top_K ;
-   Fr::LocalAlloc<uint8_t> keybuf(max_length+1) ;
+   LocalAlloc<uint8_t> keybuf(max_length+1) ;
    // figure out the threshold we need to limit the total n-grams to the
    //   desired number
    enum_data.m_count = 0 ;
@@ -1460,7 +1460,7 @@ static NybbleTrie *restrict_ngrams(NybbleTrie *ngrams, unsigned top_K,
       {
       new_ngrams = nullptr ;
       }
-   Fr::gc() ;
+   gc() ;
    return new_ngrams.move() ;
 }
 
@@ -1478,8 +1478,8 @@ static NybbleTrie *count_ngrams(const char **filelist, unsigned num_files,
    if (minlen > max_length)
       minlen = max_length ;
    unsigned top_K = set_oversampling(topK,min_length,minimum_length,aligned) ;
-   Fr::LocalAlloc<uint32_t> top_frequencies(top_K,true) ;
-   Fr::NewPtr<NybbleTrie> new_ngrams(1) ;
+   LocalAlloc<uint32_t> top_frequencies(top_K,true) ;
+   NewPtr<NybbleTrie> new_ngrams(1) ;
    NgramEnumerationData enum_data(have_max_length) ;
    enum_data.m_ngrams = new_ngrams.begin() ;
    enum_data.m_min_length = min_length ;
@@ -1487,7 +1487,7 @@ static NybbleTrie *count_ngrams(const char **filelist, unsigned num_files,
    enum_data.m_frequencies = top_frequencies ;
    enum_data.m_topK = top_K ;
    enum_data.m_alignment = alignment ;
-   Fr::LocalAlloc<uint8_t> keybuf(max_length+1) ;
+   LocalAlloc<uint8_t> keybuf(max_length+1) ;
    // find the threshold at which to cut off ngrams to limit to topK
    if (verbose)
       {
@@ -1531,7 +1531,7 @@ static NybbleTrie *count_ngrams(const char **filelist, unsigned num_files,
       {
       new_ngrams = nullptr ;
       }
-   Fr::gc() ;
+   gc() ;
    return new_ngrams.move() ;
 }
 
@@ -1592,7 +1592,7 @@ static void add_ngrams(const NybbleTrie *ngrams, uint64_t total_bytes,
       auto langID = language_identifier->addLanguage(opts,total_bytes) ;
       if (langID < num_langs)
 	 {
-	 Fr::CharPtr spec = language_identifier->languageDescriptor(langID) ;
+	 CharPtr spec = language_identifier->languageDescriptor(langID) ;
 	 cerr << "Duplicate language specification " << spec
 	      << " encountered in " << filename
 	      << ",\n  ignoring data to avoid database errors." << endl ;
@@ -1729,9 +1729,9 @@ static bool compute_coverage(PreprocessedInputFile *infile, va_list args)
    unsigned maxlen = ngrams->longestKey() ;
    if (maxlen > ABSOLUTE_MAX_LENGTH)
       maxlen = ABSOLUTE_MAX_LENGTH ;
-   Fr::LocalAlloc<uint8_t> buf(maxlen+1) ;
-   Fr::LocalAlloc<unsigned> cover(maxlen+1) ;
-   Fr::LocalAlloc<double> freqtotal(maxlen+1) ;
+   LocalAlloc<uint8_t> buf(maxlen+1) ;
+   LocalAlloc<unsigned> cover(maxlen+1) ;
+   LocalAlloc<double> freqtotal(maxlen+1) ;
    unsigned buflen = 0 ;
    // initialize the statistics and prime the buffer
    for (size_t i = 0 ; i < maxlen ; i++)
@@ -1816,7 +1816,7 @@ static void compute_coverage(LanguageID &lang_info,
 
 //----------------------------------------------------------------------
 
-static bool load_frequencies(Fr::CFile& f, NybbleTrie *ngrams,
+static bool load_frequencies(CFile& f, NybbleTrie *ngrams,
 			     uint64_t &total_bytes, bool textcat_format,
 			     LanguageID &opts,
 			     BigramCounts *&bigrams, bool &scaled)
@@ -1868,28 +1868,28 @@ static bool load_frequencies(Fr::CFile& f, NybbleTrie *ngrams,
 	 }
       else if (strncasecmp(buffer,"Lang:",5) == 0)
 	 {
-	 char *arg = Fr::trim_whitespace(*buffer + 5) ;
+	 char *arg = trim_whitespace(*buffer + 5) ;
 	 opts.setLanguage(arg) ;
 	 }
       else if (strncasecmp(buffer,"Region:",7) == 0)
 	 {
-	 char *arg = Fr::trim_whitespace(*buffer + 7) ;
+	 char *arg = trim_whitespace(*buffer + 7) ;
 	 opts.setRegion(arg) ;
 	 }
       else if (strncasecmp(buffer,"Encoding:",9) == 0)
 	 {
-	 char *arg = Fr::trim_whitespace(*buffer + 9) ;
+	 char *arg = trim_whitespace(*buffer + 9) ;
 	 opts.setEncoding(arg) ;
 	 try_guessing_script = !have_script ;
 	 }
       else if (strncasecmp(buffer,"Source:",7) == 0)
 	 {
-	 char *arg = Fr::trim_whitespace(*buffer + 7) ;
+	 char *arg = trim_whitespace(*buffer + 7) ;
 	 opts.setSource(arg) ;
 	 }
       else if (strncasecmp(buffer,"Script:",7) == 0)
 	 {
-	 char *arg = Fr::trim_whitespace(*buffer + 7) ;
+	 char *arg = trim_whitespace(*buffer + 7) ;
 	 opts.setScript(arg) ;
 	 have_script = true ;
 	 try_guessing_script = false ;
@@ -1904,7 +1904,7 @@ static bool load_frequencies(Fr::CFile& f, NybbleTrie *ngrams,
 	 }
       else if (strncasecmp(buffer,"Alignment:",10) == 0)
 	 {
-	 char *arg = Fr::trim_whitespace(*buffer + 10) ;
+	 char *arg = trim_whitespace(*buffer + 10) ;
 	 opts.setAlignment(arg) ;
 	 }
       else if (strncasecmp(buffer,"BigramCounts:",13) == 0)
@@ -1950,7 +1950,7 @@ static bool load_frequencies(Fr::CFile& f, NybbleTrie *ngrams,
 	    try_guessing_script = false ;
 	    }
 	 endptr = nullptr ;
-	 char *bufptr = Fr::skip_whitespace(*buffer) ;
+	 char *bufptr = skip_whitespace(*buffer) ;
 	 bool stopgram = false ;
 	 if (*bufptr == '-')
 	    {
@@ -2089,7 +2089,7 @@ static bool load_frequencies(const char **filelist, unsigned num_files,
       cout << "(Crubadan format)" << endl ;
    else
       cout << "(MkLangID format)" << endl ;
-   Fr::NewPtr<NybbleTrie> ngrams(1) ;
+   NewPtr<NybbleTrie> ngrams(1) ;
    if (!ngrams)
       {
       SystemMessage::no_memory("while loading frequency lists") ;
@@ -2101,7 +2101,7 @@ static bool load_frequencies(const char **filelist, unsigned num_files,
    for (size_t i = 0 ; i < num_files ; i++)
       {
       const char *filename = filelist[i] ;
-      Fr::CInputFile fp(filename) ;
+      CInputFile fp(filename) ;
       if (fp)
 	 {
 	 cout << "  Reading " << filename << endl ;
@@ -2240,12 +2240,12 @@ static bool cluster_models_by_charset(LanguageIdentifier *clusterdb,
    model_sizes = new unsigned[numlangs] ;
    std::fill_n(model_sizes,numlangs,0) ;
    unsigned maxkey = ptrie->longestKey() ;
-   Fr::LocalAlloc<uint8_t> keybuf(maxkey) ;
+   LocalAlloc<uint8_t> keybuf(maxkey) ;
    ptrie->enumerate(keybuf,maxkey,merge_ngrams,merged) ;
    base_frequency = nullptr ;
    // figure out the maximum size of an individual model for each encoding
-   Fr::LocalAlloc<unsigned> max_sizes(num_encs) ;
-   memset(max_sizes,'\0',sizeof(max_sizes)) ;
+   LocalAlloc<unsigned> max_sizes(num_encs) ;
+   std::fill_n(&max_sizes,num_encs,0) ;
    for (size_t i = 0 ; i < num_encs ; i++)
       {
       for (unsigned langid = 0 ; langid < numlangs ; langid++)
@@ -2571,12 +2571,12 @@ static void parse_translit(const char *spec, char *&from, char *&to)
    to = nullptr ;
    if (spec)
       {
-      from = Fr::dup_string(spec).move() ;
+      from = dup_string(spec).move() ;
       char *comma = strchr(from,',') ;
       if (comma)
 	 {
 	 if (comma[1])
-	    to = Fr::dup_string(comma+1).move() ;
+	    to = dup_string(comma+1).move() ;
 	 if (comma != from)
 	    *comma = '\0' ;
 	 else
@@ -2750,7 +2750,7 @@ static bool process_argument_group(int &argc, const char **&argv,
       {
       // check for a transliteration request
       CharPtr translit_to
-	 = from ? Fr::aprintf("%s//TRANSLIT",to ? to : lang_info.encoding()) : nullptr ;
+	 = from ? aprintf("%s//TRANSLIT",to ? to : lang_info.encoding()) : nullptr ;
       if (!PreprocessedInputFile::setDefaultTransliteration(from,translit_to))
 	 {
 	 cerr << "Unable to perform conversion from " << from << " to " << translit_to
@@ -2819,9 +2819,9 @@ static int real_main(int argc, const char **argv)
 
 int main(int argc, const char **argv)
 {
-   Fr::Initialize() ;
+   Initialize() ;
    int status = real_main(argc,argv) ;
-   Fr::Shutdown() ;
+   Shutdown() ;
    return status ;
 }
 
