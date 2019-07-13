@@ -60,10 +60,10 @@ class PreprocessedInputFile
       PreprocessedInputFile(const char *filename, uint64_t sample_limit = s_sample_bytes,
 			    bool uniform_sample = s_sample_uniformly,
 			    const char *from_enc = s_from_enc, const char *to_enc = s_to_enc) ;
-      ~PreprocessedInputFile() ;
+      ~PreprocessedInputFile() = default ;
 
       // accesse to state
-      bool good() const { return m_fp != nullptr ; }
+      bool good() const { return (bool)m_fp ; }
       bool ignoringWhitespace() const { return m_ignore_whitespace ; }
       BigramExtension bigramExt() const { return m_bigram_ext ; }
       uint64_t bytesRead() const { return m_bytes_read ; }
@@ -103,7 +103,7 @@ class PreprocessedInputFile
 
    private:
       Fr::CharPtr m_filename ;
-      Fr::CFile*  m_fp ;
+      Fr::CFile   m_fp ;
       size_t	  m_max_sample_bytes ;
       uint64_t	  m_bytes_read ;
       bool	  m_piped ;

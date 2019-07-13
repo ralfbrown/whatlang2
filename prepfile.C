@@ -52,7 +52,6 @@ Fr::CharPtr PreprocessedInputFile::s_to_enc = nullptr ;
 
 PreprocessedInputFile::PreprocessedInputFile()
 {
-   m_fp = nullptr ;
    m_buffered_lines = Fr::List::emptyList() ;
    m_max_sample_bytes = (size_t)~0 ;
    m_uniform_sample = true ;
@@ -69,21 +68,11 @@ PreprocessedInputFile::PreprocessedInputFile(const char *filename,
 					     bool uniform_sample,
 					     const char *from_enc, const char *to_enc)
 {
-   m_fp = nullptr ;
    m_buffered_lines = Fr::List::emptyList() ;
 #ifndef NO_ICONV
    m_conversion = (iconv_t)-1 ;
 #endif /* NO_ICONV */
    open(filename,sample_limit,uniform_sample,from_enc,to_enc) ;
-   return ;
-}
-
-//----------------------------------------------------------------------
-
-PreprocessedInputFile::~PreprocessedInputFile()
-{
-   delete m_fp ;
-   m_fp = nullptr ;
    return ;
 }
 
@@ -228,7 +217,6 @@ void PreprocessedInputFile::close()
    if (m_fp)
       {
       // close the input file
-      delete m_fp ;
       m_fp = nullptr ;
       }
    original_buffer_len = 0 ;
@@ -265,8 +253,10 @@ int PreprocessedInputFile::readInput(unsigned char *buf, size_t buflen)
 	 }
       return count ;
       }
+   else if (m_fp)
+      return m_fp.read(buf,buflen) ;
    else
-      return fread(buf,1,buflen,m_fp->fp()) ;
+      return -1 ;
 }
 
 //----------------------------------------------------------------------
@@ -355,7 +345,7 @@ bool PreprocessedInputFile::moreData() const
 {
    if (m_bytes_read >= m_max_sample_bytes)
       return false ;
-   return (translit_buffer_len > translit_buffer_ptr) || !m_fp->eof() ;
+   return (translit_buffer_len > translit_buffer_ptr) || !m_fp.eof() ;
 }
 
 //----------------------------------------------------------------------

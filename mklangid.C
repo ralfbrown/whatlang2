@@ -1067,12 +1067,12 @@ static bool count_raw_trigrams(PreprocessedInputFile *infile, va_list args)
 
 static uint64_t count_trigrams(const char **filelist, unsigned num_files,
 			       TrigramCounts &counts, bool skip_newlines,
-			       bool aligned, BigramCounts **bigrams)
+			       bool aligned, Owned<BigramCounts>& bigrams)
 {
    cout << "Counting trigrams" << endl ;
    uint64_t total_bytes = read_files(filelist,num_files,true,&count_raw_trigrams,&counts) ;
-   if (bigrams)
-      (*bigrams) = new BigramCounts(counts) ;
+   // count the bigrams before we clear any of the trigram counts
+   bigrams = new BigramCounts(counts) ;
    if (bigram_extension == BigramExt_ASCIILittleEndian ||
        bigram_extension == BigramExt_UTF8LittleEndian)
       {
@@ -2212,7 +2212,7 @@ static bool cluster_models_by_charset(LanguageIdentifier *clusterdb,
    NewPtr< LanguageID*> enc_info(encs_alloc) ;
    // make a mapping from language ID to per-encoding merged models
    unsigned numlangs = language_identifier->numLanguages() ;
-   NybbleTrie **merged = new NybbleTrie*[numlangs] ;
+   NewPtr<NybbleTrie*> merged(numlangs) ;
    for (unsigned langid = 0 ; langid < numlangs ; langid++)
       {
       // get the character encoding for the current model and find the
@@ -2233,7 +2233,7 @@ static bool cluster_models_by_charset(LanguageIdentifier *clusterdb,
    std::fill_n(model_sizes,numlangs,0) ;
    unsigned maxkey = ptrie->longestKey() ;
    LocalAlloc<uint8_t> keybuf(maxkey) ;
-   ptrie->enumerate(keybuf,maxkey,merge_ngrams,merged) ;
+   ptrie->enumerate(keybuf,maxkey,merge_ngrams,merged.begin()) ;
    base_frequency = nullptr ;
    // figure out the maximum size of an individual model for each encoding
    LocalAlloc<unsigned> max_sizes(num_encs) ;
@@ -2269,15 +2269,14 @@ static bool cluster_models_by_charset(LanguageIdentifier *clusterdb,
 
 //----------------------------------------------------------------------
 
-static bool cluster_models(const char *cluster_db_name, double cluster_thresh)
+static bool cluster_models(const char* cluster_db_name, double cluster_thresh)
 {
    if (cluster_thresh < 0.0 || cluster_thresh > 1.0)
       return false ;
-   auto clusterdb = new LanguageIdentifier(cluster_db_name) ;
+   Owned<LanguageIdentifier> clusterdb(cluster_db_name) ;
    if (!clusterdb)
       {
-      cerr << "Unable to create clustered language database " 
-	   << cluster_db_name << endl ;
+      cerr << "Unable to create clustered language database "  << cluster_db_name << endl ;
       return false ;
       }
    if (clusterdb->numLanguages() > 0)
@@ -2316,17 +2315,11 @@ static bool compute_ngrams(const char **filelist, unsigned num_files, Owned<Nybb
    // since we get bigrams counts essentially for free after step 1, also
    // add in the complete set of nonzero bigram counts while we're at it
    Owned<TrigramCounts> counts ;
-   ngrams = nullptr ;
    if (!counts)
       return false ;
    ngrams = new NybbleTrie ;
-   if (!ngrams)
-      {
-      return false ;
-      }
-   BigramCounts *bi_counts = nullptr ;
-   BigramCounts **bigram_ptr = omit_bigrams ? nullptr : &bi_counts ;
-   total_bytes = count_trigrams(filelist,num_files,**counts,skip_newlines,aligned,bigram_ptr) ;
+   OwnedNull<BigramCounts> bi_counts ;
+   total_bytes = count_trigrams(filelist,num_files,**counts,skip_newlines,aligned,bi_counts) ;
    unsigned top_K = set_oversampling(topK,ABSOLUTE_MIN_LENGTH,minimum_length,aligned) ;
    counts->filter(top_K,maximum_length,verbose) ;
    ngrams->ignoreWhiteSpace(ignore_whitespace) ;
@@ -2347,8 +2340,7 @@ static bool compute_ngrams(const char **filelist, unsigned num_files, Owned<Nybb
       do {
          NybbleTrie *new_ngrams
 	    = count_ngrams(filelist, num_files, ngrams, min_length,
-			   max_length, have_max_length, skip_newlines,
-			   aligned) ;
+			   max_length, have_max_length, skip_newlines, aligned) ;
 	 if (new_ngrams)
 	    {
 	    ngrams = new_ngrams ;
@@ -2372,7 +2364,6 @@ static bool compute_ngrams(const char **filelist, unsigned num_files, Owned<Nybb
       {
       merge_bigrams(ngrams,bi_counts,false,total_bytes) ;
       }
-   delete bi_counts ;
    return true ;
 }
 
