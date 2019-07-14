@@ -5,7 +5,7 @@
 /*									*/
 /*  File:     langid.C							*/
 /*  Version:  1.30							*/
-/*  LastEdit: 2019-07-12						*/
+/*  LastEdit: 2019-07-14						*/
 /*                                                                      */
 /*  (c) Copyright 2010,2011,2012,2013,2014,2015,2019			*/
 /*		 Ralf Brown/Carnegie Mellon University			*/
@@ -62,28 +62,6 @@ using namespace Fr ;
 /************************************************************************/
 /*	Types								*/
 /************************************************************************/
-
-class ScoreAndID
-   {
-   private:
-      double   m_score ;
-      unsigned short m_id ;
-   public:
-      ScoreAndID() {}
-      void init(double sc, unsigned short new_id)
-	 { m_score = sc ; m_id = new_id ; }
-
-      // accessors
-      double score() const { return m_score ; }
-      unsigned short id() const { return m_id ; }
-
-      // manipulators
-      static void swap(ScoreAndID &, ScoreAndID &) ;
-
-      // comparison
-      static int compare(const ScoreAndID &, const ScoreAndID &) ;
-      bool operator< (const ScoreAndID& other) const { return compare(*this,other) < 0 ; }
-   } ;
 
 /************************************************************************/
 /*	Global variables						*/
@@ -276,10 +254,10 @@ static double scale_score(uint32_t score)
 }
 
 /************************************************************************/
-/*	Methods for class ScoreAndID					*/
+/*	Methods for class LanguageScores::Info				*/
 /************************************************************************/
 
-int ScoreAndID::compare(const ScoreAndID &s1, const ScoreAndID &s2)
+int LanguageScores::Info::compare(const LanguageScores::Info &s1, const LanguageScores::Info &s2)
 {
    if (s1.score() < s2.score())
       return +1 ;
@@ -291,7 +269,7 @@ int ScoreAndID::compare(const ScoreAndID &s1, const ScoreAndID &s2)
 
 //----------------------------------------------------------------------
 
-void ScoreAndID::swap(ScoreAndID &s1, ScoreAndID &s2)
+void LanguageScores::Info::swap(LanguageScores::Info &s1, LanguageScores::Info &s2)
 {
    std::swap(s1.m_score,s2.m_score) ;
    std::swap(s1.m_id,s2.m_id) ;
@@ -923,22 +901,14 @@ bool LanguageID::write(CFile& f) const
 /************************************************************************/
 
 LanguageScores::LanguageScores(size_t num_languages)
-   : m_lang_ids(num_languages), m_scores(num_languages)
+   : m_info(num_languages)
 {
    m_sorted = false ;
    m_userdata = nullptr ;
    m_active_language = 0 ;
-   if (m_lang_ids && m_scores)
-      {
-      m_num_languages = num_languages ;
-      m_max_languages = num_languages ;
-      std::fill_n(m_scores.begin(),num_languages,0.0) ;
-      std::iota(m_lang_ids.begin(),m_lang_ids.begin()+num_languages,0) ;
-      }
-   else
-      {
-      invalidate() ;
-      }
+   m_num_languages = num_languages ;
+   m_max_languages = num_languages ;
+   std::iota(m_info.begin(),m_info.begin()+num_languages,0) ;
    return ;
 }
 
@@ -950,13 +920,11 @@ LanguageScores::LanguageScores(const LanguageScores *orig)
       {
       unsigned nlang = orig->numLanguages() ;
       m_num_languages = nlang ;
-      m_lang_ids = UShortPtr(nlang) ;
-      m_scores = DoublePtr(nlang) ;
-      if (m_lang_ids && m_scores)
+      m_info = new Info[nlang] ;
+      if (m_info)
 	 {
 	 m_sorted = orig->m_sorted ;
-	 std::copy_n(orig->m_scores.begin(),nlang,m_scores.begin()) ;
-	 std::copy_n(orig->m_lang_ids.begin(),nlang,m_lang_ids.begin()) ;
+	 std::copy_n(orig->m_info.begin(),nlang,m_info.begin()) ;
 	 }
       }
    return ;
@@ -970,16 +938,11 @@ LanguageScores::LanguageScores(const LanguageScores *orig, double scale)
       {
       unsigned nlang = orig->numLanguages() ;
       m_num_languages = nlang ;
-      m_lang_ids = UShortPtr(nlang) ;
-      m_scores = DoublePtr(nlang) ;
-      if (m_lang_ids && m_scores)
+      m_sorted = orig->m_sorted ;
+      m_info = new Info[nlang] ;
+      for (size_t i = 0 ; i < nlang ; i++)
 	 {
-	 m_sorted = orig->m_sorted ;
-	 for (size_t i = 0 ; i < nlang ; i++)
-	    {
-	    m_scores[i] = orig->score(i) * scale ;
-	    }
-	 std::copy_n(orig->m_lang_ids.begin(),nlang,m_lang_ids.begin()) ;
+	 m_info[i].init(orig->score(i) * scale,orig->m_info[i].id()) ;
 	 }
       }
    return ;
@@ -992,7 +955,7 @@ double LanguageScores::highestScore() const
    size_t nlang = numLanguages() ;
    if (sorted())
       {
-      return m_scores[0] ;
+      return m_info[0].score() ;
       }
    else if (nlang == 0)
       {
@@ -1000,7 +963,7 @@ double LanguageScores::highestScore() const
       }
    else
       {
-      return *std::max_element(m_scores.begin(),m_scores.begin()+nlang) ;
+      return std::max_element(m_info.begin(),m_info.begin()+nlang)->score() ;
       }
 }
 
@@ -1011,14 +974,13 @@ unsigned LanguageScores::highestLangID() const
    auto nlang = numLanguages() ;
    if (sorted())
       {
-      return m_lang_ids[0] ;
+      return m_info[0].id() ;
       }
    else if (nlang == 0)
       return (unsigned)~0 ;
    else
       {
-      double* highest = std::max_element(m_scores.begin(),m_scores.begin()+nlang) ;
-      return (highest - m_scores.begin()) ;
+      return std::max_element(m_info.begin(),m_info.begin()+nlang)->id() ;
       }
 }
 
@@ -1028,14 +990,14 @@ unsigned LanguageScores::nonzeroScores() const
 {
    if (sorted())
       {
-      return (m_scores[0] > LANGID_ZERO_SCORE) ? numLanguages() : 0 ;
+      return (m_info[0].score() > LANGID_ZERO_SCORE) ? numLanguages() : 0 ;
       }
    else
       {
       size_t count = 0 ;
-      for (size_t i = 0 ; i < numLanguages() ; i++)
+      for (auto info : *this)
 	 {
-	 if (m_scores[i] > LANGID_ZERO_SCORE)
+	 if (info.score() > LANGID_ZERO_SCORE)
 	    count++ ;
 	 }
       return count ;
@@ -1047,7 +1009,7 @@ unsigned LanguageScores::nonzeroScores() const
 void LanguageScores::clear()
 {
    m_num_languages = maxLanguages() ;
-   std::fill_n(m_scores.begin(),numLanguages(),0.0) ;
+   std::fill_n(begin(),numLanguages(),0.0) ;
    m_sorted = false ;
    return ;
 }
@@ -1056,8 +1018,7 @@ void LanguageScores::clear()
 
 void LanguageScores::reserve(size_t N)
 {
-   m_scores = DoublePtr(N) ;
-   m_lang_ids = UShortPtr(N) ;
+   m_info = new Info[N] ;
    m_num_languages = m_max_languages = N ;
    m_sorted = false ;
    return ;
@@ -1067,9 +1028,9 @@ void LanguageScores::reserve(size_t N)
 
 void LanguageScores::scaleScores(double scale_factor)
 {
-   for (size_t i = 0 ; i < numLanguages() ; i++)
+   for (auto info : *this)
       {
-      m_scores[i] *= scale_factor ;
+      info.setScore(info.score() * scale_factor) ;
       }
    return ;
 }
@@ -1078,7 +1039,10 @@ void LanguageScores::scaleScores(double scale_factor)
 
 void LanguageScores::sqrtScores()
 {
-   std::transform(m_scores.begin(),m_scores.begin()+numLanguages(),m_scores.begin(),::sqrt) ;
+   for (auto info : *this)
+      {
+      info.setScore(::sqrt(info.score())) ;
+      }
    return ;
 }
 
@@ -1088,12 +1052,10 @@ void LanguageScores::add(const LanguageScores *scores, double weight)
 {
    if (scores && weight != 0)
       {
-      size_t count = numLanguages() ;
-      if (scores->numLanguages() < count)
-	 count = scores->numLanguages() ;
+      size_t count = std::min(numLanguages(),scores->numLanguages()) ;
       for (size_t i = 0 ; i < count ; i++)
 	 {
-	 m_scores[i] += (scores->m_scores[i] * weight) ;
+	 m_info[i].incrScore(scores->score(i) * weight) ;
 	 }
       }
    return ;
@@ -1106,14 +1068,12 @@ void LanguageScores::addThresholded(const LanguageScores *scores,
 {
    if (scores && weight != 0)
       {
-      size_t count = numLanguages() ;
-      if (scores->numLanguages() < count)
-	 count = scores->numLanguages() ;
+      size_t count = std::min(numLanguages(),scores->numLanguages()) ;
       for (size_t i = 0 ; i < count ; i++)
 	 {
-	 double sc = scores->m_scores[i] ;
+	 double sc = scores->score(i) ;
 	 if (sc >= threshold)
-	    m_scores[i] += (sc * weight) ;
+	    m_info[i].incrScore(sc * weight) ;
 	 }
       }
    return ;
@@ -1125,12 +1085,10 @@ void LanguageScores::subtract(const LanguageScores *scores, double weight)
 {
    if (scores && weight != 0)
       {
-      size_t count = numLanguages() ;
-      if (scores->numLanguages() < count)
-	 count = scores->numLanguages() ;
+      size_t count = std::min(numLanguages(),scores->numLanguages()) ;
       for (size_t i = 0 ; i < count ; i++)
 	 {
-	 m_scores[i] -= (scores->m_scores[i] * weight) ;
+	 m_info[i].decrScore(scores->score(i) * weight) ;
 	 }
       }
    return ;
@@ -1146,11 +1104,11 @@ bool LanguageScores::lambdaCombineWithPrior(LanguageScores *prior, double lambda
       {
       for (size_t i = 0 ; i < count ; i++)
 	 {
-	 double priorscore = prior->m_scores[i] ;
-	 double currscore = m_scores[i] ;
+	 double priorscore = prior->score(i) ;
+	 double currscore = score(i) ;
 	 if (currscore >= LANGID_ZERO_SCORE)
-	    prior->m_scores[i] += currscore * smoothing ;
-	 m_scores[i] = lambda * currscore + (1.0 - lambda) * priorscore ;
+	    prior->m_info[i].incrScore(currscore * smoothing) ;
+	 m_info[i].setScore(lambda * currscore + (1.0 - lambda) * priorscore) ;
 	 }
       return true ;
       }
@@ -1159,88 +1117,57 @@ bool LanguageScores::lambdaCombineWithPrior(LanguageScores *prior, double lambda
 
 //----------------------------------------------------------------------
 
-void LanguageScores::sort(double cutoff_ratio)
+void LanguageScores::filter(double cutoff_ratio)
 {
-   if (!sorted() && numLanguages() > 0)
+   double cutoff = LANGID_ZERO_SCORE ;
+   if (cutoff_ratio > 0.0)
       {
-      NewPtr<ScoreAndID> scores_and_ids(numLanguages()) ;
-      if (!scores_and_ids)
+      if (cutoff_ratio > 1.0)
+	 cutoff_ratio = 1.0 ;
+      double threshold = highestScore() * cutoff_ratio ;
+      if (threshold > cutoff)
+	 cutoff = threshold ;
+      }
+   Info* dest = begin() ;
+   for (auto src : *this)
+      {
+      if (src.score() >= cutoff)
+	 *dest++ = src ;
+      }
+   if (dest != begin())
+      {
+      m_num_languages = dest - begin() ;
+      }
+   else
+      {
+      // nothing is above our cutoff, but we can't just discard everything,
+      //   so scan for the highest score and make that the sole score
+      for (auto info : *this)
 	 {
-	 //!!!
-	 return ;
-	 }
-      double cutoff = LANGID_ZERO_SCORE ;
-      if (cutoff_ratio > 0.0)
-	 {
-	 if (cutoff_ratio > 1.0)
-	    cutoff_ratio = 1.0 ;
-	 double threshold = highestScore() * cutoff_ratio ;
-	 if (threshold > cutoff)
-	    cutoff = threshold ;
-	 }
-      unsigned num_scores = 0 ;
-      for (unsigned i = 0 ; i < numLanguages() ; i++)
-	 {
-	 if (m_scores[i] >= cutoff)
-	    scores_and_ids[num_scores++].init(m_scores[i],m_lang_ids[i]) ;
-	 }
-      if (num_scores > 0)
-	 {
-	 if (num_scores > 1)
+	 if (info.score() > begin()->score())
 	    {
-	    std::sort(*scores_and_ids,(*scores_and_ids)+num_scores) ;
+	    *begin() = info   ;
 	    }
-	 for (unsigned i = 0 ; i < num_scores ; i++)
-	    {
-	    m_scores[i] = scores_and_ids[i].score() ;
-	    m_lang_ids[i] = scores_and_ids[i].id() ;
-	    }
-	 m_num_languages = num_scores ;
 	 }
-      else
-	 {
-	 // nothing is above our cutoff, but we can't just discard everything,
-	 //   so scan for the highest score and make that the sole score
-	 for (unsigned i = 1 ; i < numLanguages() ; i++)
-	    {
-	    if (m_scores[i] > m_scores[0])
-	       {
-	       m_scores[0] = m_scores[i] ;
-	       m_lang_ids[0] = m_lang_ids[i] ;
-	       }
-	    }
-	 m_num_languages = 1 ;
-	 }
-      m_sorted = true ;
+      m_num_languages = 1 ;
       }
    return ;
 }
 
 //----------------------------------------------------------------------
 
-static void insert(double score, unsigned lang_id,
-		   ScoreAndID *scores_and_ids,
-		   unsigned &num_scores,
-		   unsigned max_scores)
+void LanguageScores::sort(double cutoff_ratio)
 {
-   for (size_t i = 0 ; i < num_scores ; i++)
+   if (!sorted() && numLanguages() > 0)
       {
-      if (score > scores_and_ids[i].score())
+      // remove language records with scores below the cutoff
+      filter(cutoff_ratio) ;
+      // then sort the remaining records if multiple passed the filtering
+      if (numLanguages() > 1)
 	 {
-	 if (num_scores < max_scores)
-	    num_scores++ ;
-	 for (size_t j = num_scores - 1 ; j > i ; j--)
-	    {
-	    scores_and_ids[j] = scores_and_ids[j-1] ;
-	    }
-	 scores_and_ids[i].init(score,lang_id) ;
-	 return ;
+	 std::sort(begin(),end()) ;
 	 }
-      }
-   if (num_scores == 0)
-      {
-      scores_and_ids[0].init(score,lang_id) ;
-      num_scores++ ;
+      m_sorted = true ;
       }
    return ;
 }
@@ -1253,48 +1180,15 @@ void LanguageScores::sort(double cutoff_ratio, unsigned max_langs)
       sort(cutoff_ratio) ;
    else if (!sorted() && numLanguages() > 0)
       {
-      NewPtr<ScoreAndID> scores_and_ids(max_langs) ;
-      if (!scores_and_ids)
+      filter(cutoff_ratio) ;
+      if (numLanguages() > max_langs)
 	 {
-	 //!!!
-	 return ;
-	 }
-      double cutoff = LANGID_ZERO_SCORE ;
-      unsigned num_scores = 0 ;
-      for (unsigned i = 0 ; i < numLanguages() ; i++)
-	 {
-	 if (m_scores[i] >= cutoff)
-	    {
-	    insert(m_scores[i],m_lang_ids[i],*scores_and_ids,num_scores,max_langs) ;
-	    double threshold = scores_and_ids[0].score() * cutoff_ratio ;
-	    if (threshold > cutoff)
-	       {
-	       cutoff = threshold ;
-	       }
-	    }
-	 }
-      if (num_scores > 0)
-	 {
-	 for (unsigned i = 0 ; i < num_scores ; i++)
-	    {
-	    m_scores[i] = scores_and_ids[i].score() ;
-	    m_lang_ids[i] = scores_and_ids[i].id() ;
-	    }
-	 m_num_languages = num_scores ;
+	 std::partial_sort(begin(),begin()+max_langs,end()) ;
+	 m_num_languages = max_langs ;
 	 }
       else
 	 {
-	 // nothing is above our cutoff, but we can't just discard everything,
-	 //   so scan for the highest score and make that the sole score
-	 for (unsigned i = 1 ; i < numLanguages() ; i++)
-	    {
-	    if (m_scores[i] > m_scores[0])
-	       {
-	       m_scores[0] = m_scores[i] ;
-	       m_lang_ids[0] = m_lang_ids[i] ;
-	       }
-	    }
-	 m_num_languages = 1 ;
+	 std::sort(begin(),end()) ;
 	 }
       m_sorted = true ;
       }
@@ -1306,7 +1200,7 @@ void LanguageScores::sort(double cutoff_ratio, unsigned max_langs)
 // the following variable makes sortByName() non-threadsafe
 static const LanguageID *sort_langinfo = nullptr ;
 
-static int compare_names(const ScoreAndID& s1, const ScoreAndID& s2)
+static int compare_names(const LanguageScores::Info& s1, const LanguageScores::Info& s2)
 {
    if (!sort_langinfo)
       return s1.id() - s2.id() ;
@@ -1329,21 +1223,12 @@ void LanguageScores::sortByName(const LanguageID *langinfo)
 {
    if (numLanguages() > 0 && langinfo != nullptr)
       {
-      NewPtr<ScoreAndID> scores_and_ids(numLanguages()) ;
-      unsigned num_scores = 0 ;
-      for (unsigned i = 0 ; i < numLanguages() ; i++)
-	 {
-	 if (m_scores[i] > 0.0)
-	    scores_and_ids[num_scores++].init(m_scores[i],m_lang_ids[i]) ;
-	 }
+      // remove languages with zero scores
+      Info* last = std::remove(begin(),end(),0.0) ;
+      m_num_languages = last - m_info ;
+      // and sort the remaining language records
       sort_langinfo = langinfo ;
-      std::sort(*scores_and_ids,(*scores_and_ids)+num_scores,compare_names) ;
-      for (unsigned i = 0 ; i < num_scores ; i++)
-	 {
-	 m_scores[i] = scores_and_ids[i].score() ;
-	 m_lang_ids[i] = scores_and_ids[i].id() ;
-	 }
-      m_num_languages = num_scores ;
+      std::sort(begin(),end(),compare_names) ;
       }
    return ;
 }
@@ -1367,8 +1252,8 @@ void LanguageScores::mergeDuplicateNamesAndSort(const LanguageID *langinfo)
 	    break ;
 	 if (strcmp(name1,name2) == 0)
 	    {
-	    m_scores[i] += m_scores[j] ;
-	    m_scores[j] = 0.0 ;
+	    m_info[i].incrScore(m_info[j].score()) ;
+	    m_info[j].setScore(0.0) ;
 	    }
 	 }
       }
@@ -1397,8 +1282,7 @@ void LanguageScores::filterDuplicates(const LanguageIdentifier *langid,
 	 }
       if (!is_dup)
 	 {
-	 m_lang_ids[dest] = m_lang_ids[i] ;
-	 m_scores[dest] = m_scores[i] ;
+	 m_info[dest] = m_info[i] ;
 	 dest++ ;
 	 }
       }
@@ -1743,7 +1627,7 @@ static void identify_languages(const char *buffer, size_t buflen,
 {
    //assert(scores != nullptr) ;
    unsigned minhist = length_factors[2] ? 1 : 2 ;
-   double *score_array = scores->scoreArray() ;
+   auto info_array = scores->begin() ;
    double normalizer = (double)length_normalizer ;
    for (size_t index = 0 ; index + minhist < buflen ; index++)
       {
@@ -1787,7 +1671,7 @@ static void identify_languages(const char *buffer, size_t buflen,
 		  if (likely(alignments[id] <= max_alignment))
 		     {
 		     double prob = f->mappedScore() ;
-		     score_array[id] += (prob * len_factor) ;
+		     info_array[id].incrScore(prob * len_factor) ;
 		     }
 		  f++ ;
 	          } while (!f[-1].isLast()) ;
@@ -1805,7 +1689,7 @@ static void identify_languages(const char *buffer, size_t buflen,
 		     double prob = f->mappedScore() ;
 		     if (unlikely(prob <= 0.0))
 			break ;		// only stopgrams from here on
-		     score_array[id] += (prob * len_factor) ;
+		     info_array[id].incrScore(prob * len_factor) ;
 		     }
 		  f++ ;
 	          } while (!f[-1].isLast()) ;

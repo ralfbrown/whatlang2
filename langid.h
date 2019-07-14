@@ -5,7 +5,7 @@
 /*									*/
 /*  File:     langid.h							*/
 /*  Version:  1.30							*/
-/*  LastEdit: 2019-07-12						*/
+/*  LastEdit: 2019-07-14						*/
 /*                                                                      */
 /*  (c) Copyright 2010,2011,2012,2013,2014,2015,2019			*/
 /*		 Ralf Brown/Carnegie Mellon University			*/
@@ -258,6 +258,37 @@ class LanguageID
 
 class LanguageScores
    {
+   public: // types
+      class Info
+	 {
+	 public:
+//	    Info() {}
+	    void init(double sc, unsigned short new_id)
+	       { m_score = sc ; m_id = new_id ; }
+
+	    // accessors
+	    double score() const { return m_score ; }
+	    unsigned short id() const { return m_id ; }
+
+	    // manipulators
+	    void setScore(double sc) { m_score = sc ; }
+	    void incrScore(double inc) { m_score += inc ; }
+	    void decrScore(double dec) { m_score -= dec ; }
+	    void setLang(unsigned short id) { m_id = id ; }
+	    Info& operator= (double sc) { m_score = sc ; return *this ; }
+	    Info& operator= (int id) { m_id = id ; m_score = 0.0 ; return *this ; }
+
+	    static void swap(Info&, Info&) ;
+
+	    // comparison
+	    static int compare(const Info&, const Info&) ;
+	    bool operator< (const Info& other) const { return compare(*this,other) < 0 ; }
+	    bool operator== (double sc) { return sc == m_score ; }
+
+	 private:
+	    double   	   m_score ;
+	    unsigned short m_id ;
+	 } ;
    public:
       LanguageScores(size_t num_languages) ;
       LanguageScores(const LanguageScores *orig) ;
@@ -270,12 +301,11 @@ class LanguageScores
       unsigned numLanguages() const { return m_num_languages ; }
       unsigned maxLanguages() const { return m_max_languages ; }
       unsigned activeLanguage() const { return m_active_language ; }
-      unsigned topLanguage() const { return m_lang_ids[0] ; }
+      unsigned topLanguage() const { return m_info[0].id() ; }
       unsigned languageNumber(size_t N) const
-	 { return (N < numLanguages()) ? m_lang_ids[N] : ~0 ; }
-      double *scoreArray() { return m_scores.begin() ; }
+	 { return (N < numLanguages()) ? m_info[N].id() : ~0 ; }
       double score(size_t N) const
-	 { return (N < numLanguages()) ? m_scores[N] : -1.0 ; }
+	 { return (N < numLanguages()) ? m_info[N].score() : -1.0 ; }
       double highestScore() const ;
       unsigned highestLangID() const ;
       unsigned nonzeroScores() const ;
@@ -285,13 +315,13 @@ class LanguageScores
       void clear() ;
       void reserve(size_t N) ;
       void setScore(size_t N, double val)
-	 { if (N < numLanguages()) m_scores[N] = val ; }
+	 { if (N < numLanguages()) m_info[N].setScore(val) ; }
       void increment(size_t N, double incr = 1.0)
-	 { if (N < numLanguages()) m_scores[N] += incr ; }
+	 { if (N < numLanguages()) m_info[N].incrScore(incr) ; }
       void decrement(size_t N, double decr = 1.0)
-	 { if (N < numLanguages()) m_scores[N] -= decr ; }
+	 { if (N < numLanguages()) m_info[N].incrScore(-decr) ; }
       void scaleScore(size_t N, double scale_factor)
-	 { if (N < numLanguages()) m_scores[N] *= scale_factor ; }
+	 { if (N < numLanguages()) m_info[N].setScore(m_info[N].score() * scale_factor) ; }
       void scaleScores(double scale_factor) ;
       void sqrtScores() ;
       void add(const LanguageScores *scores, double weight = 1.0) ;
@@ -300,6 +330,7 @@ class LanguageScores
       void subtract(const LanguageScores *scores, double weight = 1.0) ;
       bool lambdaCombineWithPrior(LanguageScores *prior, double lambda,
 				  double smoothing) ;
+      void filter(double cutoff_ratio) ;
       void sort(double cutoff_ratio = 0.0) ;
       void sort(double cutoff_ratio, unsigned max_langs) ;
       void mergeDuplicateNamesAndSort(const LanguageID *langinfo) ;
@@ -308,13 +339,15 @@ class LanguageScores
       void setLanguage(unsigned lang)
 	 { m_active_language = lang ; }
 
+      // iterator support
+      Info* begin() const { return m_info.begin() ; }
+      Info* end() const { return m_info.begin() + numLanguages() ; }
    protected: // methods
       void sortByName(const LanguageID *langinfo) ;
-      void invalidate() { m_lang_ids = nullptr ; m_scores = nullptr ; m_num_languages = m_max_languages = 0 ; }
+      void invalidate() { m_info = nullptr ; m_num_languages = m_max_languages = 0 ; }
 
    private: // members
-      Fr::UShortPtr      m_lang_ids ;
-      Fr::DoublePtr      m_scores ;
+      Fr::NewPtr<Info>   m_info ;
       void*		 m_userdata ;
    protected:
       unsigned	 	 m_num_languages { 0 } ;
