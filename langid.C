@@ -471,6 +471,23 @@ LanguageID::LanguageID(const LanguageID *orig)
 
 //----------------------------------------------------------------------
 
+LanguageID& LanguageID::operator = (LanguageID& orig)
+{
+   setLanguage(orig.language(),orig.friendlyName()) ;
+   setRegion(orig.region()) ;
+   setEncoding(orig.encoding()) ;
+   setSource(orig.source()) ;
+   setScript(orig.script()) ;
+   setAlignment(orig.alignment()) ;
+   setCoverageFactor(orig.coverageFactor()) ;
+   setCountedCoverage(orig.countedCoverage()) ;
+   setFreqCoverage(orig.freqCoverage()) ;
+   setMatchFactor(orig.matchFactor()) ;
+   return *this ;
+}
+
+//----------------------------------------------------------------------
+
 LanguageID& LanguageID::operator = (LanguageID&& orig)
 {
    m_language = orig.m_language.move() ;
@@ -1317,63 +1334,45 @@ void WeightedLanguageScores::sqrtWeights()
 /*	Methods for class LanguageIdentifier				*/
 /************************************************************************/
 
-LanguageIdentifier::LanguageIdentifier(const char *language_data_file,
-				       bool run_verbosely)
+LanguageIdentifier::LanguageIdentifier(const char* language_data_file, bool run_verbosely)
 {
-   m_alloc_languages = 0 ;
-   m_num_languages = 0 ;
    m_apply_cover_factor = true ;
    useFriendlyName(false) ;
    charsetIdentifier(nullptr) ;
    setBigramWeight(DEFAULT_BIGRAM_WEIGHT) ;
    runVerbosely(run_verbosely) ;
-   if (language_data_file && *language_data_file)
+   CInputFile fp(language_data_file,CFile::binary) ;
+   if (fp)
       {
-      CInputFile fp(language_data_file,CFile::binary) ;
-      if (fp)
+      unsigned version = 0 ;
+      if (checkSignature(fp,&version))
 	 {
-	 unsigned version = 0 ;
-	 if (checkSignature(fp,&version))
+	 FilePath path(language_data_file) ;
+	 m_directory = dup_string(path.directory()) ;
+	 auto nlang = read_uint32(fp,0) ;
+	 if (nlang > 0)
 	    {
-	    FilePath path(language_data_file) ;
-	    m_directory = dup_string(path.directory()) ;
-	    m_num_languages = read_uint32(fp,0) ;
+	    m_langinfo.allocBatch(nlang) ;
+	    uint8_t have_bigrams = false ;
+	    (void)fp.readValue(&have_bigrams) ;
+	    // skip the reserved padding
+	    fp.seek(LANGID_PADBYTES_1,SEEK_CUR) ;
+	    // read the language info records
+	    for (size_t i = 0 ; i < numLanguages() ; i++)
+	       {
+	       if (!LanguageID::read(fp,&m_langinfo[i],version))
+		  {
+		  m_langinfo.shrink(0) ;
+		  break ;
+		  }
+	       }
+	    // next, read the multi-trie
 	    if (numLanguages() > 0)
 	       {
-	       m_langinfo = NewPtr<LanguageID>(numLanguages()) ;
-	       if (m_langinfo)
-		  {
-		  m_alloc_languages = numLanguages() ;
-		  }
-	       else
-		  {
-		  m_num_languages = 0 ;
-		  }
-	       uint8_t have_bigrams = false ;
-	       (void)fp.readValue(&have_bigrams) ;
-	       // skip the reserved padding
-	       fp.seek(LANGID_PADBYTES_1,SEEK_CUR) ;
-	       // read the language info records
-	       for (size_t i = 0 ; i < numLanguages() ; i++)
-		  {
-		  if (!LanguageID::read(fp,&m_langinfo[i],version))
-		     {
-		     m_num_languages = 0 ;
-		     break ;
-		     }
-		  }
-	       // next, read the multi-trie
-	       if (m_num_languages > 0)
-		  {
-		  m_langdata = LangIDPackedMultiTrie::load(fp,language_data_file) ;
-		  if (m_langdata)
-		     {
-		     m_alloc_languages = numLanguages() ;
-		     }
-		  }
-	       // finally, load the data mapping, if present
-//FIXME
+	       m_langdata = LangIDPackedMultiTrie::load(fp,language_data_file) ;
 	       }
+	    // finally, load the data mapping, if present
+//FIXME
 	    }
 	 }
       }
@@ -1386,21 +1385,12 @@ LanguageIdentifier::LanguageIdentifier(const char *language_data_file,
    if (!m_langdata)
       m_langdata = new LangIDPackedMultiTrie ;
    if (!m_langinfo)
-      m_langinfo = NewPtr<LanguageID>(1) ;
+      m_langinfo.reserve(1) ;
    m_string_counts = NewPtr<size_t>(numLanguages()) ;
    if (m_string_counts)
       std::fill_n(m_string_counts.begin(),numLanguages(),0) ;
    if (m_langdata)
       m_length_factors = make_length_factors(m_langdata->longestKey(),m_bigram_weight) ;
-   return ;
-}
-
-//----------------------------------------------------------------------
-
-LanguageIdentifier::~LanguageIdentifier()
-{
-   m_num_languages = 0 ;
-   m_alloc_languages = 0 ;
    return ;
 }
 
@@ -1881,27 +1871,14 @@ bool LanguageIdentifier::sameLanguage(size_t L1, size_t L2,
 
 //----------------------------------------------------------------------
 
-uint32_t LanguageIdentifier::addLanguage(const LanguageID &info,
-					 uint64_t train_bytes)
+uint32_t LanguageIdentifier::addLanguage(const LanguageID &info, uint64_t train_bytes)
 {
    for (size_t i = 0 ; i < numLanguages() ; i++)
       {
       if (m_langinfo[i] == info)
 	 return i ;
       }
-   if (numLanguages() >= allocLanguages())
-      {
-      auto nlang = numLanguages() ;
-      size_t new_alloc = nlang ? 2 * nlang : 120 ;
-      NewPtr<LanguageID> new_info(new_alloc) ;
-      if (!new_info)
-	 return unknown_lang ;
-      if (nlang)
-	 std::move(m_langinfo.begin(),m_langinfo.begin()+nlang,new_info.begin()) ;
-      m_langinfo = new_info ;
-      m_alloc_languages = new_alloc ;
-      }
-   uint32_t langID = m_num_languages++ ;
+   uint32_t langID = m_langinfo.alloc() ;
    new (&m_langinfo[langID]) LanguageID(&info) ;
    m_langinfo[langID].setTraining(train_bytes) ;
    return langID ;
@@ -1951,7 +1928,7 @@ bool LanguageIdentifier::writeStatistics(CFile& f) const
       {
       counts.setScore(i,m_string_counts[i]) ;
       }
-   counts.mergeDuplicateNamesAndSort(m_langinfo) ;
+   counts.mergeDuplicateNamesAndSort(m_langinfo.begin()) ;
    for (size_t i = 0 ; i < numLanguages() ; i++)
       {
       double count = counts.score(i) ;

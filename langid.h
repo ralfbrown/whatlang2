@@ -193,6 +193,7 @@ class LanguageID
 		 const char *source = nullptr, const char *script = "UNKNOWN") ;
       LanguageID(const LanguageID &orig) ;
       LanguageID(const LanguageID *orig) ;
+      LanguageID& operator= (LanguageID& orig) ;
       LanguageID& operator= (LanguageID&& orig) ;
       ~LanguageID() ;
 
@@ -385,14 +386,14 @@ class LanguageIdentifier
    public:
       LanguageIdentifier(const char *language_data_file,
 			 bool verbose = false) ;
-      ~LanguageIdentifier() ;
+      ~LanguageIdentifier() = default ;
 
       // accessors
       bool good() const { return m_langdata && m_langdata->good() ; }
       bool verbose() const { return m_verbose ; }
       bool applyCoverageFactor() const { return m_apply_cover_factor && m_adjustments ; }
-      size_t allocLanguages() const { return m_alloc_languages ; }
-      size_t numLanguages() const { return m_num_languages ; }
+      size_t allocLanguages() const { return m_langinfo.capacity() ; }
+      size_t numLanguages() const { return m_langinfo.size() ; }
       double adjustmentFactor(size_t N) const { return m_adjustments[N] ; }
       LanguageIdentifier *charsetIdentifier() const { return m_charsetident ; }
       class LangIDPackedMultiTrie* trie() const { return m_langdata.get() ; }
@@ -459,7 +460,7 @@ class LanguageIdentifier
    private:
       Fr::Owned<LangIDPackedMultiTrie> m_langdata ;
       Fr::Owned<LangIDMultiTrie> m_uncomplangdata ;
-      Fr::NewPtr<LanguageID> m_langinfo ;
+      Fr::ItemPool<LanguageID> m_langinfo ;
       Fr::DoublePtr          m_length_factors ;
       Fr::DoublePtr          m_adjustments ;
       Fr::UInt8Ptr           m_alignments ;
@@ -468,8 +469,6 @@ class LanguageIdentifier
       Fr::CharPtr            m_directory ;
       LanguageIdentifier*    m_charsetident ;
       double 	             m_bigram_weight ;
-      size_t	             m_alloc_languages ;
-      size_t 	             m_num_languages ;
       bool   	             m_friendly_name ;
       bool	             m_apply_cover_factor ;
       bool                   m_verbose ;
