@@ -298,8 +298,8 @@ class LanguageScores
       // accessors
       void *userData() const { return m_userdata ; }
       bool sorted() const { return m_sorted ; }
-      unsigned numLanguages() const { return m_num_languages ; }
-      unsigned maxLanguages() const { return m_max_languages ; }
+      unsigned numLanguages() const { return m_info.size() ; }
+      unsigned maxLanguages() const { return m_info.capacity() ; }
       unsigned activeLanguage() const { return m_active_language ; }
       unsigned topLanguage() const { return m_info[0].id() ; }
       unsigned languageNumber(size_t N) const
@@ -344,14 +344,10 @@ class LanguageScores
       Info* end() const { return m_info.begin() + numLanguages() ; }
    protected: // methods
       void sortByName(const LanguageID *langinfo) ;
-      void invalidate() { m_info = nullptr ; m_num_languages = m_max_languages = 0 ; }
 
-   private: // members
-      Fr::NewPtr<Info>   m_info ;
+   protected: // members
+      Fr::ItemPool<Info> m_info ;
       void*		 m_userdata ;
-   protected:
-      unsigned	 	 m_num_languages { 0 } ;
-      unsigned		 m_max_languages { 0 } ;
       unsigned		 m_active_language ;
       bool      	 m_sorted ;
    } ;

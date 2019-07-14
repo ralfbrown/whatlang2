@@ -906,8 +906,7 @@ LanguageScores::LanguageScores(size_t num_languages)
    m_sorted = false ;
    m_userdata = nullptr ;
    m_active_language = 0 ;
-   m_num_languages = num_languages ;
-   m_max_languages = num_languages ;
+   m_info.allocBatch(num_languages) ;
    std::iota(m_info.begin(),m_info.begin()+num_languages,0) ;
    return ;
 }
@@ -919,10 +918,10 @@ LanguageScores::LanguageScores(const LanguageScores *orig)
    if (orig)
       {
       unsigned nlang = orig->numLanguages() ;
-      m_num_languages = nlang ;
-      m_info = new Info[nlang] ;
-      if (m_info)
+      m_info.reserve(nlang) ;
+      if (m_info.capacity() >= nlang)
 	 {
+	 m_info.allocBatch(nlang) ;
 	 m_sorted = orig->m_sorted ;
 	 std::copy_n(orig->m_info.begin(),nlang,m_info.begin()) ;
 	 }
@@ -936,10 +935,9 @@ LanguageScores::LanguageScores(const LanguageScores *orig, double scale)
 {
    if (orig)
       {
-      unsigned nlang = orig->numLanguages() ;
-      m_num_languages = nlang ;
       m_sorted = orig->m_sorted ;
-      m_info = new Info[nlang] ;
+      unsigned nlang = orig->numLanguages() ;
+      m_info.reserve(nlang) ;
       for (size_t i = 0 ; i < nlang ; i++)
 	 {
 	 m_info[i].init(orig->score(i) * scale,orig->m_info[i].id()) ;
@@ -1008,8 +1006,7 @@ unsigned LanguageScores::nonzeroScores() const
 
 void LanguageScores::clear()
 {
-   m_num_languages = maxLanguages() ;
-   std::fill_n(begin(),numLanguages(),0.0) ;
+   std::fill_n(begin(),maxLanguages(),0.0) ;
    m_sorted = false ;
    return ;
 }
@@ -1018,8 +1015,7 @@ void LanguageScores::clear()
 
 void LanguageScores::reserve(size_t N)
 {
-   m_info = new Info[N] ;
-   m_num_languages = m_max_languages = N ;
+   m_info.reserve(N) ;
    m_sorted = false ;
    return ;
 }
@@ -1136,7 +1132,7 @@ void LanguageScores::filter(double cutoff_ratio)
       }
    if (dest != begin())
       {
-      m_num_languages = dest - begin() ;
+      m_info.shrink(dest - begin()) ;
       }
    else
       {
@@ -1149,7 +1145,7 @@ void LanguageScores::filter(double cutoff_ratio)
 	    *begin() = info   ;
 	    }
 	 }
-      m_num_languages = 1 ;
+      m_info.shrink(1) ;
       }
    return ;
 }
@@ -1184,7 +1180,7 @@ void LanguageScores::sort(double cutoff_ratio, unsigned max_langs)
       if (numLanguages() > max_langs)
 	 {
 	 std::partial_sort(begin(),begin()+max_langs,end()) ;
-	 m_num_languages = max_langs ;
+	 m_info.shrink(max_langs) ;
 	 }
       else
 	 {
@@ -1225,7 +1221,7 @@ void LanguageScores::sortByName(const LanguageID *langinfo)
       {
       // remove languages with zero scores
       Info* last = std::remove(begin(),end(),0.0) ;
-      m_num_languages = last - m_info ;
+      m_info.shrink(last - m_info.begin()) ;
       // and sort the remaining language records
       sort_langinfo = langinfo ;
       std::sort(begin(),end(),compare_names) ;
@@ -1286,7 +1282,7 @@ void LanguageScores::filterDuplicates(const LanguageIdentifier *langid,
 	 dest++ ;
 	 }
       }
-   m_num_languages = dest ;
+   m_info.shrink(dest) ;
    return ;
 }
 
@@ -1304,7 +1300,7 @@ WeightedLanguageScores::WeightedLanguageScores(size_t num_languages,
       }
    else
       {
-      m_num_languages = 0 ;
+      m_info.shrink(0) ;
       }
    return ;
 }
