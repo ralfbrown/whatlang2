@@ -5,7 +5,7 @@
 /*									*/
 /*  File: ptrie.h - packed Word-frequency multi-trie			*/
 /*  Version:  1.30				       			*/
-/*  LastEdit: 2019-07-12						*/
+/*  LastEdit: 2019-07-14						*/
 /*									*/
 /*  (c) Copyright 2011,2012,2013,2015,2019 Carnegie Mellon University	*/
 /*      This program is free software; you can redistribute it and/or   */
@@ -62,18 +62,8 @@ using namespace std ;
 #define PACKED_TRIE_VALUE_SHIFT (PACKED_TRIE_FREQ_EXP_SHIFT - 1) // incl sg-bit
 #define PACKED_TRIE_NUM_VALUES (1UL << (32 - PACKED_TRIE_VALUE_SHIFT))
 
-// we want to store percentages for entries in the trie in 32 bits.  Since
-//   it is very unlikely that any ngram in the trie will have a probability
-//   greater than 4.2%, scale the percentage by a factor of one billion.
-#define TRIE_SCALE_FACTOR 1000000000L
-#define SQRT_TRIE_SCALE_FACTOR (31622.7766016838)
-
 /************************************************************************/
 /************************************************************************/
-
-class LangIDMultiTrie ;
-
-//----------------------------------------------------------------------
 
 class PackedTrieFreq
    {
@@ -196,6 +186,10 @@ class PackedTrieNode : public PackedTrieTerminalNode
       uint8_t	 m_popcounts[LENGTHOF_M_CHILDREN] ;
 #undef LENGTHOF_M_CHILDREN
    } ;
+
+//----------------------------------------------------------------------
+
+class LangIDMultiTrie ;
 
 //----------------------------------------------------------------------
 
