@@ -1,4 +1,4 @@
-/************************************************************************/
+/****************************** -*- C++ -*- *****************************/
 /*                                                                      */
 /*	LangIdent: long n-gram-based language identification		*/
 /*	by Ralf Brown / Carnegie Mellon University			*/
@@ -47,9 +47,18 @@ struct ISO9Element
 /*	Global data for this module					*/
 /************************************************************************/
 
+#define ISO843_TABLE_START    0x037C		// Greek
+#define ISO9_TABLE_START      0x0400		// Cyrillic
+#define ISO9985_TABLE_START   0x0530		// Armenian
+#define	ISO295_TABLE_START    0x05B0		// Hebrew
+#define ISO233_TABLE_START    0x0600		// Arabic
+#define ISO15919_TABLE_START  0x0900		// Devanagari
+#define ISO11940_TABLE_START  0x0E00		// Thai
+#define ISO9984_TABLE_START   0x10D0		// Georgian
+#define ISO843EXT_TABLE_START 0x1F00		// extended Greek
+
 // romanization information for Greek character codepoints
-#define ISO843_TABLE_START 0x037C
-static const ISO9Element ISO843_table[] =
+static const ISO9Element primary_table[] =
    {
       { 0, 0 }, { 0, 0 }, { '?', 0 }, { 0, 0 },				// 0x037C-0x037F
       { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x0380-0x0383
@@ -74,12 +83,18 @@ static const ISO9Element ISO843_table[] =
       { 0x00F3, 0 }, { 0x00FD, 0 }, { 0x1E53, 0 }, { 0, 0 },		// 0x03CC-0x03CF
       { 'v', 0 }, { 't', 'h' }, { 'Y', 0 }, { 'Y', 0x0301 },		// 0x03D0-0x03D3
       { 'Y', 0x0308 }, { 'f', 0 }, { 'p', 0 }, { '&', 0 },		// 0x03D4-0x03D7
-   } ;
-
-// romanization information for Unicode codepoints 0x0400 to 0x051F (Cyrillic)
-#define ISO9_TABLE_START 0x0400
-static const ISO9Element ISO9_table[] =
-   {
+   // end of Greek codepoints, insert padding until next table
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x03D8-0x03DB
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x03DC-0x03DF
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x03E0-0x03E3
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x03E4-0x03E7
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x03E8-0x03EB
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x03EC-0x03EF
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x03F0-0x03F3
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x03F4-0x03F7
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x03F8-0x03FB
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x03FC-0x03FF
+   // romanization information for Unicode codepoints 0x0400 to 0x051F (Cyrillic)
       { 0, 0 }, { 0x00CB, 0 }, { 0x0110, 0 }, { 0x01F4, 0 },		// 0x0400-0403
       { 0x00CA, 0 }, { 0x1E90, 0 }, { 0x00CC, 0 }, { 0x00CF, 0 },	// 0x0404-0407
       { 'J', 0x030C }, { 'L', 0x0302 }, { 'N', 0x0302 }, { 0x0106, 0 },	// 0x0408-040B
@@ -119,7 +134,7 @@ static const ISO9Element ISO9_table[] =
       { 'G', 0x0300 }, { 'g', 0x0300 }, { 0x0120, 0 }, { 0x0121, 0 },	// 0x0490-0493
       { 0x011E, 0 }, { 0x011F, 0 }, { 0, 0 }, { 0, 0 },			// 0x0494-0497
       { 0, 0 }, { 0, 0 }, { 0x0136, 0 }, { 0x0137, 0 },			// 0x0498-049B
-      { 'K', 0x0302 }, { 'k', 0x0302 }, { 'K', 0x0304 }, { 'k', 0x0304 },	// 0x049C-049F
+      { 'K',0x0302 }, { 'k',0x0302 }, { 'K', 0x0304 }, { 'k', 0x0304 },	// 0x049C-049F
       { 0x01E8, 0 }, { 0x01E9, 0 }, { 0x0145, 0 }, { 0x0146, 0 },	// 0x04A0-04A3
       { 0x1E44, 0 }, { 0x1E45, 0 }, { 0x1E54, 0 }, { 0x1E55, 0 },	// 0x04A4-04A7
       { 0x00D2, 0 }, { 0x00F2, 0 }, { 0x015E, 0 }, { 0x015F, 0 },	// 0x04A8-04AB
@@ -135,7 +150,7 @@ static const ISO9Element ISO9_table[] =
       { 0x0102, 0 }, { 0x0103, 0 }, { 0x00C4, 0 }, { 0x00E4, 0 },	// 0x04D0-04D3
       { 0x00C6, 0 }, { 0x00E6, 0 }, { 0x0114, 0 }, { 0x0115, 0 },	// 0x04D4-04D7
       { 'A', 0x030B }, { 'a', 0x030B }, { 0x00C0, 0 }, { 0x00E0, 0 },	// 0x04D8-04DB
-      { 'Z', 0x0304 }, { 'z', 0x0304 }, { 'Z', 0x0308 }, { 'z', 0x0308 },	// 0x04DC-04DF
+      { 'Z',0x0304 }, { 'z',0x0304 }, { 'Z', 0x0308 }, { 'z', 0x0308 },	// 0x04DC-04DF
       { 0x0179, 0 }, { 0x017A, 0 }, { 0x012A, 0 }, { 0x012B, 0 },	// 0x04E0-04E3
       { 0x00CE, 0 }, { 0x00EE, 0 }, { 0x00D6, 0 }, { 0x00F6, 0 },	// 0x04E4-04E7
       { 0x00D4, 0 }, { 0x00F4, 0 }, { 0x0150, 0 }, { 0x0151, 0 },	// 0x04E8-04EB
@@ -151,85 +166,91 @@ static const ISO9Element ISO9_table[] =
       { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x0510-0513
       { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x0514-0517
       { 0, 0 }, { 0, 0 }, { 'Q', 0 }, { 'q', 0 },			// 0x0518-051B
-      { 'W', 0 }, { 'w', 0 }, { 0, 0 }, { 0, 0 }			// 0x051C-051F
-   } ;
-
-// romanization table for Armenian
-#define ISO9985_TABLE_START 0x0530
-static const ISO9Element ISO9985_table[] = 
-   {
-      { 0, 0 }, { 'A', 0 }, { 'B', 0 }, { 'G', 0 },		// 0x0530-0x0533
-      { 'D', 0 }, { 'E', 0 }, { 'Z', 0 }, { 0x0112, 0 },	// 0x0534-0x0537
-      { 0x00CB, 0 }, { 'T', '\'' }, { 'Z', 'H' }, { 'I', 0 },	// 0x0538-0x053B
-      { 'L', 0 }, { 'X', 0 }, { 0x00C7, 0 }, { 'K', 0 },	// 0x053C-0x053F
-      { 'H', 0 }, { 'J', 0 }, { 'G', 'H' }, { 0x010C, 0 },	// 0x0540-0x0543
-      { 'M', 0 }, { 'Y', 0 }, { 'N', 0 }, { 0x0160, 0 },	// 0x0544-0x0547
-      { 'O', 0 }, { 0x010C, 0 }, { 'P', 0 }, { 0x01F0, 0 },	// 0x0548-0x054B
-      { 'R', 'R' }, { 'S', 0 }, { 'V', 0 }, { 'T', 0 },		// 0x054C-0x054F
-      { 'R', 0 }, { 'C', '\'' }, { 'W', 0 }, { 'P', '\'' },	// 0x0550-0x0553
-      { 'K', '\'' }, { 0x00D2, 0 }, { 'F', 0 }, { 'E', 'W' },	// 0x0554-0x0557
-      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },			// 0x0558-0x055B
-      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },			// 0x055C-0x055F
-      { 0, 0 }, { 'a', 0 }, { 'b', 0 }, { 'g', 0 },		// 0x0560-0x0563
-      { 'd', 0 }, { 'e', 0 }, { 'z', 0 }, { 0x0113, 0 },	// 0x0564-0x0567
-      { 0x00EB, 0 }, { 't', '\'' }, { 'z', 'h' }, { 'i', 0 },	// 0x0568-0x056B
-      { 'l', 0 }, { 'x', 0 }, { 0x00E7, 0 }, { 'k', 0 },	// 0x056C-0x056F
-      { 'h', 0 }, { 'j', 0 }, { 'g', 'h' }, { 0x010D, 0 },	// 0x0570-0x0573
-      { 'm', 0 }, { 'y', 0 }, { 'n', 0 }, { 's', 'h' },		// 0x0574-0x0577
-      { 'o', 0 }, { 'c', 'h' }, { 'p', 0 }, { 'j', 0 },		// 0x0578-0x057B
-      { 'r', 'r' }, { 's', 0 }, { 'v', 0 }, { 't', 0 },		// 0x057C-0x057F
-      { 'r', 0 }, { 'c', '\'' }, { 'w', 0 }, { 'p', '\'' },	// 0x0580-0x0583
-      { 'k', '\'' }, { 0x00F2, 0 }, { 'f', 0 }, { 'e', 'w' },	// 0x0584-0x0587
-   } ;
-
-// romanization information for Hebrew
-#define ISO259_TABLE_START 0x05B0
-static const ISO9Element ISO259_table[] =
-   {
-      { 0, 0 }, { 'e', 0 }, { 'a', 0 }, { 'o', 0 },		// 0x05B0-0x05B3
-      { 'i', 0 }, { 'e', 0 }, { 'e', 0 }, { 'a', 0 },		// 0x05B4-0x05B7
-      { 'a', 0 }, { 0, 0 }, { 0, 0 }, { 'u', 0 },		// 0x05B8-0x05BB
-      { 'u', 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },		// 0x05BC-0x05BF
-      { 0, 0 }, { 0, 0 }, { 'o', 0 }, { 0, 0 },		// 0x05C0-0x05C3
-      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },		// 0x05C4-0x05C7
-      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },		// 0x05C8-0x05CB
-      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },		// 0x05CC-0x05CF
+      { 'W', 0 }, { 'w', 0 }, { 0, 0 }, { 0, 0 },			// 0x051C-051F
+   // end of Cyrillic, add padding
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x0520-0523
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x0524-0527
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x0528-052B
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x052C-052F
+   // romanization table for Armenian
+      { 0, 0 }, { 'A', 0 }, { 'B', 0 }, { 'G', 0 },			// 0x0530-0x0533
+      { 'D', 0 }, { 'E', 0 }, { 'Z', 0 }, { 0x0112, 0 },		// 0x0534-0x0537
+      { 0x00CB, 0 }, { 'T', '\'' }, { 'Z', 'H' }, { 'I', 0 },		// 0x0538-0x053B
+      { 'L', 0 }, { 'X', 0 }, { 0x00C7, 0 }, { 'K', 0 },		// 0x053C-0x053F
+      { 'H', 0 }, { 'J', 0 }, { 'G', 'H' }, { 0x010C, 0 },		// 0x0540-0x0543
+      { 'M', 0 }, { 'Y', 0 }, { 'N', 0 }, { 0x0160, 0 },		// 0x0544-0x0547
+      { 'O', 0 }, { 0x010C, 0 }, { 'P', 0 }, { 0x01F0, 0 },		// 0x0548-0x054B
+      { 'R', 'R' }, { 'S', 0 }, { 'V', 0 }, { 'T', 0 },			// 0x054C-0x054F
+      { 'R', 0 }, { 'C', '\'' }, { 'W', 0 }, { 'P', '\'' },		// 0x0550-0x0553
+      { 'K', '\'' }, { 0x00D2, 0 }, { 'F', 0 }, { 'E', 'W' },		// 0x0554-0x0557
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x0558-0x055B
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x055C-0x055F
+      { 0, 0 }, { 'a', 0 }, { 'b', 0 }, { 'g', 0 },			// 0x0560-0x0563
+      { 'd', 0 }, { 'e', 0 }, { 'z', 0 }, { 0x0113, 0 },		// 0x0564-0x0567
+      { 0x00EB, 0 }, { 't', '\'' }, { 'z', 'h' }, { 'i', 0 },		// 0x0568-0x056B
+      { 'l', 0 }, { 'x', 0 }, { 0x00E7, 0 }, { 'k', 0 },		// 0x056C-0x056F
+      { 'h', 0 }, { 'j', 0 }, { 'g', 'h' }, { 0x010D, 0 },		// 0x0570-0x0573
+      { 'm', 0 }, { 'y', 0 }, { 'n', 0 }, { 's', 'h' },			// 0x0574-0x0577
+      { 'o', 0 }, { 'c', 'h' }, { 'p', 0 }, { 'j', 0 },			// 0x0578-0x057B
+      { 'r', 'r' }, { 's', 0 }, { 'v', 0 }, { 't', 0 },			// 0x057C-0x057F
+      { 'r', 0 }, { 'c', '\'' }, { 'w', 0 }, { 'p', '\'' },		// 0x0580-0x0583
+      { 'k', '\'' }, { 0x00F2, 0 }, { 'f', 0 }, { 'e', 'w' },		// 0x0584-0x0587
+   // end of Armenian, add padding
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x0588-0x058B
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x058C-0x058F
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x0590-0x0593
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x0594-0x0597
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x0598-0x059B
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x059C-0x059F
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x05A0-0x05A3
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x05A4-0x05A7
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x05A8-0x05AB
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x05AC-0x05AF
+   // romanization information for Hebrew
+      { 0, 0 }, { 'e', 0 }, { 'a', 0 }, { 'o', 0 },			// 0x05B0-0x05B3
+      { 'i', 0 }, { 'e', 0 }, { 'e', 0 }, { 'a', 0 },			// 0x05B4-0x05B7
+      { 'a', 0 }, { 0, 0 }, { 0, 0 }, { 'u', 0 },			// 0x05B8-0x05BB
+      { 'u', 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x05BC-0x05BF
+      { 0, 0 }, { 0, 0 }, { 'o', 0 }, { 0, 0 },				// 0x05C0-0x05C3
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x05C4-0x05C7
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x05C8-0x05CB
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x05CC-0x05CF
       { 0x02C0, 0 }, { 'b', 0 }, { 'g', 0 }, { 'd', 0 },		// 0x05D0-0x05D3
       { 'h', 0 }, { 'w', 0 }, { 'z', 0 }, { 0x1E25, 0 },		// 0x05D4-0x05D7
       { 0x1E6F, 0 }, { 'y', 0 }, { 'k', 0 }, { 'k', 0 },		// 0x05D8-0x05DB
-      { 'l', 0 }, { 'm', 0 }, { 'm', 0 }, { 'n', 0 },		// 0x05DC-0x05DF
+      { 'l', 0 }, { 'm', 0 }, { 'm', 0 }, { 'n', 0 },			// 0x05DC-0x05DF
       { 'n', 0 }, { 's', 0 }, { 0x02C1, 0 }, { 'p', 0 },		// 0x05E0-0x05E3
-      { 'p', 0 }, { 'c', 0 }, { 'c', 0 }, { 'q', 0 },		// 0x05E4-0x05E7
-      { 'r', 0 }, { 0x0161, 0 }, { 't', 0 }, { 0, 0 },		// 0x05E8-0x05EB
-      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },		// 0x05EC-0x05EF
-   } ;
-
-// romanization information for Arabic
-#define ISO233_TABLE_START 0x0600
-static const ISO9Element ISO233_table[] = 
-   {
-      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },		// 0x0600-0x0603
-      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },		// 0x0604-0x0607
-      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },		// 0x0608-0x060B
-      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },		// 0x060C-0x060F
-      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },		// 0x0610-0x0613
-      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },		// 0x0614-0x0617
-      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },		// 0x0618-0x061B
-      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },		// 0x061C-0x061F
+      { 'p', 0 }, { 'c', 0 }, { 'c', 0 }, { 'q', 0 },			// 0x05E4-0x05E7
+      { 'r', 0 }, { 0x0161, 0 }, { 't', 0 }, { 0, 0 },			// 0x05E8-0x05EB
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x05EC-0x05EF
+   // end of Hebrew, add padding
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x05F0-0x05F3
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x05F4-0x05F7
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x05F8-0x05FB
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x05FC-0x05FF
+   // romanization information for Arabic
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x0600-0x0603
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x0604-0x0607
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x0608-0x060B
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x060C-0x060F
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x0610-0x0613
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x0614-0x0617
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x0618-0x061B
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x061C-0x061F
       { 0, 0 }, { 0x02CC, 0 }, { '\'', 'A' }, { '>', 0 },		// 0x0620-0x0623
-      { '&', 0 }, { '<', 0 }, { '}', 0 }, { 'A', 0 },		// 0x0624-0x0627
+      { '&', 0 }, { '<', 0 }, { '}', 0 }, { 'A', 0 },			// 0x0624-0x0627
       { 'b', 0 }, { 0x1E97, 0 }, { 't', 0 }, { 0x1E6F, 0 },		// 0x0628-0x062B
-      { 0x01E7, 0 }, { 0x1E25, 0 }, { 0x1E96, 0 }, { 'd', 0 },	// 0x062C-0x062F
-      { 0x1E0F, 0 }, { 'r', 0 }, { 'z', 0 }, { 's', 0 },	// 0x0630-0x0633
-      { 0x0161, 0 }, { 0x1E63, 0 }, { 0x1E0D, 0 }, { 0x1E6D, 0 },		// 0x0634-0x0637
+      { 0x01E7, 0 }, { 0x1E25, 0 }, { 0x1E96, 0 }, { 'd', 0 },		// 0x062C-0x062F
+      { 0x1E0F, 0 }, { 'r', 0 }, { 'z', 0 }, { 's', 0 },		// 0x0630-0x0633
+      { 0x0161, 0 }, { 0x1E63, 0 }, { 0x1E0D, 0 }, { 0x1E6D, 0 },	// 0x0634-0x0637
       { 0x1E93, 0 }, { 0x02BF, 0 }, { 0x0121, 0 }, { 0, 0 },		// 0x0638-0x063B
-      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },		// 0x063C-0x063F
-      { '_', 0 }, { 'f', 0 }, { 'q', 0 }, { 'k', 0 },		// 0x0640-0x0643
-      { 'l', 0 }, { 'm', 0 }, { 'n', 0 }, { 'h', 0 },		// 0x0644-0x0647
+      { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },				// 0x063C-0x063F
+      { '_', 0 }, { 'f', 0 }, { 'q', 0 }, { 'k', 0 },			// 0x0640-0x0643
+      { 'l', 0 }, { 'm', 0 }, { 'n', 0 }, { 'h', 0 },			// 0x0644-0x0647
       { 'w', 0 }, { 0x1EF3, 0 }, { 'y', 0 }, { 'F', 0 },		// 0x0648-0x064B
-      { 'N', 0 }, { 'K', 0 }, { 'a', 0 }, { 'u', 0 },		// 0x064C-0x064F
-      { 'i', 0 }, { '~', 0 }, { 'o', 0 }, { '^', 0 },		// 0x0650-0x0653
-      { 0x02C8, 0 }, { '\'', 0 }, { 0, 0 }, { 0, 0 },		// 0x0654-0x0657
+      { 'N', 0 }, { 'K', 0 }, { 'a', 0 }, { 'u', 0 },			// 0x064C-0x064F
+      { 'i', 0 }, { '~', 0 }, { 'o', 0 }, { '^', 0 },			// 0x0650-0x0653
+      { 0x02C8, 0 }, { '\'', 0 }, { 0, 0 }, { 0, 0 },			// 0x0654-0x0657
       { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },		// 0x0658-0x065B
       { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },		// 0x065C-0x065F
       { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },		// 0x0660-0x0663
@@ -255,7 +276,6 @@ static const ISO9Element ISO233_table[] =
    } ;
 
 // romanization table for Devanagari
-#define ISO15919_TABLE_START 0x0900
 static const ISO9Element ISO15919_table[] = 
    {
       { 0, 0 }, { 'm', 0x0310 }, { 0x1E41, 0 }, { 0x1E25, 0 },		// 0x0900-0x0903
@@ -293,7 +313,6 @@ static const ISO9Element ISO15919_table[] =
    } ;
 
 // romanization table for Thai
-#define ISO11940_TABLE_START 0x0E00
 static const ISO9Element ISO11940_table[] = 
    {
       { 0, 0 }, { 'k', 0 }, { 'k', 'h' }, { 0x1E33, 'h' },	// 0x0E00-0x0E03
@@ -323,7 +342,6 @@ static const ISO9Element ISO11940_table[] =
    } ;
 
 // romanization information for Georgian
-#define ISO9984_TABLE_START 0x10D0
 static const ISO9Element ISO9984_table[] = 
    {
       { 'a', 0 }, { 'b', 0 }, { 'g', 0 }, { 'd', 0 },		// 0x10D0-0x10D3
@@ -340,7 +358,6 @@ static const ISO9Element ISO9984_table[] =
 
 // romanization information for extended Greek characters
 //    (treated like ISO 843 after ignoring diacritics)
-#define ISO843EXT_TABLE_START 0x1F00
 static const ISO9Element ISO843ext_table[] = 
    {
       { 'a', 0 }, { 'a', 0 }, { 'a', 0 }, { 'a', 0 },		// 0x1F00-0x1F03
@@ -413,34 +430,10 @@ static const ISO9Element ISO843ext_table[] =
 /*	Helper Functions						*/
 /************************************************************************/
 
-inline bool in_ISO9_table(wchar_t codepoint)
-{
-   return ((unsigned)codepoint >= ISO9_TABLE_START && 
-	   (unsigned)codepoint < ISO9_TABLE_START + lengthof(ISO9_table)) ;
-}
-
-//----------------------------------------------------------------------
-
-inline bool in_ISO233_table(wchar_t codepoint)
-{
-   return ((unsigned)codepoint >= ISO233_TABLE_START && 
-	   (unsigned)codepoint < ISO233_TABLE_START + lengthof(ISO233_table)) ;
-}
-
-//----------------------------------------------------------------------
-
-inline bool in_ISO259_table(wchar_t codepoint)
-{
-   return ((unsigned)codepoint >= ISO259_TABLE_START && 
-	   (unsigned)codepoint < ISO259_TABLE_START + lengthof(ISO259_table)) ;
-}
-
-//----------------------------------------------------------------------
-
-inline bool in_ISO843_table(wchar_t codepoint)
+inline bool in_primary_table(wchar_t codepoint)
 {
    return ((unsigned)codepoint >= ISO843_TABLE_START && 
-	   (unsigned)codepoint < ISO843_TABLE_START + lengthof(ISO843_table)) ;
+	   (unsigned)codepoint < ISO843_TABLE_START + lengthof(primary_table)) ;
 }
 
 //----------------------------------------------------------------------
@@ -457,14 +450,6 @@ inline bool in_ISO9984_table(wchar_t codepoint)
 {
    return ((unsigned)codepoint >= ISO9984_TABLE_START && 
 	   (unsigned)codepoint < ISO9984_TABLE_START + lengthof(ISO9984_table)) ;
-}
-
-//----------------------------------------------------------------------
-
-inline bool in_ISO9985_table(wchar_t codepoint)
-{
-   return ((unsigned)codepoint >= ISO9985_TABLE_START && 
-	   (unsigned)codepoint < ISO9985_TABLE_START + lengthof(ISO9985_table)) ;
 }
 
 //----------------------------------------------------------------------
@@ -549,24 +534,9 @@ unsigned Romanizer::utf8codepoint(const char *buf, wchar_t &codepoint)
 
 bool Romanizer::romanizable(wchar_t codepoint)
 {
-   if (in_ISO9_table(codepoint))
+   if (in_primary_table(codepoint))
       {
-      if (ISO9_table[codepoint - ISO9_TABLE_START].codepoint1)
-	 return true ;
-      }
-   else if (in_ISO233_table(codepoint))
-      {
-      if (ISO233_table[codepoint - ISO233_TABLE_START].codepoint1)
-	 return true ;
-      }
-   else if (in_ISO259_table(codepoint))
-      {
-      if (ISO259_table[codepoint - ISO259_TABLE_START].codepoint1)
-	 return true ;
-      }
-   else if (in_ISO843_table(codepoint))
-      {
-      if (ISO843_table[codepoint - ISO843_TABLE_START].codepoint1)
+      if (primary_table[codepoint - ISO843_TABLE_START].codepoint1)
 	 return true ;
       }
    else if (in_ISO843ext_table(codepoint))
@@ -577,11 +547,6 @@ bool Romanizer::romanizable(wchar_t codepoint)
    else if (in_ISO9984_table(codepoint))
       {
       if (ISO9984_table[codepoint - ISO9984_TABLE_START].codepoint1)
-	 return true ;
-      }
-   else if (in_ISO9985_table(codepoint))
-      {
-      if (ISO9985_table[codepoint - ISO9985_TABLE_START].codepoint1)
 	 return true ;
       }
    else if (in_ISO11940_table(codepoint))
@@ -626,24 +591,9 @@ int Romanizer::romanize(wchar_t codepoint, char *buffer)
 unsigned Romanizer::romanize(wchar_t codepoint, wchar_t &romanized1, wchar_t &romanized2)
 {
    const ISO9Element *table = nullptr ;
-   if (in_ISO9_table(codepoint))
+   if (in_primary_table(codepoint))
       {
-      table = ISO9_table ;
-      codepoint -= ISO9_TABLE_START ;
-      }
-   else if (in_ISO233_table(codepoint))
-      {
-      table = ISO233_table ;
-      codepoint -= ISO233_TABLE_START ;
-      }
-   else if (in_ISO259_table(codepoint))
-      {
-      table = ISO259_table ;
-      codepoint -= ISO259_TABLE_START ;
-      }
-   else if (in_ISO843_table(codepoint))
-      {
-      table = ISO843_table ;
+      table = primary_table ;
       codepoint -= ISO843_TABLE_START ;
       }
    else if (in_ISO843ext_table(codepoint))
@@ -655,11 +605,6 @@ unsigned Romanizer::romanize(wchar_t codepoint, wchar_t &romanized1, wchar_t &ro
       {
       table = ISO9984_table ;
       codepoint -= ISO9984_TABLE_START ;
-      }
-   else if (in_ISO9985_table(codepoint))
-      {
-      table = ISO9985_table ;
-      codepoint -= ISO9985_TABLE_START ;
       }
    else if (in_ISO11940_table(codepoint))
       {
