@@ -103,11 +103,11 @@ ifndef BITS
 BITS=64
 endif
 
-ifeq ($(THREADS),1)
-  PTHREAD=-pthread -DFrMULTITHREAD 
-#-fopenmp
+ifeq ($(NOTHREADS),1)
+  PTHREAD=-DFrSINGLE_THREADED
 else
-  PTHREAD=
+  PTHREAD=-pthread
+#-fopenmp
 endif
 
 ifeq ($(STATIC),1)
