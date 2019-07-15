@@ -218,7 +218,7 @@ class LangIDPackedMultiTrie // : public Fr::PackedMultiTrie<...>
 
       // accessors
       bool good() const { return size() > 0 && m_freq.size() ; }
-      bool terminalNode(const PackedTrieNode *n) const { return !m_nodes.inBuffer(n) ; }
+      static bool terminalNode(uint32_t nodeindex) { return (nodeindex & TERMINAL_MASK) != 0 ; }
       uint32_t size() const { return m_nodes.size() ; }
       uint32_t numFrequencies() const { return m_freq.size(); }
       unsigned longestKey() const { return m_maxkeylen ; }

@@ -605,7 +605,7 @@ bool LangIDPackedMultiTrie::enumerateChildren(uint32_t nodeindex,
    auto n = node(nodeindex) ;
    if (n->leaf() && !fn(n,keybuf,curr_keylength_bits/8,user_data))
       return false ;
-   else if (terminalNode(n))
+   else if (terminalNode(nodeindex))
       return true ;
    if (curr_keylength_bits < max_keylength_bits)
       {
