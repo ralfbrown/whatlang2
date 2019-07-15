@@ -85,10 +85,12 @@ class MultiTrieFrequency
       void scaleFrequency(uint64_t total_count, uint32_t ID) ;
 
       // I/O
-      static MultiTrieFrequency *read(Fr::CFile& f) ;
       static bool readAll(Fr::CFile& f) ;
       bool write(Fr::CFile& f) const ;
       static bool writeAll(Fr::CFile& f) ;
+   protected:
+      void newFrequency(uint32_t ID, uint32_t freq, bool stopgram) ;
+
    private:
       static Fr::ItemPool<MultiTrieFrequency> s_freq_records ;
       uint32_t m_next ;

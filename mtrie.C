@@ -5,7 +5,7 @@
 /*									*/
 /*  File: mtrie.C - bit-slice-based Word-frequency multi-trie		*/
 /*  Version:  1.30				       			*/
-/*  LastEdit: 2019-07-12						*/
+/*  LastEdit: 2019-07-14						*/
 /*									*/
 /*  (c) Copyright 2011,2012,2015,2019 Carnegie Mellon University	*/
 /*      This program is free software; you can redistribute it and/or   */
@@ -108,8 +108,22 @@ uint32_t MultiTrieFrequency::frequency(uint32_t ID) const
 
 //----------------------------------------------------------------------
 
-void MultiTrieFrequency::setFrequency(uint32_t ID, uint32_t freq,
-				      bool stopgram)
+void MultiTrieFrequency::newFrequency(uint32_t ID, uint32_t freq, bool stopgram)
+{
+   // add a record with the new language ID and frequency
+   // because the allocation might reallocate the array containing
+   //   'this', we need to get our index and use it to re-establish
+   //   the correct object address after the allocation
+   uint32_t index = (this - s_freq_records.begin()) ;
+   MultiTrieFrequency *f = allocate(freq,ID,stopgram) ;
+   MultiTrieFrequency *prev = getAddress(index) ;
+   prev->setNext(f) ;
+
+}
+
+//----------------------------------------------------------------------
+
+void MultiTrieFrequency::setFrequency(uint32_t ID, uint32_t freq, bool stopgram)
 {
    if (ID == languageID())
       {
@@ -123,14 +137,7 @@ void MultiTrieFrequency::setFrequency(uint32_t ID, uint32_t freq,
       }
    else
       {
-      // add a record with the new language ID and frequency
-      // because the allocation might reallocate the array containing
-      //   'this', we need to get our index and use it to re-establish
-      //   the correct object address after the allocation
-      uint32_t index = (this - s_freq_records.begin()) ;
-      MultiTrieFrequency *f = allocate(freq,ID,stopgram) ;
-      MultiTrieFrequency *prev = getAddress(index) ;
-      prev->setNext(f) ;
+      newFrequency(ID,freq,stopgram) ;
       }
    return ;
 }
@@ -152,8 +159,7 @@ void MultiTrieFrequency::incrFrequency(uint32_t ID, uint32_t incr)
    else
       {
       // add a record with the new ID
-      auto f = allocate(incr,ID) ;
-      setNext(f) ;
+      newFrequency(ID,incr,false) ;
       }
    return ;
 }
@@ -168,22 +174,6 @@ void MultiTrieFrequency::scaleFrequency(uint64_t total_count,
    else if (next())
       next()->scaleFrequency(total_count,id) ;
    return ;
-}
-
-//----------------------------------------------------------------------
-
-MultiTrieFrequency *MultiTrieFrequency::read(CFile& f)
-{
-   if (f)
-      {
-      char buffer[sizeof(MultiTrieFrequency)] ;
-      if (f.read(buffer,sizeof(buffer),sizeof(char)) == sizeof(buffer))
-	 {
-	 MultiTrieFrequency *freq = (MultiTrieFrequency*)buffer ;
-	 return new MultiTrieFrequency(*freq) ;
-	 }
-      }
-   return nullptr ;
 }
 
 //----------------------------------------------------------------------
