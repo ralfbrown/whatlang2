@@ -1,11 +1,11 @@
-/************************************************************************/
+/****************************** -*- C++ -*- *****************************/
 /*                                                                      */
 /*	LangIdent: long n-gram-based language identification		*/
 /*	by Ralf Brown / Carnegie Mellon University			*/
 /*									*/
 /*  File:     smooth.C  inter-string score smoothing			*/
 /*  Version:  1.30							*/
-/*  LastEdit: 2019-07-07 						*/
+/*  LastEdit: 2019-07-15 						*/
 /*                                                                      */
 /*  (c) Copyright 2011,2012,2013,2019 Carnegie Mellon University	*/
 /*      This program is free software; you can redistribute it and/or   */
@@ -27,17 +27,6 @@
 #include "langid.h"
 
 using namespace Fr ;
-
-/************************************************************************/
-/************************************************************************/
-
-// how much above the minimal score must a language score be to be considered
-//   a reliable identification (and not get a question mark)?
-#define UNSURE_CUTOFF (120 * LANGID_ZERO_SCORE)
-
-// set the multiplicative factor by which to decay the prior scores for each
-//   new string
-#define SMOOTHING_DECAY_FACTOR 0.25
 
 /************************************************************************/
 /*	Global variables						*/

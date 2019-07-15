@@ -1,13 +1,13 @@
-/************************************************************************/
+/****************************** -*- C++ -*- *****************************/
 /*                                                                      */
 /*	LangIdent: long n-gram-based language identification		*/
 /*	by Ralf Brown / Carnegie Mellon University			*/
 /*									*/
 /*  File:     romanize.C						*/
-/*  Version:  1.12							*/
-/*  LastEdit: 08jan2012							*/
+/*  Version:  1.30							*/
+/*  LastEdit: 2019-07-15						*/
 /*                                                                      */
-/*  (c) Copyright 2011,2012 Ralf Brown/Carnegie Mellon University	*/
+/*  (c) Copyright 2011,2012,2019 Ralf Brown/Carnegie Mellon University	*/
 /*      This program is free software; you can redistribute it and/or   */
 /*      modify it under the terms of the GNU General Public License as  */
 /*      published by the Free Software Foundation, version 3.           */

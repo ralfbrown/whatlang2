@@ -1,11 +1,11 @@
-/************************************************************************/
+/****************************** -*- C++ -*- *****************************/
 /*                                                                      */
 /*	LA-Strings: language-aware text-strings extraction		*/
 /*	by Ralf Brown / Carnegie Mellon University			*/
 /*									*/
 /*  File:     langid.C							*/
 /*  Version:  1.30							*/
-/*  LastEdit: 2019-07-14						*/
+/*  LastEdit: 2019-07-15						*/
 /*                                                                      */
 /*  (c) Copyright 2010,2011,2012,2013,2014,2015,2019			*/
 /*		 Ralf Brown/Carnegie Mellon University			*/

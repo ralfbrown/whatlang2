@@ -1,4 +1,4 @@
-/************************************************************************/
+/****************************** -*- C++ -*- *****************************/
 /*                                                                      */
 /*	LangIdent: long n-gram-based language identification		*/
 /*	by Ralf Brown / Carnegie Mellon University			*/
@@ -30,7 +30,6 @@
 #include "langid.h"
 #include "framepac/config.h"
 #include "framepac/file.h"
-//#include "framepac/smartptr.h"
 #include "framepac/texttransforms.h"
 #include "framepac/unicode.h"
 

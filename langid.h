@@ -93,10 +93,6 @@ using namespace std ;
 //   even a guess
 #define GUESS_CUTOFF (20 * LANGID_ZERO_SCORE)
 
-// how much above the minimal score must a language score be to be considered
-//   a reliable identification (and not get a question mark)?
-#define UNSURE_CUTOFF (120 * LANGID_ZERO_SCORE)
-
 // at what point are we so sure that we don't flag the identification even
 //   if it is highly ambiguous?
 #define SURE_THRESHOLD (800 * LANGID_ZERO_SCORE)
@@ -386,7 +382,14 @@ class WeightedLanguageScores : public LanguageScores
 class LanguageIdentifier
    {
    public:
-      static const uint32_t unknown_lang = (uint32_t)~0 ;
+      static constexpr uint32_t unknown_lang = (uint32_t)~0 ;
+      // how much above the minimal score must a language score be to
+      //   be considered a reliable identification (and not get a
+      //   question mark)?
+      static constexpr double UNSURE_CUTOFF = (120 * LANGID_ZERO_SCORE) ;
+      // set the multiplicative factor by which to decay the prior
+      //   scores for each new string
+      static constexpr double SMOOTHING_DECAY_FACTOR = 0.25 ;
    public:
       LanguageIdentifier(const char *language_data_file,
 			 bool verbose = false) ;
