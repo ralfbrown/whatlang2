@@ -1,11 +1,11 @@
-/************************************************************************/
+/****************************** -*- C++ -*- *****************************/
 /*                                                                      */
 /*	LangIdent: long n-gram-based language identification		*/
 /*	by Ralf Brown / Carnegie Mellon University			*/
 /*									*/
 /*  File:     subsample.C  utility program to sample lines of text	*/
 /*  Version:  1.30							*/
-/*  LastEdit: 2019-07-12 						*/
+/*  LastEdit: 2019-07-15 						*/
 /*                                                                      */
 /*  (c) Copyright 2012,2013,2014,2019 Carnegie Mellon University	*/
 /*      This program is free software; you can redistribute it and/or   */
@@ -24,11 +24,11 @@
 /************************************************************************/
 
 #include <algorithm>
-#include <iostream>
-#include <stdio.h>
+#include <cstdlib>
+#include <cstdio>
 #include <iostream>
 #include <memory.h>
-#include <stdlib.h>
+#include "framepac/file.h"
 #include "framepac/random.h"
 
 using namespace std ;
@@ -139,7 +139,7 @@ static void usage(const char *argv0)
 
 //----------------------------------------------------------------------
 
-static void take_uniform_bytes(StringList *lines, size_t sample_size, FILE *rejectfp)
+static void take_uniform_bytes(StringList* lines, size_t sample_size, CFile& rejectfp)
 {
    if (!lines)
       return ;
@@ -163,7 +163,7 @@ static void take_uniform_bytes(StringList *lines, size_t sample_size, FILE *reje
 	 }
       else if (rejectfp)
 	 {
-	 fputs(line->string(),rejectfp) ;
+	 rejectfp.puts(line->string()) ;
 	 }
       total_bytes += len ;
       }
@@ -172,8 +172,7 @@ static void take_uniform_bytes(StringList *lines, size_t sample_size, FILE *reje
 
 //----------------------------------------------------------------------
 
-static void take_uniform_sample(StringList *lines, size_t sample_size,
-				FILE *rejectfp)
+static void take_uniform_sample(StringList* lines, size_t sample_size, CFile& rejectfp)
 {
    if (!lines)
       return ;
@@ -191,7 +190,7 @@ static void take_uniform_sample(StringList *lines, size_t sample_size,
 	 }
       else if (rejectfp)
 	 {
-	 fputs(line->string(),rejectfp) ;
+	 rejectfp.puts(line->string()) ;
 	 }
       count += increment ;
       }
@@ -200,7 +199,7 @@ static void take_uniform_sample(StringList *lines, size_t sample_size,
 
 //----------------------------------------------------------------------
 
-static void take_random_sample(StringList *lines, size_t sample_size, FILE *rejectfp)
+static void take_random_sample(StringList* lines, size_t sample_size, CFile& rejectfp)
 {
    size_t numlines = lines->listlength() ;
    if (sample_size >= numlines)
@@ -222,7 +221,7 @@ static void take_random_sample(StringList *lines, size_t sample_size, FILE *reje
 	 if (selected[i])
 	    fputs(line->string(),stdout) ;
 	 else if (rejectfp)
-	    fputs(line->string(),rejectfp) ;
+	    rejectfp.puts(line->string()) ;
 	 }
       }
    return ;
@@ -302,11 +301,7 @@ int main(int argc, char **argv)
       }
    StringList *lines = nullptr ;
    StringList **lastline = &lines ;
-   FILE *rejectfp = nullptr ;
-   if (reject_file && *reject_file)
-      {
-      rejectfp = fopen(reject_file,"w") ;
-      }
+   COutputFile rejectfp(reject_file) ;
    size_t numlines = 0 ;
    while (!feof(stdin))
       {
@@ -320,14 +315,14 @@ int main(int argc, char **argv)
 	 if (len >= min_length && len <= max_length)
 	    fputs(line,stdout) ;
 	 else if (rejectfp)
-	    fputs(line,rejectfp) ;
+	    rejectfp.puts(line) ;
 	 }
       else if (use_interval)
 	 {
 	 if (numlines % sample_size == 0)
 	    fputs(line,stdout) ;
 	 else if (rejectfp)
-	    fputs(line,rejectfp) ;
+	    rejectfp.puts(line) ;
 	 }
       else
 	 {
@@ -348,7 +343,5 @@ int main(int argc, char **argv)
       {
       take_random_sample(lines,sample_size,rejectfp) ;
       }
-   if (rejectfp)
-      fclose(rejectfp) ;
    return 0 ;
 }
