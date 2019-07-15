@@ -87,9 +87,9 @@ class NybbleTrieNode
       bool write(Fr::CFile& f) const ;
    protected:
       uint32_t	m_children[1<<BITS_PER_LEVEL] ;
-      uint32_t  m_frequency ;
-      bool	m_leaf ;
-      bool	m_stopgram ;
+      uint32_t  m_frequency { 0 } ;
+      bool	m_leaf { false } ;
+      bool	m_stopgram { false } ;
    } ;
 
 //----------------------------------------------------------------------

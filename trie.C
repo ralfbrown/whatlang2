@@ -166,9 +166,6 @@ double unscale_frequency(uint32_t freq, double power)
 NybbleTrieNode::NybbleTrieNode()
 {
    std::fill_n(m_children,lengthof(m_children),NybbleTrie::NULL_INDEX) ;
-   m_frequency = 0 ;
-   m_leaf = false ;
-   m_stopgram = false ;
    return ;
 }
 
@@ -186,8 +183,7 @@ bool NybbleTrieNode::hasChildren() const
 
 //----------------------------------------------------------------------
 
-bool NybbleTrieNode::hasChildren(const NybbleTrie *trie,
-				 uint32_t min_freq) const
+bool NybbleTrieNode::hasChildren(const NybbleTrie *trie, uint32_t min_freq) const
 {
    for (size_t i = 0 ; i < lengthof(m_children) ; i++)
       {
