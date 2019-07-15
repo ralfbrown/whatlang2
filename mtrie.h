@@ -41,23 +41,20 @@ using namespace std ;
 /*	Manifest Constants						*/
 /************************************************************************/
 
-#define LID_LANGID_MASK   0x0FFFFFFF
-#define LID_STOPGRAM_MASK 0x8000000
-
-/************************************************************************/
-/************************************************************************/
-
 class MultiTrieFrequency
    {
    public:
       static constexpr uint32_t INVALID_FREQ = (uint32_t)~0 ;
+      static constexpr uint32_t LANGID_MASK =   0x7FFFFFFF ;
+      static constexpr uint32_t STOPGRAM_MASK = 0x80000000 ;
+
    public:
       MultiTrieFrequency() {} // only for internal use by readAll()
       MultiTrieFrequency(uint32_t freq, uint32_t langID,
 			 bool stopgram = false,
 			 MultiTrieFrequency *nxt = nullptr)
 	 { m_frequency = freq ;
-	   m_langID = (langID & LID_LANGID_MASK) | (stopgram * LID_STOPGRAM_MASK) ;
+	   m_langID = (langID & LANGID_MASK) | (stopgram * STOPGRAM_MASK) ;
 	   setNext(nxt) ; }
       ~MultiTrieFrequency() ;
       static MultiTrieFrequency *allocate(uint32_t freq = 0,
@@ -67,8 +64,8 @@ class MultiTrieFrequency
       // accessors
       uint32_t frequency() const { return m_frequency ; }
       uint32_t frequency(uint32_t langID) const ;
-      uint32_t languageID() const { return m_langID & LID_LANGID_MASK ; }
-      bool isStopgram() const { return (m_langID & LID_STOPGRAM_MASK) != 0 ; }
+      uint32_t languageID() const { return m_langID & LANGID_MASK ; }
+      bool isStopgram() const { return (m_langID & STOPGRAM_MASK) != 0 ; }
       static MultiTrieFrequency *getAddress(uint32_t index) { return s_freq_records.item(index) ; }
       static uint32_t getIndex(MultiTrieFrequency *f)
          { return f >= s_freq_records.begin() ? (uint32_t)(f - s_freq_records.begin()) : INVALID_FREQ ; }
