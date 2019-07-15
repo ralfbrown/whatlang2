@@ -46,67 +46,64 @@ using namespace std ;
 // how do we distinguish non-terminal from terminal nodes?
 #define PTRIE_TERMINAL_MASK 0x80000000
 
-// define the bitfields for PackedTrieFreq
-#define PACKED_TRIE_LASTENTRY     0x00002000
-#define PACKED_TRIE_STOPGRAM	  0x00004000
-#define PACKED_TRIE_LANGID_MASK   0x00001FFF
-#define PACKED_TRIE_FREQ_EXPONENT 0x00018000
-#define PACKED_TRIE_FREQ_EXP_SHIFT 15
-#define PACKED_TRIE_FREQ_MANTISSA 0xFFFE0000
-#define PACKED_TRIE_FREQ_MAN_SHIFT 17
-#define PACKED_TRIE_MANTISSA_LSB  0x00020000
-#define PTRIE_EXPONENT_SCALE 2  // each count in exp is two bits of shift
-#define PACKED_TRIE_FREQ_HIBITS   0xC0000000  // top two bits
-
-#define PACKED_TRIE_VALUE (PACKED_TRIE_FREQ_EXPONENT | PACKED_TRIE_FREQ_MANTISSA | PACKED_TRIE_STOPGRAM)
-#define PACKED_TRIE_VALUE_SHIFT (PACKED_TRIE_FREQ_EXP_SHIFT - 1) // incl sg-bit
-#define PACKED_TRIE_NUM_VALUES (1UL << (32 - PACKED_TRIE_VALUE_SHIFT))
-
 /************************************************************************/
 /************************************************************************/
 
 class PackedTrieFreq
    {
    public:
+      // define the bitfields used
+      static constexpr uint32_t TRIE_LASTENTRY =      0x00002000 ;
+      static constexpr uint32_t TRIE_STOPGRAM =       0x00004000 ;
+      static constexpr uint32_t TRIE_LANGID_MASK =    0x00001FFF ;
+      static constexpr uint32_t TRIE_FREQ_EXPONENT =  0x00018000 ;
+      static constexpr uint32_t TRIE_FREQ_EXP_SHIFT = 15 ;
+      static constexpr uint32_t TRIE_FREQ_MANTISSA =  0xFFFE0000 ;
+      static constexpr uint32_t TRIE_FREQ_MAN_SHIFT = 17 ;
+      static constexpr uint32_t TRIE_MANTISSA_LSB =   0x00020000 ;
+      static constexpr uint32_t TRIE_FREQ_HIBITS =    0xC0000000 ; // top two bits
+      static constexpr uint32_t EXPONENT_SCALE  = 2 ;  // each count in exp is two bits of shift
+
+      // composite bitfields
+      static constexpr uint32_t PACKED_TRIE_VALUE = (TRIE_FREQ_EXPONENT | TRIE_FREQ_MANTISSA | TRIE_STOPGRAM) ;
+      static constexpr uint32_t TRIE_VALUE_SHIFT = (TRIE_FREQ_EXP_SHIFT - 1) ; // incl sign-bit
+      static constexpr uint32_t TRIE_NUM_VALUES = (1UL << (32 - TRIE_VALUE_SHIFT)) ;
+
+   public:
       void *operator new(size_t, void *where) { return where ; }
-      PackedTrieFreq()
-	 { m_freqinfo.store(PACKED_TRIE_LASTENTRY) ; }
+      PackedTrieFreq() { m_freqinfo.store(TRIE_LASTENTRY) ; }
       PackedTrieFreq(uint32_t freq, uint32_t langID, bool last = true,
 		     bool is_stop = false) ;
       ~PackedTrieFreq() ;
 
       // accessors
+      static constexpr unsigned maxExponent()
+	 { return EXPONENT_SCALE * (TRIE_FREQ_EXPONENT >> TRIE_FREQ_EXP_SHIFT) ; }
+      static constexpr double minWeight()
+	 { return TRIE_FREQ_MANTISSA >> maxExponent() ; }
+      static constexpr uint32_t maxLanguages() { return TRIE_LANGID_MASK+1 ; }
       static void quantize(uint32_t value, uint32_t &mantissa,
 			   uint32_t &exponent) ;
       static uint32_t mantissa(uint32_t scaled)
 	 {
-	 return (scaled & PACKED_TRIE_FREQ_MANTISSA) >> PACKED_TRIE_FREQ_MAN_SHIFT ;
+	 return (scaled & TRIE_FREQ_MANTISSA) >> TRIE_FREQ_MAN_SHIFT ;
 	 }
       uint32_t mantissa() const { return mantissa(m_freqinfo.load()) ; }
       static uint32_t exponent(uint32_t scaled)
 	 {
-	 return (scaled & PACKED_TRIE_FREQ_EXPONENT) >> PACKED_TRIE_FREQ_EXP_SHIFT ;
+	 return (scaled & TRIE_FREQ_EXPONENT) >> TRIE_FREQ_EXP_SHIFT ;
 	 }
       uint32_t exponent() const { return exponent(m_freqinfo.load()) ; }
       static uint32_t scaledScore(uint32_t data)
 	 {
-	 uint32_t mant = data & PACKED_TRIE_FREQ_MANTISSA ;
-	 uint32_t expon = data & PACKED_TRIE_FREQ_EXPONENT ;
-	 expon >>= (PACKED_TRIE_FREQ_EXP_SHIFT - 1) ;
+	 uint32_t mant = data & TRIE_FREQ_MANTISSA ;
+	 uint32_t expon = (data & TRIE_FREQ_EXPONENT) >> (TRIE_FREQ_EXP_SHIFT - 1) ;
 	 return (mant >> expon) ;
 	 }
-      uint32_t scaledScore() const
-	 {
-	 uint32_t data =m_freqinfo.load() ;
-	 uint32_t mant = data & PACKED_TRIE_FREQ_MANTISSA ;
-	 uint32_t expon = data & PACKED_TRIE_FREQ_EXPONENT ;
-	 expon >>= (PACKED_TRIE_FREQ_EXP_SHIFT - 1) ;
-	 return (mant >> expon) ;
-	 }
+      uint32_t scaledScore() const { return scaledScore(m_freqinfo.load()) ; }
       double mappedScore() const
 	 {
-	 uint32_t data = m_freqinfo.load() & PACKED_TRIE_VALUE ;
-	 data >>= PACKED_TRIE_VALUE_SHIFT ;
+	 uint32_t data = (m_freqinfo.load() & PACKED_TRIE_VALUE) >> TRIE_VALUE_SHIFT ;
 	 return s_value_map[data] ;
 	 }
 
@@ -116,11 +113,11 @@ class PackedTrieFreq
       double percentage() const
 	 { return (scaledScore() / (1.0 * TRIE_SCALE_FACTOR)) ; }
       uint32_t languageID() const
-         { return m_freqinfo.load() & PACKED_TRIE_LANGID_MASK ; }
+         { return m_freqinfo.load() & TRIE_LANGID_MASK ; }
       bool isLast() const
-	 { return (m_freqinfo.load() & PACKED_TRIE_LASTENTRY) != 0 ; }
+	 { return (m_freqinfo.load() & TRIE_LASTENTRY) != 0 ; }
       bool isStopgram() const
-	 { return (m_freqinfo.load() & PACKED_TRIE_STOPGRAM) != 0 ; }
+	 { return (m_freqinfo.load() & TRIE_STOPGRAM) != 0 ; }
       const PackedTrieFreq *next() const { return isLast() ? nullptr : (this + 1) ; }
       static bool dataMappingInitialized() { return s_value_map_initialized ; }
 
@@ -131,7 +128,7 @@ class PackedTrieFreq
 
    private:
       Fr::UInt32 m_freqinfo ;
-      static double s_value_map[PACKED_TRIE_NUM_VALUES] ;
+      static double s_value_map[TRIE_NUM_VALUES] ;
       static bool s_value_map_initialized ;
    } ;
 

@@ -477,8 +477,7 @@ static bool collect_language_ngrams_packed(const PackedTrieNode *node,
       // the following is the smallest value which can be represented by
       //   the bitfields in PackedTrieFreq; anything less than that will
       //   round to zero unless smoothed
-      unsigned max_exp = PTRIE_EXPONENT_SCALE * (PACKED_TRIE_FREQ_EXPONENT >> PACKED_TRIE_FREQ_EXP_SHIFT) ;
-      double minweight = PACKED_TRIE_FREQ_MANTISSA >> max_exp ;
+      double minweight = PackedTrieFreq::minWeight() ;
       // since extra stopgrams have a cost both in storage and runtime,
       //   we want to omit any that have little possible impact on the
       //   overall score, so bump up the above absolute minimum threshold

@@ -1398,20 +1398,20 @@ LanguageIdentifier::LanguageIdentifier(const char* language_data_file, bool run_
 
 void LanguageIdentifier::setAlignments()
 {
-   m_alignments = UInt8Ptr(PACKED_TRIE_LANGID_MASK + 1) ;
+   m_alignments = UInt8Ptr(PackedTrieFreq::maxLanguages()) ;
    for (size_t i = 0 ; i < numLanguages() ; i++)
       {
       m_alignments[i] = languageInfo(i)->alignment() ;
       }
-   for (size_t i = numLanguages() ; i <= PACKED_TRIE_LANGID_MASK ; i++)
+   for (size_t i = numLanguages() ; i < PackedTrieFreq::maxLanguages() ; i++)
       {
       m_alignments[i] = (uint8_t)~0 ;
       }
    if (!m_unaligned)
       {
-      m_unaligned = UInt8Ptr(PACKED_TRIE_LANGID_MASK + 1) ;
+      m_unaligned = UInt8Ptr(PackedTrieFreq::maxLanguages()) ;
       std::fill_n(m_unaligned.begin(),numLanguages(),1) ;
-      for (size_t i = numLanguages() ; i <= PACKED_TRIE_LANGID_MASK ; i++)
+      for (size_t i = numLanguages() ; i < PackedTrieFreq::maxLanguages() ; i++)
 	 {
 	 m_unaligned[i] = (uint8_t)~0 ;
 	 }

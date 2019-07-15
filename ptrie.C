@@ -58,7 +58,7 @@ using namespace Fr ;
 /*	Global variables						*/
 /************************************************************************/
 
-double PackedTrieFreq::s_value_map[PACKED_TRIE_NUM_VALUES] ;
+double PackedTrieFreq::s_value_map[PackedTrieFreq::TRIE_NUM_VALUES] ;
 bool PackedTrieFreq::s_value_map_initialized = false ;
 
 //----------------------------------------------------------------------
@@ -80,13 +80,12 @@ void write_escaped_key(CFile& f, const uint8_t* key, unsigned keylen) ;
 PackedTrieFreq::PackedTrieFreq(uint32_t freq, uint32_t langID, bool last,
 			       bool is_stop)
 {
-   uint32_t data = (langID | (last * PACKED_TRIE_LASTENTRY) |
-		    (is_stop * PACKED_TRIE_STOPGRAM)) ;
+   uint32_t data = (langID | (last * TRIE_LASTENTRY) | (is_stop * TRIE_STOPGRAM)) ;
    uint32_t mant ;
    uint32_t expon ;
    quantize(freq,mant,expon) ;
    data |= mant ;
-   data |= (expon << PACKED_TRIE_FREQ_EXP_SHIFT) ;
+   data |= (expon << TRIE_FREQ_EXP_SHIFT) ;
    m_freqinfo.store(data) ;
    return ;
 }
@@ -98,17 +97,15 @@ void PackedTrieFreq::quantize(uint32_t freq, uint32_t &mantissa, uint32_t &exp)
    uint32_t e = 0 ;
    if (freq)
       {
-      const uint32_t highbits = PACKED_TRIE_FREQ_HIBITS ;
-      const uint32_t max_exponent
-	 = PACKED_TRIE_FREQ_EXPONENT >> PACKED_TRIE_FREQ_EXP_SHIFT ;
-      while ((freq & highbits) == 0 && e < max_exponent)
+      constexpr uint32_t max_exponent = TRIE_FREQ_EXPONENT >> TRIE_FREQ_EXP_SHIFT ;
+      while ((freq & TRIE_FREQ_HIBITS) == 0 && e < max_exponent)
 	 {
-	 freq <<= PTRIE_EXPONENT_SCALE ;
+	 freq <<= EXPONENT_SCALE ;
 	 e++ ;
 	 }
-      freq &= PACKED_TRIE_FREQ_MANTISSA ;
+      freq &= TRIE_FREQ_MANTISSA ;
       if (freq == 0)
-	 freq = PACKED_TRIE_MANTISSA_LSB ;
+	 freq = TRIE_MANTISSA_LSB ;
       }
    mantissa = freq ;
    exp = e ;
@@ -138,9 +135,9 @@ double PackedTrieFreq::probability(uint32_t ID) const
 
 void PackedTrieFreq::isLast(bool last)
 {
-   uint32_t data = m_freqinfo.load() & ~PACKED_TRIE_LASTENTRY ;
+   uint32_t data = m_freqinfo.load() & ~TRIE_LASTENTRY ;
    if (last)
-      data |= PACKED_TRIE_LASTENTRY ;
+      data |= TRIE_LASTENTRY ;
    m_freqinfo.store(data) ;
    return ;
 }
@@ -149,9 +146,9 @@ void PackedTrieFreq::isLast(bool last)
 
 void PackedTrieFreq::initDataMapping(double (*mapfn)(uint32_t))
 {
-   for (size_t i = 0 ; i < PACKED_TRIE_NUM_VALUES ; i++)
+   for (size_t i = 0 ; i < TRIE_NUM_VALUES ; i++)
       {
-      uint32_t scaled = scaledScore(i << PACKED_TRIE_VALUE_SHIFT) ;
+      uint32_t scaled = scaledScore(i << TRIE_VALUE_SHIFT) ;
       double mapped_value ;
       if (mapfn)
 	 {
@@ -174,7 +171,7 @@ void PackedTrieFreq::initDataMapping(double (*mapfn)(uint32_t))
 
 bool PackedTrieFreq::writeDataMapping(CFile& f)
 {
-   UInt32 count(PACKED_TRIE_NUM_VALUES) ;
+   UInt32 count(TRIE_NUM_VALUES) ;
    return f && f.writeValue(count) && f.writeValue(*s_value_map) ;
 }
 
