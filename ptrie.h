@@ -43,9 +43,6 @@ using namespace std ;
 
 #define PTRIE_BITS_PER_LEVEL 8
 
-// how do we distinguish non-terminal from terminal nodes?
-#define PTRIE_TERMINAL_MASK 0x80000000
-
 /************************************************************************/
 /************************************************************************/
 
@@ -205,6 +202,8 @@ class LangIDPackedMultiTrie // : public Fr::PackedMultiTrie<...>
       static constexpr uint32_t INVALID_FREQ = (uint32_t)~0 ;
       typedef bool EnumFn(const PackedTrieNode *node, const uint8_t *key, unsigned keylen, void *user_data) ;
 
+      // how do we distinguish non-terminal from terminal nodes?
+      static constexpr uint32_t TERMINAL_MASK = 0x80000000 ;
    public:
       LangIDPackedMultiTrie() = default ;
       LangIDPackedMultiTrie(const LangIDMultiTrie *trie) ;
@@ -227,9 +226,9 @@ class LangIDPackedMultiTrie // : public Fr::PackedMultiTrie<...>
       PTrieCase caseSensitivity() const { return m_casesensitivity ; }
       const PackedTrieFreq* frequencyBaseAddress() const { return m_freq.begin() ; }
       PackedTrieNode* node(uint32_t N) const
-	 { if ((N & PTRIE_TERMINAL_MASK) != 0)
+	 { if ((N & TERMINAL_MASK) != 0)
 	      {
-	      uint32_t termindex = (N & ~PTRIE_TERMINAL_MASK) ;
+	      uint32_t termindex = (N & ~TERMINAL_MASK) ;
 	      return (PackedTrieNode*)m_terminals.item(termindex) ; 
 	      }
 	   else

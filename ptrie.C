@@ -334,7 +334,7 @@ uint32_t LangIDPackedMultiTrie::allocateChildNodes(unsigned numchildren)
 
 uint32_t LangIDPackedMultiTrie::allocateTerminalNodes(unsigned numchildren)
 {
-   return m_terminals.allocBatch(numchildren) | PTRIE_TERMINAL_MASK ;
+   return m_terminals.allocBatch(numchildren) | TERMINAL_MASK ;
 }
 
 //----------------------------------------------------------------------
@@ -523,7 +523,7 @@ PackedTrieNode* LangIDPackedMultiTrie::findNode(const uint8_t *key, unsigned key
 
 bool LangIDPackedMultiTrie::extendKey(uint32_t &nodeindex, uint8_t keybyte) const
 {
-   if ((nodeindex & PTRIE_TERMINAL_MASK) != 0)
+   if ((nodeindex & TERMINAL_MASK) != 0)
       {
       nodeindex = NULL_INDEX ;
       return false ;
@@ -556,7 +556,7 @@ bool LangIDPackedMultiTrie::extendKey(uint32_t &nodeindex, uint8_t keybyte) cons
 
 uint32_t LangIDPackedMultiTrie::extendKey(uint8_t keybyte, uint32_t nodeindex) const
 {
-   if ((nodeindex & PTRIE_TERMINAL_MASK) != 0)
+   if ((nodeindex & TERMINAL_MASK) != 0)
       {
       return NULL_INDEX ;
       }
