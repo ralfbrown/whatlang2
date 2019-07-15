@@ -290,6 +290,8 @@ class LanguageScores
 	    double   	   m_score ;
 	    unsigned short m_id ;
 	 } ;
+      typedef Fr::ItemPoolFlat<Info>::iter_type iter_type ;
+      typedef Fr::ItemPoolFlat<Info>::const_iter_type const_iter_type ;
    public:
       LanguageScores(size_t num_languages) ;
       LanguageScores(const LanguageScores *orig) ;
@@ -341,13 +343,15 @@ class LanguageScores
 	 { m_active_language = lang ; }
 
       // iterator support
-      Info* begin() const { return m_info.begin() ; }
-      Info* end() const { return m_info.begin() + numLanguages() ; }
+      iter_type begin() const { return m_info.begin() ; }
+      const_iter_type cbegin() const { return m_info.cbegin() ; }
+      iter_type end() const { return m_info.end() ; }
+      const_iter_type cend() const { return m_info.cend() ; }
    protected: // methods
       void sortByName(const LanguageID *langinfo) ;
 
    protected: // members
-      Fr::ItemPool<Info> m_info ;
+      Fr::ItemPoolFlat<Info> m_info ;
       void*		 m_userdata ;
       unsigned		 m_active_language ;
       bool      	 m_sorted ;
@@ -388,9 +392,17 @@ class LanguageIdentifier
 			 bool verbose = false) ;
       ~LanguageIdentifier() = default ;
 
+      // factory
+      static LanguageIdentifier* load(const char* db_file, const char* charset_file, bool create = false,
+	 bool verbose = false) ;
+          // set charset_file to NULL for default search, "" to not use a separate
+          //    database (use the main database for charset ID as well as lang ID)
+      static void unload(LanguageIdentifier* id) ;
+
       // accessors
       bool good() const { return m_langdata && m_langdata->good() ; }
       bool verbose() const { return m_verbose ; }
+      bool smoothingScores() const { return m_smooth ; }
       bool applyCoverageFactor() const { return m_apply_cover_factor && m_adjustments ; }
       size_t allocLanguages() const { return m_langinfo.capacity() ; }
       size_t numLanguages() const { return m_langinfo.size() ; }
@@ -429,6 +441,7 @@ class LanguageIdentifier
 			       bool enforce_alignments = true) const ;
       bool finishIdentification(LanguageScores *scores, unsigned select_highestN = 0,
 				double cutoff_ratio = 0.1) const ;
+      Fr::Owned<LanguageScores> smoothedScores(LanguageScores* rawscores, int buflen) const ;
       LanguageScores *similarity(unsigned langid) const ;
       bool sameLanguage(size_t L1, size_t L2,
 			bool ignore_region = false) const ;
@@ -440,6 +453,7 @@ class LanguageIdentifier
 	 { m_charsetident = (id ? id : this) ; }
       void setBigramWeight(double weight) { m_bigram_weight = weight ; }
       void useFriendlyName(bool friendly = true) { m_friendly_name = friendly ; }
+      void smoothScores(bool sm = true) { m_smooth = sm ; }
       void runVerbosely(bool v) { m_verbose = v ; }
       void applyCoverageFactor(bool apply) { m_apply_cover_factor = apply ; }
       void incrStringCount(size_t langnum) ;
@@ -456,11 +470,13 @@ class LanguageIdentifier
    private:
       void setAlignments() ;
       bool setAdjustmentFactors() ;
+      static LanguageIdentifier* tryLoading(const char* db_file, bool verbose) ;
 
    private:
       Fr::Owned<LangIDPackedMultiTrie> m_langdata ;
       Fr::Owned<LangIDMultiTrie> m_uncomplangdata ;
-      Fr::ItemPool<LanguageID> m_langinfo ;
+      mutable Fr::Owned<LanguageScores> m_prior_scores { Fr::null } ;
+      Fr::ItemPoolFlat<LanguageID> m_langinfo ;
       Fr::DoublePtr          m_length_factors ;
       Fr::DoublePtr          m_adjustments ;
       Fr::UInt8Ptr           m_alignments ;
@@ -472,30 +488,14 @@ class LanguageIdentifier
       bool   	             m_friendly_name ;
       bool	             m_apply_cover_factor ;
       bool                   m_verbose ;
+      bool		     m_smooth { true } ;
    } ;
 
 /************************************************************************/
 /*	Procedural interface						*/
 /************************************************************************/
 
-LanguageIdentifier *load_language_database(const char *database_file,
-					   const char *charset_file,
-					   bool create = false,
-					   bool verbose = false) ;
-   // set charset_file to NULL for default search, "" to not use a separate
-   //    database (use the main database for charset ID as well as lang ID)
-void unload_language_database(LanguageIdentifier *id) ;
 double set_stopgram_penalty(double wt) ;
-
-bool smooth_language_scores(bool smooth) ;
-bool smoothing_language_scores() ;
-LanguageScores *smoothed_language_scores(LanguageScores *scores,
-					 LanguageScores *&prior_scores,
-					 size_t match_length) ;
-// the following uses a global, so is not thread-safe
-LanguageScores *smoothed_language_scores(LanguageScores *scores,
-					 size_t match_length) ;
-
 
 #endif /* !__LANGID_H_INCLUDED */
 

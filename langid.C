@@ -924,7 +924,9 @@ LanguageScores::LanguageScores(size_t num_languages)
    m_userdata = nullptr ;
    m_active_language = 0 ;
    m_info.allocBatch(num_languages) ;
-   std::iota(m_info.begin(),m_info.begin()+num_languages,0) ;
+   auto last = m_info.begin() ;
+   last += num_languages ;
+   std::iota(m_info.begin(),last,0) ;
    return ;
 }
 
@@ -978,7 +980,9 @@ double LanguageScores::highestScore() const
       }
    else
       {
-      return std::max_element(m_info.begin(),m_info.begin()+nlang)->score() ;
+      auto last = m_info.begin() ;
+      last += nlang ;
+      return std::max_element(m_info.begin(),last)->score() ;
       }
 }
 
@@ -995,7 +999,9 @@ unsigned LanguageScores::highestLangID() const
       return (unsigned)~0 ;
    else
       {
-      return std::max_element(m_info.begin(),m_info.begin()+nlang)->id() ;
+      auto last = m_info.begin() ;
+      last += nlang ;
+      return std::max_element(m_info.begin(),last)->id() ;
       }
 }
 
@@ -1141,11 +1147,14 @@ void LanguageScores::filter(double cutoff_ratio)
       if (threshold > cutoff)
 	 cutoff = threshold ;
       }
-   Info* dest = begin() ;
+   auto dest = begin() ;
    for (auto src : *this)
       {
       if (src.score() >= cutoff)
-	 *dest++ = src ;
+	 {
+	 *dest = src ;
+	 ++dest ;
+	 }
       }
    if (dest != begin())
       {
@@ -1159,7 +1168,7 @@ void LanguageScores::filter(double cutoff_ratio)
 	 {
 	 if (info.score() > begin()->score())
 	    {
-	    *begin() = info   ;
+	    *begin() = info ;
 	    }
 	 }
       m_info.shrink(1) ;
@@ -1196,7 +1205,9 @@ void LanguageScores::sort(double cutoff_ratio, unsigned max_langs)
       filter(cutoff_ratio) ;
       if (numLanguages() > max_langs)
 	 {
-	 std::partial_sort(begin(),begin()+max_langs,end()) ;
+	 auto mid = begin() ;
+	 mid += max_langs ;
+	 std::partial_sort(begin(),mid,end()) ;
 	 m_info.shrink(max_langs) ;
 	 }
       else
@@ -1237,7 +1248,7 @@ void LanguageScores::sortByName(const LanguageID *langinfo)
    if (numLanguages() > 0 && langinfo != nullptr)
       {
       // remove languages with zero scores
-      Info* last = std::remove(begin(),end(),0.0) ;
+      auto last = std::remove(begin(),end(),0.0) ;
       m_info.shrink(last - m_info.begin()) ;
       // and sort the remaining language records
       sort_langinfo = langinfo ;
@@ -1391,6 +1402,123 @@ LanguageIdentifier::LanguageIdentifier(const char* language_data_file, bool run_
       std::fill_n(m_string_counts.begin(),numLanguages(),0) ;
    if (m_langdata)
       m_length_factors = make_length_factors(m_langdata->longestKey(),m_bigram_weight) ;
+   return ;
+}
+
+//----------------------------------------------------------------------
+
+LanguageIdentifier* LanguageIdentifier::tryLoading(const char* database_file, bool verbose)
+{
+   if (!database_file)
+      return nullptr ;
+   CharPtr db_filename ;
+   if (database_file[0] == '~' && database_file[1] == '/')
+      {
+      const char *home = getenv("HOME") ;
+      if (home)
+	 {
+	 db_filename = aprintf("%s%s",home,database_file+1) ;
+	 }
+      else
+	 {
+	 const char *user = getenv("USER") ;
+	 if (user)
+	    db_filename = aprintf("/home/%s%s",user,database_file+1) ;
+	 }
+      }
+   if (!db_filename)
+      db_filename = dup_string(database_file) ;
+   Owned<LanguageIdentifier> id(db_filename,verbose) ;
+   if (!id)
+      {
+      SystemMessage::no_memory("loading language database") ;
+      return nullptr ;
+      }
+   else if (id->numLanguages() == 0)
+      {
+      if (verbose)
+	 cerr << "Unsuccessfully tried to open " << database_file << endl ;
+      return nullptr ;
+      }
+   else if (verbose)
+      {
+      cerr << "Opened language database " << database_file << endl ;
+      }
+   return id.move() ;
+}
+
+//----------------------------------------------------------------------
+
+LanguageIdentifier* LanguageIdentifier::load(const char *database_file, const char *charset_file,
+					     bool create, bool verbose)
+{
+   LanguageIdentifier *id = nullptr ;
+   if (database_file && *database_file)
+      id = tryLoading(database_file, verbose) ;
+   if (!id && !create)
+      {
+      id = tryLoading(FALLBACK_LANGID_DATABASE, verbose) ;
+      if (!id)
+	 {
+	 id = tryLoading(ALTERNATE_LANGID_DATABASE, verbose) ;
+	 if (!id)
+	    id = tryLoading(DEFAULT_LANGID_DATABASE, verbose) ;
+	 }
+      }
+   if (!id && create)
+      id = new LanguageIdentifier(database_file,verbose) ;
+   if (!id)
+      {
+      if (database_file && *database_file)
+	 {
+	 cerr << "Warning: Unable to load database from " << database_file
+	      << endl ;
+	 }
+      else
+	 {
+	 cerr << "Warning: unable to load database from standard locations"
+	      << endl ;
+	 }
+      }
+   else
+      {
+      LanguageIdentifier *cs = nullptr ;
+      if (charset_file)
+	 {
+	 if (*charset_file)
+	    cs = tryLoading(charset_file, verbose) ;
+	 else
+	    cs = id ;
+	 }
+      if (!cs)
+	 {
+	 cs = tryLoading(FALLBACK_CHARSET_DATABASE, verbose) ;
+	 if (!cs)
+	    {
+	    cs = tryLoading(ALTERNATE_CHARSET_DATABASE, verbose) ;
+	    if (!cs)
+	       cs = tryLoading(DEFAULT_CHARSET_DATABASE, verbose) ;
+	    }
+	 }
+      if (!cs)
+	 cs = id ;
+      id->charsetIdentifier(cs) ;
+      }
+   return id ;
+}
+
+//----------------------------------------------------------------------
+
+void LanguageIdentifier::unload(LanguageIdentifier *id)
+{
+   if (!id)
+      return ;
+   if (id->charsetIdentifier() != id)
+      {
+      delete id->charsetIdentifier() ;
+      id->charsetIdentifier(nullptr) ;
+      }
+   delete id ;
    return ;
 }
 
@@ -2085,122 +2213,6 @@ bool LanguageIdentifier::dump(CFile& f, bool show_ngrams) const
 /************************************************************************/
 /*	Procedural interface						*/
 /************************************************************************/
-
-static LanguageIdentifier* try_loading(const char* database_file, bool verbose)
-{
-   if (!database_file)
-      return nullptr ;
-   CharPtr db_filename ;
-   if (database_file[0] == '~' && database_file[1] == '/')
-      {
-      const char *home = getenv("HOME") ;
-      if (home)
-	 {
-	 db_filename = aprintf("%s%s",home,database_file+1) ;
-	 }
-      else
-	 {
-	 const char *user = getenv("USER") ;
-	 if (user)
-	    db_filename = aprintf("/home/%s%s",user,database_file+1) ;
-	 }
-      }
-   if (!db_filename)
-      db_filename = dup_string(database_file) ;
-   Owned<LanguageIdentifier> id(db_filename,verbose) ;
-   if (!id)
-      {
-      SystemMessage::no_memory("loading language database") ;
-      return nullptr ;
-      }
-   else if (id->numLanguages() == 0)
-      {
-      if (verbose)
-	 cerr << "Unsuccessfully tried to open " << database_file << endl ;
-      return nullptr ;
-      }
-   else if (verbose)
-      {
-      cerr << "Opened language database " << database_file << endl ;
-      }
-   return id.move() ;
-}
-
-//----------------------------------------------------------------------
-
-LanguageIdentifier *load_language_database(const char *database_file,
-					   const char *charset_file,
-					   bool create, bool verbose)
-{
-   LanguageIdentifier *id = nullptr ;
-   if (database_file && *database_file)
-      id = try_loading(database_file, verbose) ;
-   if (!id && !create)
-      {
-      id = try_loading(FALLBACK_LANGID_DATABASE, verbose) ;
-      if (!id)
-	 {
-	 id = try_loading(ALTERNATE_LANGID_DATABASE, verbose) ;
-	 if (!id)
-	    id = try_loading(DEFAULT_LANGID_DATABASE, verbose) ;
-	 }
-      }
-   if (!id && create)
-      id = new LanguageIdentifier(database_file,verbose) ;
-   if (!id)
-      {
-      if (database_file && *database_file)
-	 {
-	 cerr << "Warning: Unable to load database from " << database_file
-	      << endl ;
-	 }
-      else
-	 {
-	 cerr << "Warning: unable to load database from standard locations"
-	      << endl ;
-	 }
-      }
-   else
-      {
-      LanguageIdentifier *cs = nullptr ;
-      if (charset_file)
-	 {
-	 if (*charset_file)
-	    cs = try_loading(charset_file, verbose) ;
-	 else
-	    cs = id ;
-	 }
-      if (!cs)
-	 {
-	 cs = try_loading(FALLBACK_CHARSET_DATABASE, verbose) ;
-	 if (!cs)
-	    {
-	    cs = try_loading(ALTERNATE_CHARSET_DATABASE, verbose) ;
-	    if (!cs)
-	       cs = try_loading(DEFAULT_CHARSET_DATABASE, verbose) ;
-	    }
-	 }
-      if (!cs)
-	 cs = id ;
-      id->charsetIdentifier(cs) ;
-      }
-   return id ;
-}
-
-//----------------------------------------------------------------------
-
-void unload_language_database(LanguageIdentifier *id)
-{
-   if (!id)
-      return ;
-   if (id->charsetIdentifier() != id)
-      {
-      delete id->charsetIdentifier() ;
-      id->charsetIdentifier(nullptr) ;
-      }
-   delete id ;
-   return ;
-}
 
 //----------------------------------------------------------------------
 

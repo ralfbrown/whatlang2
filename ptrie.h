@@ -224,7 +224,7 @@ class LangIDPackedMultiTrie // : public Fr::PackedMultiTrie<...>
       unsigned longestKey() const { return m_maxkeylen ; }
       bool ignoringWhiteSpace() const { return m_ignorewhitespace ; }
       PTrieCase caseSensitivity() const { return m_casesensitivity ; }
-      const PackedTrieFreq* frequencyBaseAddress() const { return m_freq.begin() ; }
+      const PackedTrieFreq* frequencyBaseAddress() const { return m_freq.item(0) ; }
       PackedTrieNode* node(uint32_t N) const
 	 { if ((N & TERMINAL_MASK) != 0)
 	      {
@@ -261,7 +261,7 @@ class LangIDPackedMultiTrie // : public Fr::PackedMultiTrie<...>
    private:
       Fr::ItemPool<PackedTrieNode> m_nodes ;
       Fr::ItemPool<PackedTrieTerminalNode> m_terminals ;
-      Fr::ItemPool<PackedTrieFreq> m_freq ;
+      Fr::ItemPoolFlat<PackedTrieFreq> m_freq ;
       Fr::MemMappedFile	 m_fmap ;	 // memory-map info
       unsigned		 m_maxkeylen        { 0 } ;
       enum PTrieCase	 m_casesensitivity  { CS_Full } ;

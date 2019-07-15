@@ -2090,7 +2090,7 @@ static bool load_frequencies(const char **filelist, unsigned num_files,
    uint64_t total_bytes = 0 ;
    bool scaled = false ;
    { // start scope for bigrams
-   OwnedNull<BigramCounts> bigrams ;
+   Owned<BigramCounts> bigrams { Fr::null } ;
    for (size_t i = 0 ; i < num_files ; i++)
       {
       const char *filename = filelist[i] ;
@@ -2317,7 +2317,7 @@ static bool compute_ngrams(const char **filelist, unsigned num_files, Owned<Nybb
    if (!counts)
       return false ;
    ngrams = new NybbleTrie ;
-   OwnedNull<BigramCounts> bi_counts ;
+   Owned<BigramCounts> bi_counts { Fr::null } ;
    total_bytes = count_trigrams(filelist,num_files,**counts,skip_newlines,aligned,bi_counts) ;
    unsigned top_K = set_oversampling(topK,ABSOLUTE_MIN_LENGTH,minimum_length,aligned) ;
    counts->filter(top_K,maximum_length,verbose) ;
@@ -2376,7 +2376,7 @@ static bool process_files(const char** filelist, unsigned num_files,
 			  bool /*check_script TODO*/)
 {
    LanguageID opts(base_opts) ;
-   OwnedNull<NybbleTrie> ngrams ;
+   Owned<NybbleTrie> ngrams { Fr::null } ;
    uint64_t total_bytes = 0 ;
    bool scaled = false ;
    if (curr_ngrams && curr_ngrams->size() > 0)
@@ -2726,8 +2726,8 @@ static bool process_argument_group(int &argc, const char **&argv,
 	 {
 	 cerr << "Unable to perform conversion from " << from << " to " << translit_to << endl ;
 	 }
-      OwnedNull<NybbleTrie> curr_ngrams ;
-      OwnedNull<NybbleTrie> ngram_weights ;
+      Owned<NybbleTrie> curr_ngrams { Fr::null } ;
+      Owned<NybbleTrie> ngram_weights { Fr::null } ;
       uint64_t training_bytes = 0 ;
       Owned<NybbleTrie> stop_grams = load_stop_grams(&lang_info,related_langs,curr_ngrams,ngram_weights,
 	 					     training_bytes) ;
@@ -2762,7 +2762,7 @@ static int real_main(int argc, const char **argv)
       usage(argv0,nullptr) ;
       return 1 ;
       }
-   language_identifier = load_language_database(database_file,"",true) ;
+   language_identifier = LanguageIdentifier::load(database_file,"",true) ;
    bool success = false ;
    LanguageID lang_info("en","US","utf-8",nullptr) ;
    while (argc > 1)

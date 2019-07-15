@@ -5,7 +5,7 @@
 /*									*/
 /*  File:     whatlang.C  main program/wrapper for simple identifier	*/
 /*  Version:  1.30							*/
-/*  LastEdit: 2019-07-11 						*/
+/*  LastEdit: 2019-07-15 						*/
 /*                                                                      */
 /*  (c) Copyright 2011,2012,2013,2014,2019				*/
 /*		 Ralf Brown/Carnegie Mellon University			*/
@@ -157,7 +157,7 @@ static void identify(const char *buf, int buflen,
       return ;
    LanguageScores *rawscores = langid.identify(buf,buflen) ;
    langid.finishIdentification(rawscores) ;
-   Owned<LanguageScores> scores = smoothed_language_scores(rawscores,buflen) ;
+   Owned<LanguageScores> scores = langid.smoothedScores(rawscores,buflen) ;
    if (!scores)
       return ;
    unsigned num_scores = langid.numLanguages() ;
@@ -490,11 +490,9 @@ int main(int argc, char **argv)
       cutoff_ratio = 0.0001 ;
    if (cutoff_ratio > 1.0)
       cutoff_ratio = 1.0 ;
-   smooth_language_scores(false) ;
    if (blocksize == 2)
       {
       line_mode = line_type ;
-      smooth_language_scores(true) ;
       blocksize = BY_LINE_BLOCKSIZE ;
       }
    else if (blocksize == 1)
@@ -513,13 +511,13 @@ int main(int argc, char **argv)
 	      "Specified block size is ridiculously small, adjusted to %d\n",
 	      MIN_BLOCKSIZE) ;
       }
-   LanguageIdentifier *langid
-      = load_language_database(language_db, "", false, verbose) ;
+   auto langid = LanguageIdentifier::load(language_db, "", false, verbose) ;
    if (!langid)
       return 1 ;
    langid->setBigramWeight(bigram_weight) ;
    langid->applyCoverageFactor(apply_coverage) ;
    langid->useFriendlyName(use_friendly_name) ;
+   langid->smoothScores(blocksize == 2) ;
    if (argc == 1)
       {
       // no filename specified on command line, so use stdin
@@ -535,7 +533,7 @@ int main(int argc, char **argv)
 			    separate_sources,multiple_files,line_mode) ;
 	 }
       }
-   unload_language_database(langid) ;
+   LanguageIdentifier::unload(langid) ;
    return 0 ;
 }
 

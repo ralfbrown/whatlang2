@@ -68,12 +68,13 @@ class MultiTrieFrequency
       bool isStopgram() const { return (m_langID & STOPGRAM_MASK) != 0 ; }
       static MultiTrieFrequency *getAddress(uint32_t index) { return s_freq_records.item(index) ; }
       static uint32_t getIndex(MultiTrieFrequency *f)
-         { return f >= s_freq_records.begin() ? (uint32_t)(f - s_freq_records.begin()) : INVALID_FREQ ; }
+         { auto first = s_freq_records.item(0) ;
+           return first <= f ? (uint32_t)(f - first) : INVALID_FREQ ; }
       MultiTrieFrequency *next() const { return getAddress(m_next) ; }
 
       // manipulators
       void setNext(MultiTrieFrequency *nxt)
-	 { m_next = nxt ? (nxt - s_freq_records.begin()) : INVALID_FREQ ; }
+	 { m_next = nxt ? (nxt - s_freq_records.item(0)) : INVALID_FREQ ; }
       void setNext(uint32_t nxt) { m_next = nxt ; }
       void setFrequency(uint32_t freq) { m_frequency = freq ; }
       void setFrequency(uint32_t ID, uint32_t freq, bool stopgram) ;
@@ -89,7 +90,7 @@ class MultiTrieFrequency
       void newFrequency(uint32_t ID, uint32_t freq, bool stopgram) ;
 
    private:
-      static Fr::ItemPool<MultiTrieFrequency> s_freq_records ;
+      static Fr::ItemPoolFlat<MultiTrieFrequency> s_freq_records ;
       uint32_t m_next ;
       uint32_t m_frequency ;
       uint32_t m_langID ;

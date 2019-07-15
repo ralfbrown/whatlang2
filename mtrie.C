@@ -59,7 +59,7 @@ using namespace Fr ;
 /*	Global variables						*/
 /************************************************************************/
 
-ItemPool<MultiTrieFrequency> MultiTrieFrequency::s_freq_records(100000) ;
+ItemPoolFlat<MultiTrieFrequency> MultiTrieFrequency::s_freq_records(100000) ;
 
 /************************************************************************/
 /*	Helper functions						*/
@@ -114,7 +114,7 @@ void MultiTrieFrequency::newFrequency(uint32_t ID, uint32_t freq, bool stopgram)
    // because the allocation might reallocate the array containing
    //   'this', we need to get our index and use it to re-establish
    //   the correct object address after the allocation
-   uint32_t index = (this - s_freq_records.begin()) ;
+   uint32_t index = (this - s_freq_records.item(0)) ;
    MultiTrieFrequency *f = allocate(freq,ID,stopgram) ;
    MultiTrieFrequency *prev = getAddress(index) ;
    prev->setNext(f) ;

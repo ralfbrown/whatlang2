@@ -26,6 +26,8 @@
 #include <cmath>
 #include "langid.h"
 
+using namespace Fr ;
+
 /************************************************************************/
 /************************************************************************/
 
@@ -41,45 +43,24 @@
 /*	Global variables						*/
 /************************************************************************/
 
-static bool do_smoothing = true ;
-static LanguageScores *prior_language_scores = nullptr ;
-
 /************************************************************************/
+/*	Methods for class LanguageIdentifier				*/
 /************************************************************************/
 
-bool smooth_language_scores(bool smooth)
+Owned<LanguageScores> LanguageIdentifier::smoothedScores(LanguageScores* scores, int match_length) const
 {
-   bool old_smooth = do_smoothing ;
-   do_smoothing = smooth ;
-   return old_smooth ;
-}
-
-//----------------------------------------------------------------------
-
-bool smoothing_language_scores()
-{
-   return do_smoothing ;
-}
-
-//----------------------------------------------------------------------
-
-LanguageScores *smoothed_language_scores(LanguageScores *scores,
-					 LanguageScores *&prior_scores,
-					 size_t match_length)
-{
-   if (!scores || !smoothing_language_scores())
+   if (!scores || !smoothingScores())
       return scores ;
    // use exponential decay as the smoothing function, since it is far
    //   simpler and runs faster than the other functions tried, yet
    //   works at least as well
-   if (!prior_scores)
+   if (!m_prior_scores)
       {
-      prior_scores = new LanguageScores(scores->numLanguages()) ;
-      prior_scores->addThresholded(scores,LANGID_ZERO_SCORE,
-				   ::log(match_length)) ;
+      m_prior_scores = new LanguageScores(scores->numLanguages()) ;
+      m_prior_scores->addThresholded(scores,LANGID_ZERO_SCORE, ::log(match_length)) ;
       return scores ;
       }
-   prior_scores->scaleScores(SMOOTHING_DECAY_FACTOR) ;
+   m_prior_scores->scaleScores(SMOOTHING_DECAY_FACTOR) ;
    // adaptively weight the current sentence relative to the smoothing
    //   scores
    double max_score = scores->highestScore() ;
@@ -91,16 +72,8 @@ LanguageScores *smoothed_language_scores(LanguageScores *scores,
    // give a little more smoothing weight to longer strings, since their
    //   scores are more reliable
    double smoothwt = 2.0 + 0.25 * ::log(match_length) ;
-   scores->lambdaCombineWithPrior(prior_scores,lambda,smoothwt) ;
+   scores->lambdaCombineWithPrior(m_prior_scores,lambda,smoothwt) ;
    return scores ;
-}
-
-//----------------------------------------------------------------------
-
-LanguageScores *smoothed_language_scores(LanguageScores *scores,
-					 size_t match_length)
-{
-   return smoothed_language_scores(scores,prior_language_scores,match_length) ;
 }
 
 // end of file smooth.C //

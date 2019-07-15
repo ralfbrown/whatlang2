@@ -734,7 +734,7 @@ static bool dump_ngram(const PackedTrieNode *node, const uint8_t *key,
 bool LangIDPackedMultiTrie::dump(CFile& f) const
 {
    LocalAlloc<uint8_t,10000> keybuf(longestKey()) ;
-   base_frequency = m_freq.begin() ;
+   base_frequency = m_freq.item(0) ;
    return keybuf ? enumerate(keybuf,longestKey(),dump_ngram,&f) : false ;
 }
 
