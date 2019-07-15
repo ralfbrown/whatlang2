@@ -1,13 +1,13 @@
-/************************************************************************/
+/****************************** -*- C++ -*- *****************************/
 /*                                                                      */
 /*	LangIdent: long n-gram-based language identification		*/
 /*	by Ralf Brown / Carnegie Mellon University			*/
 /*									*/
-/*  File:     roman.C							*/
-/*  Version:  1.16							*/
-/*  LastEdit: 26jun2012							*/
+/*  File:     roman.h							*/
+/*  Version:  1.30							*/
+/*  LastEdit: 2019-07-15						*/
 /*                                                                      */
-/*  (c) Copyright 2011,2012 Ralf Brown/Carnegie Mellon University	*/
+/*  (c) Copyright 2011,2012,2019 Ralf Brown/Carnegie Mellon University	*/
 /*      This program is free software; you can redistribute it and/or   */
 /*      modify it under the terms of the GNU General Public License as  */
 /*      published by the Free Software Foundation, version 3.           */
@@ -23,11 +23,19 @@
 /*                                                                      */
 /************************************************************************/
 
-unsigned get_UTF8_codepoint(const char *buf, wchar_t &codepoint) ;
+/************************************************************************/
+/************************************************************************/
 
-bool romanizable_codepoint(wchar_t codepoint) ;
-int romanize_codepoint(wchar_t codepoint, char *buffer) ;
-unsigned romanize_codepoint(wchar_t codepoint, wchar_t &romanized1,
-			    wchar_t &romanized2) ;
+class Romanizer
+   {
+   public:
+      static unsigned utf8codepoint(const char* buf, wchar_t& codepoint) ;
+      static bool romanizable(wchar_t codepoint) ;
+      static int romanize(wchar_t codepoint, char* buffer) ;
+      static unsigned romanize(wchar_t codepoint, wchar_t& romanized1, wchar_t& romanized2) ;
+   } ;
+
+/************************************************************************/
+/************************************************************************/
 
 // end of file roman.h //

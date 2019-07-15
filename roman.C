@@ -4,8 +4,8 @@
 /*	by Ralf Brown / Carnegie Mellon University			*/
 /*									*/
 /*  File:     roman.C							*/
-/*  Version:  1.20							*/
-/*  LastEdit: 01jul2019							*/
+/*  Version:  1.30							*/
+/*  LastEdit: 2019-07-15						*/
 /*                                                                      */
 /*  (c) Copyright 2011,2012,2019 Ralf Brown/Carnegie Mellon University	*/
 /*      This program is free software; you can redistribute it and/or   */
@@ -484,9 +484,70 @@ inline bool in_ISO15919_table(wchar_t codepoint)
 }
 
 /************************************************************************/
+/*	Methods for class Romanizer					*/
 /************************************************************************/
 
-bool romanizable_codepoint(wchar_t codepoint)
+unsigned Romanizer::utf8codepoint(const char *buf, wchar_t &codepoint)
+{
+   int len = 0 ;
+   codepoint = 0 ;
+   if (buf)
+      {
+      unsigned cp = ((unsigned char*)buf)[0] ;
+      if ((cp & 0x80) == 0)
+	 {
+	 codepoint = cp ;
+	 return 1 ;
+	 }
+      else if ((cp & 0xE0) == 0xC0)
+	 {
+	 len = 2 ;
+	 cp &= 0x1F ;
+	 }
+      else if ((cp & 0xF0) == 0xE0)
+	 {
+	 len = 3 ;
+	 cp &= 0x0F ;
+	 }
+      else if ((cp & 0xF8) == 0xF0)
+	 {
+	 len = 4 ;
+	 cp &= 0x07 ;
+	 }
+      else if ((cp & 0xFC) == 0xF8)
+	 {
+	 len = 5 ;
+	 cp &= 0x03 ;
+	 }
+      else if ((cp & 0xFE) == 0xFC)
+	 {
+	 len = 6 ;
+	 cp &= 0x01 ;
+	 }
+      else
+	 {
+	 // high bits are 10, which is a continuation byte and invalid at
+	 //   this point
+	 codepoint = 0xFFFF ;
+	 return 0 ;
+	 }
+      for (int i = 1 ; i < len ; i++)
+	 {
+	 if ((buf[i] & 0xC0) != 0x80)
+	    {
+	    codepoint = 0xFFFF ;
+	    return 0 ; // invalid byte sequence
+	    }
+	 cp = (cp << 6) | (buf[i] & 0x3F) ;
+	 }
+      codepoint = cp ;
+      }
+   return len ;
+}
+
+//----------------------------------------------------------------------
+
+bool Romanizer::romanizable(wchar_t codepoint)
 {
    if (in_ISO9_table(codepoint))
       {
@@ -538,7 +599,31 @@ bool romanizable_codepoint(wchar_t codepoint)
 
 //----------------------------------------------------------------------
 
-unsigned romanize_codepoint(wchar_t codepoint, wchar_t &romanized1, wchar_t &romanized2)
+int Romanizer::romanize(wchar_t codepoint, char *buffer)
+{
+   wchar_t romanized1 ;
+   wchar_t romanized2 ;
+   int points = romanize(codepoint, romanized1, romanized2) ;
+   int bytes = 0 ;
+   if (points)
+      {
+      bool byteswap = false ;
+      bytes = Fr::Unicode_to_UTF8(romanized1,buffer,byteswap) ;
+      if (points == 2)
+	 {
+	 int bytes2 = Fr::Unicode_to_UTF8(romanized2,buffer+bytes,byteswap) ;
+	 if (bytes2)
+	    bytes += bytes2 ;
+	 else
+	    bytes = 0 ;
+	 }
+      }
+   return bytes ;
+}
+
+//----------------------------------------------------------------------
+
+unsigned Romanizer::romanize(wchar_t codepoint, wchar_t &romanized1, wchar_t &romanized2)
 {
    const ISO9Element *table = nullptr ;
    if (in_ISO9_table(codepoint))
@@ -600,87 +685,5 @@ unsigned romanize_codepoint(wchar_t codepoint, wchar_t &romanized1, wchar_t &rom
 }
 
 //----------------------------------------------------------------------
-
-int romanize_codepoint(wchar_t codepoint, char *buffer)
-{
-   wchar_t romanized1 ;
-   wchar_t romanized2 ;
-   int points = romanize_codepoint(codepoint, romanized1, romanized2) ;
-   int bytes = 0 ;
-   if (points)
-      {
-      bool byteswap = false ;
-      bytes = Fr::Unicode_to_UTF8(romanized1,buffer,byteswap) ;
-      if (points == 2)
-	 {
-	 int bytes2 = Fr::Unicode_to_UTF8(romanized2,buffer+bytes,byteswap) ;
-	 if (bytes2)
-	    bytes += bytes2 ;
-	 else
-	    bytes = 0 ;
-	 }
-      }
-   return bytes ;
-}
-
-//----------------------------------------------------------------------
-
-unsigned get_UTF8_codepoint(const char *buf, wchar_t &codepoint)
-{
-   int len = 0 ;
-   codepoint = 0 ;
-   if (buf)
-      {
-      unsigned cp = ((unsigned char*)buf)[0] ;
-      if ((cp & 0x80) == 0)
-	 {
-	 codepoint = cp ;
-	 return 1 ;
-	 }
-      else if ((cp & 0xE0) == 0xC0)
-	 {
-	 len = 2 ;
-	 cp &= 0x1F ;
-	 }
-      else if ((cp & 0xF0) == 0xE0)
-	 {
-	 len = 3 ;
-	 cp &= 0x0F ;
-	 }
-      else if ((cp & 0xF8) == 0xF0)
-	 {
-	 len = 4 ;
-	 cp &= 0x07 ;
-	 }
-      else if ((cp & 0xFC) == 0xF8)
-	 {
-	 len = 5 ;
-	 cp &= 0x03 ;
-	 }
-      else if ((cp & 0xFE) == 0xFC)
-	 {
-	 len = 6 ;
-	 cp &= 0x01 ;
-	 }
-      else
-	 {
-	 // high bits are 10, which is a continuation byte and invalid at
-	 //   this point
-	 codepoint = 0xFFFF ;
-	 return 0 ;
-	 }
-      for (int i = 1 ; i < len ; i++)
-	 {
-	 if ((buf[i] & 0xC0) != 0x80)
-	    {
-	    codepoint = 0xFFFF ;
-	    return 0 ; // invalid byte sequence
-	    }
-	 cp = (cp << 6) | (buf[i] & 0x3F) ;
-	 }
-      codepoint = cp ;
-      }
-   return len ;
-}
 
 // end of file roman.C //

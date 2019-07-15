@@ -284,6 +284,8 @@ build/ptrie.o: ptrie.C ptrie.h mtrie.h
 
 build/roman.o: roman.C roman.h
 
+build/romanize.o: romanize.C roman.h
+
 build/smooth.o: smooth.C langid.h
 
 build/subsample.o: subsample.C
