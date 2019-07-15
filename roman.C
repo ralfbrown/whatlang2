@@ -23,7 +23,7 @@
 /*                                                                      */
 /************************************************************************/
 
-#include <stdint.h>
+#include <cstdint>
 #include "framepac/unicode.h"
 #include "roman.h"
 
