@@ -27,7 +27,6 @@
 #define __TRIE_H_INCLUDED
 
 #include <cstdint>
-#include <cstdio>
 #include <limits.h>
 #include "framepac/file.h"
 #include "framepac/itempool.h"
@@ -102,6 +101,7 @@ class NybbleTrie
       static constexpr NodeIndex NULL_INDEX = 0U ;
       static constexpr NodeIndex INVALID_INDEX = (uint32_t)~0 ;
       typedef NybbleTrieNode Node ;
+      typedef bool LoadFn(NybbleTrie* trie, const uint8_t* key, unsigned keylen, uint32_t langID, uint32_t freq) ;
       typedef bool EnumFn(const NybbleTrie *trie, NodeIndex index, const uint8_t *key, unsigned keylen,
 	                  void *user_data) ;
    public:
@@ -109,7 +109,7 @@ class NybbleTrie
       NybbleTrie(const char *filename, bool verbose) ;
       ~NybbleTrie() = default ;
 
-      bool loadWords(const char *filename, bool verbose) ;
+      bool loadWords(const char *filename, LoadFn* insfn, uint32_t langID, bool verbose) ;
       NodeIndex allocateNode() { return (NodeIndex)m_nodes.alloc() ; }
 
       // modifiers
@@ -117,13 +117,10 @@ class NybbleTrie
       void ignoreWhiteSpace(bool ignore = true) { m_ignorewhitespace = ignore ; }
       void addTokenCount(uint32_t incr = 1) { m_totaltokens += incr ; }
       NodeIndex insertKey(const uint8_t* key, unsigned keylength) ;
-      bool insert(const uint8_t *key, unsigned keylength,
-		  uint32_t frequency, bool stopgram) ;
-      bool insertMax(const uint8_t *key, unsigned keylength,
-		     uint32_t frequency, bool stopgram) ;
+      bool insert(const uint8_t *key, unsigned keylength, uint32_t frequency, bool stopgram) ;
+      bool insertMax(const uint8_t *key, unsigned keylength, uint32_t frequency, bool stopgram) ;
       void insertChild(uint32_t &nodeindex, uint8_t keybyte) ;
-      uint32_t increment(const uint8_t *key, unsigned keylength,
-			 uint32_t incr = 1, bool stopgram = false) ;
+      uint32_t increment(const uint8_t *key, unsigned keylength, uint32_t incr = 1, bool stopgram = false) ;
       bool incrementExtensions(const uint8_t *key, unsigned prevlength,
 			       unsigned keylength, uint32_t incr = 1) ;
 

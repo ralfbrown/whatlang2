@@ -28,6 +28,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <functional>
 #include "trie.h"
 #include "framepac/config.h"
 #include "framepac/message.h"
@@ -262,7 +263,9 @@ NybbleTrie::NybbleTrie(uint32_t cap)
 NybbleTrie::NybbleTrie(const char *filename, bool verbose)
 {
    init(1) ;
-   loadWords(filename,verbose) ;
+   LoadFn* insfn = [](NybbleTrie* trie, const uint8_t* key, unsigned keylen, uint32_t/*langID*/, uint32_t freq) -> bool
+		      { return trie->insert(key,keylen,freq,false) ; } ;
+   loadWords(filename,insfn,0,verbose) ;
    return ;
 }
 
@@ -287,7 +290,7 @@ void NybbleTrie::init(uint32_t cap)
 // NOTE: currently doesn't work with encodings that include NUL bytes in
 //   their representation of characters other than NUL.
 
-bool NybbleTrie::loadWords(const char *filename, bool verbose)
+bool NybbleTrie::loadWords(const char *filename, LoadFn* insertfn, uint32_t langID, bool verbose)
 {
    CInputFile fp(filename) ;
    if (fp)
@@ -317,11 +320,11 @@ bool NybbleTrie::loadWords(const char *filename, bool verbose)
 	 // trim leading and trailing whitespace from rest of line
 	 lineptr = trim_whitespace(freq_end) ;
 	 unsigned len = strlen(lineptr) ;
-	 insert((uint8_t*)lineptr,len,freq,false) ;
+	 insertfn(this,(uint8_t*)lineptr,len,langID,freq) ;
 	 wc++ ;
 	 }
       if (verbose)
-	 SystemMessage::status("Read %u words from '%s'",wc,(filename?filename:"")) ;
+	 SystemMessage::status("Read %u words from '%s'",wc,filename) ;
       return true ;
       }
    else

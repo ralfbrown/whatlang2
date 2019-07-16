@@ -324,10 +324,12 @@ LangIDMultiTrie::LangIDMultiTrie(uint32_t cap)
 
 //----------------------------------------------------------------------
 
-LangIDMultiTrie::LangIDMultiTrie(const char *filename, bool verbose)
+LangIDMultiTrie::LangIDMultiTrie(const char *filename, uint32_t langID, bool verbose)
 {
    init(1) ;
-   loadWords(filename,verbose) ;
+   LoadFn* insfn = [](NybbleTrie* trie, const uint8_t* key, unsigned keylen, uint32_t lang, uint32_t freq) -> bool
+		      { return static_cast<LangIDMultiTrie*>(trie)->insert(key,keylen,lang,freq,false) ; } ;
+   loadWords(filename,insfn,langID,verbose) ;
    return ;
 }
 
@@ -345,54 +347,6 @@ void LangIDMultiTrie::init(uint32_t cap)
    // initialize the root node
    new (node(root)) MultiTrieNode ;
    return ;
-}
-
-//----------------------------------------------------------------------
-// NOTE: currently doesn't work with encodings that include NUL bytes in
-//   their representation of characters other than NUL.
-
-bool LangIDMultiTrie::loadWords(const char *filename, uint32_t langID, bool verbose)
-{
-   CInputFile fp(filename) ;
-   if (fp)
-      {
-      bool warned = false;
-      unsigned linenumber = 0 ;
-      unsigned wc = 0 ;
-      while (CharPtr line = fp.getTrimmedLine())
-	 {
-	 linenumber++ ;
-	 char *lineptr = (char*)line ;
-	 // check if blank or comment line
-	 if (!*lineptr || *lineptr == ';' || *lineptr == '#')
-	    continue ;
-	 // extract the frequency
-	 char *freq_end ;
-	 uint32_t freq = (uint32_t)strtoul(lineptr,&freq_end,0) ;
-	 if (freq == 0 || freq_end == lineptr)
-	    {
-	    if (!warned)
-	       {
-	       SystemMessage::error("Invalid text on line %u of file '%s'",linenumber,filename) ;
-	       warned = true ;
-	       }
-	    continue ;
-	    }
-	 // trim leading and trailing whitespace from rest of line
-	 lineptr = trim_whitespace(freq_end) ;
-	 unsigned len = strlen(lineptr) ;
-	 insert((uint8_t*)lineptr,len,langID,freq,false) ;
-	 wc++ ;
-	 }
-      if (verbose)
-	 SystemMessage::status("Read %u words from '%s'",wc,(filename?filename:"")) ;
-      return true ;
-      }
-   else
-      {
-      SystemMessage::warning("Unable to read word list from '%s'",(filename?filename:"")) ;
-      return false ;
-      }
 }
 
 //----------------------------------------------------------------------

@@ -133,23 +133,18 @@ class LangIDMultiTrie : public NybbleTrie
 	 		  unsigned keylen, void *user_data) ;
    public:
       LangIDMultiTrie(uint32_t capacity = 0) ;
-      LangIDMultiTrie(const char *filename, bool verbose) ;
+      LangIDMultiTrie(const char *filename, uint32_t langID, bool verbose) ;
       LangIDMultiTrie(const class LangIDMultiTrie *) ;
       LangIDMultiTrie(const class LangIDPackedMultiTrie *) ;
       ~LangIDMultiTrie() = default ;
 
-      bool loadWords(const char *filename, uint32_t langID, bool verbose = false) ;
-
       // modifiers
       void setLanguage(uint32_t langID) { m_currentlangID = langID ; }
-      bool insert(const uint8_t *key, unsigned keylength,
-		  uint32_t langID, uint32_t frequency, bool stopgram) ;
-      uint32_t increment(const uint8_t *key, unsigned keylength,
-			 uint32_t langID, uint32_t incr = 1,
+      bool insert(const uint8_t *key, unsigned keylength, uint32_t langID, uint32_t frequency, bool stopgram) ;
+      uint32_t increment(const uint8_t *key, unsigned keylength, uint32_t langID, uint32_t incr = 1,
 			 bool stopgram = false) ;
       bool incrementExtensions(const uint8_t *key, unsigned prevlength,
-			       unsigned keylength, uint32_t langID,
-			       uint32_t incr = 1) ;
+			       unsigned keylength, uint32_t langID, uint32_t incr = 1) ;
 
       // accessors
       Node* node(NodeIndex N) const { return static_cast<Node*>(m_nodes.item(N)) ; }
