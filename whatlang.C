@@ -27,6 +27,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <iostream>
 #include "langid.h"
 #include "framepac/config.h"
 #include "framepac/file.h"

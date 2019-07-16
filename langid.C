@@ -26,15 +26,10 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstdlib>
-#include <cstring>
 #include <errno.h>
-#include <float.h>
 #include <numeric>
-#include <stdint.h>
 #include "langid.h"
 #include "mtrie.h"
-#include "framepac/byteorder.h"
 #include "framepac/config.h"
 #include "framepac/message.h"
 #include "framepac/texttransforms.h"
@@ -1437,12 +1432,12 @@ LanguageIdentifier* LanguageIdentifier::tryLoading(const char* database_file, bo
    else if (id->numLanguages() == 0)
       {
       if (verbose)
-	 cerr << "Unsuccessfully tried to open " << database_file << endl ;
+	 SystemMessage::error("Unsuccessfully tried to open '%s'",database_file) ;
       return nullptr ;
       }
    else if (verbose)
       {
-      cerr << "Opened language database " << database_file << endl ;
+      SystemMessage::status("Opened language database '%s'",database_file) ;
       }
    return id.move() ;
 }
@@ -1471,13 +1466,11 @@ LanguageIdentifier* LanguageIdentifier::load(const char *database_file, const ch
       {
       if (database_file && *database_file)
 	 {
-	 cerr << "Warning: Unable to load database from " << database_file
-	      << endl ;
+	 SystemMessage::warning("Unable to load database from '%s'",database_file) ;
 	 }
       else
 	 {
-	 cerr << "Warning: unable to load database from standard locations"
-	      << endl ;
+	 SystemMessage::warning("Unable to load database from standard locations") ;
 	 }
       }
    else
@@ -1679,7 +1672,7 @@ unsigned LanguageIdentifier::languageNumber(const LanguageID *lang_info)
 	       modelnum = (unsigned)~0 ;
 	       if (verbose())
 		  {
-		  cerr << "Multiple models match language specifier" << endl ;
+		  SystemMessage::warning("Multiple models match language specifier") ;
 		  }
 	       break ;
 	       }
@@ -1714,8 +1707,7 @@ unsigned LanguageIdentifier::languageNumber(const char *langdescript) const
 	       {
 	       if (verbose())
 		  {
-		  cerr << "Multiple models match language specifier "
-		       << langdescript << endl ;
+		  SystemMessage::warning("Multiple models match language specifier '%s'",langdescript) ;
 		  }
 	       modelnum = (unsigned)~0 ;
 	       break ;

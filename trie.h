@@ -26,9 +26,9 @@
 #ifndef __TRIE_H_INCLUDED
 #define __TRIE_H_INCLUDED
 
+#include <cstdint>
 #include <cstdio>
 #include <limits.h>
-#include <stdint.h>
 #include "framepac/file.h"
 #include "framepac/itempool.h"
 

@@ -24,6 +24,7 @@
 /************************************************************************/
 
 #include <cmath>
+#include <iostream>
 #include "langid.h"
 #include "trie.h"
 

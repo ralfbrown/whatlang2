@@ -26,13 +26,8 @@
 #ifndef __MTRIE_H_INCLUDED
 #define __MTRIE_H_INCLUDED
 
-#include <cstdio>
-#include <limits.h>
-#include <stdint.h>
 #include "trie.h"
 #include "framepac/byteorder.h"
-#include "framepac/itempool.h"
-#include "framepac/file.h"
 #include "framepac/trie.h"
 
 using namespace std ;
