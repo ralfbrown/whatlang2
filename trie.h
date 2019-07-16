@@ -168,46 +168,44 @@ template <class T>
 class TriePointer
    {
    public:
-      TriePointer() : m_trie(nullptr), m_valid(false) {}
+      TriePointer() = default ;
       TriePointer(T* t) : m_trie(t) { this->resetKey() ; }
       TriePointer(const T* t) : m_trie(const_cast<T*>(t)) { this->resetKey() ; }
-      ~TriePointer() { m_trie = nullptr ; m_index = 0 ; }
+      ~TriePointer() { invalidate() ; }
       TriePointer& operator= (const TriePointer& orig) = default ;
 
       // manipulators
       void setTrie(T* t) { m_trie = t ; }
-      void resetKey() { m_index = T::ROOT_INDEX ; m_keylen = 0 ; m_failed = false ; m_valid = true ; }
+      void resetKey() { m_index = T::ROOT_INDEX ; m_keylen = 0 ; m_valid = true ; }
       void invalidate() { m_valid = false ; }
       bool extendKey(uint8_t keybyte)
 	 {
-	    if (m_failed) return false ;
+	    if (!m_valid) return false ;
 	    bool success = m_trie->extendKey(m_index,keybyte) ;
 	    if (success)
 	       ++m_keylen ;
 	    else
-	       m_failed = true ;
+	       m_valid = false ;
 	    return success ;
 	 }
 	 
       // accessors
       bool OK() const
 	 {
-	    if (m_failed) return false ;
-	    auto n = m_trie->node(m_index) ;
+	    auto n = node() ;
 	    return n && n->leaf() ;
 	 }
       bool valid() const { return m_valid ; }
       explicit operator bool () const { return m_valid ; }
       bool operator ! () const { return !m_valid ; }
       unsigned keyLength() const { return m_keylen ; }
-      typename T::Node* node() const { return m_failed ? nullptr : m_trie->node(m_index) ; }
+      typename T::Node* node() const { return m_valid ? m_trie->node(m_index) : nullptr ; }
 
    private:
-      T*  	 m_trie ;
+      T*  	 m_trie { nullptr } ;
       uint32_t	 m_index ;
       uint16_t	 m_keylen ;
-      bool	 m_failed ;
-      bool       m_valid ;
+      bool       m_valid { false } ;
    } ;
 
 typedef TriePointer<NybbleTrie> NybbleTriePointer ;

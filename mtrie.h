@@ -124,8 +124,6 @@ class MultiTrieNode : public NybbleTrieNode
 class LangIDMultiTrie : public NybbleTrie
    {
    public:
-      static constexpr uint32_t ROOT_INDEX = 0U ;
-      static constexpr uint32_t NULL_INDEX = 0U ;
       static constexpr uint32_t INVALID_FREQ = MultiTrieFrequency::INVALID_FREQ ;
 
       typedef MultiTrieNode Node ;
