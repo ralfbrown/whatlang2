@@ -807,17 +807,6 @@ static bool boost_unique_ngram(const NybbleTrie* trie, uint32_t nodeindex,
 	    boosted = 0xFFFFFFFF ;
 	 n->setFrequency(boosted) ;
 	 }
-      else if (0)
-	 {
-	 auto weights = reinterpret_cast<StopGramWeight*>(stop_grams->userData()) ;
-	 auto freq = n->frequency() ;
-	 auto sgfreq = scaled_frequency(sgnode->frequency(),weights->totalBytes(),
-			       smoothing_power,log_smoothing_power) ;
-	 if (freq > 2 * sgfreq)
-	    {
-	    cout << "alternate" << endl ;
-	    }
-	 }
       }
    return true ;
 }
@@ -1383,8 +1372,6 @@ static bool filter_ngrams(const NybbleTrie* trie, uint32_t nodeindex, const uint
 	   (keylen == minimum_length && affix_ratio < MINLEN_AFFIX_RATIO &&
 	    max_freq < MINLEN_AFFIX_RATIO * freq)))
 	 {
-//for(size_t i = 0;i<keylen;i++)print_quoted_char(stdout,key[i]);
-//cout <<" "<<keylen<<"@"<<freq<<endl;
 	 enum_data->m_ngrams->insert(key,keylen,freq,node->isStopgram()) ;
 	 enum_data->m_inserted_ngram = true ;
 	 if (keylen == enum_data->m_max_length)
@@ -1776,7 +1763,7 @@ static void compute_coverage(LanguageID &lang_info,
       {
       if (verbose)
 	 {
-	 cout << "    Coverage fraction " << (overall_coverage / (double)training_bytes) << endl ;
+	 SystemMessage::status("    Coverage fraction %g",(overall_coverage / (double)training_bytes)) ;
 	 }
       lang_info.setCoverageFactor(overall_coverage / (double)training_bytes) ;
       lang_info.setCountedCoverage(counted_coverage / (double)training_bytes) ;

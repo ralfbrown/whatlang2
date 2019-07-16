@@ -24,11 +24,12 @@
 /************************************************************************/
 
 #include <cmath>
-#include <iostream>
 #include "langid.h"
 #include "trie.h"
+#include "framepac/message.h"
 
 using namespace std ;
+using namespace Fr ;
 
 /************************************************************************/
 /************************************************************************/
@@ -168,7 +169,7 @@ void TrigramCounts::filter(unsigned topK, unsigned max_len, bool verbose)
       return ;
    if (verbose)
       {
-      cout << "Determining trigram cut-off-frequency" << endl ;
+      SystemMessage::status("Determining trigram cut-off-frequency") ;
       }
    uint32_t top_frequencies[topK] ;
    std::fill_n(top_frequencies,topK,0) ;
@@ -193,8 +194,7 @@ void TrigramCounts::filter(unsigned topK, unsigned max_len, bool verbose)
    uint32_t thresh = adjusted_threshold(top_frequencies) ;
    if (verbose)
       {
-      cout << "Trigram cut-off frequency @ " << topK << " = " << thresh
-	   << endl ;
+      SystemMessage::status("Trigram cut-off frequency @ %u = %u",topK,thresh) ;
       }
    unsigned distinct = 0 ;
    for (size_t i = 0 ; i < lengthof(m_counts) ; i++)
@@ -209,7 +209,7 @@ void TrigramCounts::filter(unsigned topK, unsigned max_len, bool verbose)
    unsigned required = topK / (unsigned)::pow(1.5,max_len-3) ;
    if (distinct < required)
       {
-      cout << "Fewer than " << required << " distinct trigrams -- you may need more training data" << endl ;
+      SystemMessage::status("Fewer than %u distinct trigrams -- you may need more training data",required) ;
       }
    return ;
 }

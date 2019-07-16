@@ -271,9 +271,8 @@ LangIDPackedMultiTrie::LangIDPackedMultiTrie(const LangIDMultiTrie *multrie)
 	    m_freq.clear() ;
 	    m_terminals.clear() ;
 	    }
-	 cout << "   converted " << m_nodes.size() << " full nodes, "
-	      << m_terminals.size() << " terminals, and "
-	      << m_freq.size() << " frequencies" << endl ;
+	 SystemMessage::status("   converted %lu full nodes, %lu terminals, and %lu frquencies",
+	    m_nodes.size(), m_terminals.size(), m_freq.size()) ;
 	 }
       else
 	 {

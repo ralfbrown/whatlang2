@@ -5,7 +5,7 @@
 /*									*/
 /*  File:     prepfile.C	preprocessed file input			*/
 /*  Version:  1.30							*/
-/*  LastEdit: 2019-07-13						*/
+/*  LastEdit: 2019-07-15						*/
 /*                                                                      */
 /*  (c) Copyright 2010,2011,2012,2013,2014,2015,2019			*/
 /*		 Ralf Brown/Carnegie Mellon University			*/
@@ -29,6 +29,7 @@
 #include "prepfile.h"
 #include "framepac/file.h"
 #include "framepac/list.h"
+#include "framepac/message.h"
 #include "framepac/string.h"
 #include "framepac/texttransforms.h"
 
@@ -156,11 +157,8 @@ Fr::CFile* PreprocessedInputFile::open_sampled_input_file(const char *filename,
       }
 //   if (verbose)
       {
-      cout << "  Sampled " << sampled << " bytes from input file" ;
-      if (sampled < m_max_sample_bytes && max_bytes < total_bytes)
-	 cout << " (requested " << max_bytes << ", filesize=" << total_bytes
-	      << ")" ;
-      cout << endl ;
+      SystemMessage::status("  Sampled %lu bytes from input file (requested %lu, filesize=%lu)",
+	 sampled,max_bytes,total_bytes) ;
       }
    // if we subsampled but didn't get enough bytes, try again with a higher
    //   limit
