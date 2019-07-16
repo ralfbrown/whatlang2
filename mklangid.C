@@ -5,7 +5,7 @@
 /*									*/
 /*  File:     mklangid.C	build language-id model database	*/
 /*  Version:  1.30							*/
-/*  LastEdit: 2019-07-10						*/
+/*  LastEdit: 2019-07-15						*/
 /*                                                                      */
 /*  (c) Copyright 2010,2011,2012,2013,2014,2015,2019			*/
 /*		 Ralf Brown/Carnegie Mellon University			*/
@@ -27,19 +27,11 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <errno.h>
-#include <iostream>
-#include <iomanip>
 #include "langid.h"
 #include "prepfile.h"
-#include "trie.h"
 #include "mtrie.h"
 #include "ptrie.h"
 #include "framepac/bitvector.h"
-#include "framepac/init.h"
 #include "framepac/message.h"
 #include "framepac/texttransforms.h"
 
@@ -240,7 +232,7 @@ static void usage(const char *argv0, const char *bad_arg)
 {
    if (bad_arg)
       cerr << "Unrecognized argument " << bad_arg << endl << endl ;
-   cerr << "MKLANGID version " VERSION "  Copyright 2011,2012 Ralf Brown/CMU -- GNU GPLv3" << endl ;
+   cerr << "MKLANGID version " VERSION "  Copyright 2011,2012,2019 Ralf Brown/CMU -- GNU GPLv3" << endl ;
    cerr << "Usage: " << argv0 << " [=DBFILE] {options} file ... [{options} file ...]"
 	<< endl ;
    cerr << "  Specify =DBFILE to use language database DBFILE instead of the\n" ;
@@ -379,7 +371,7 @@ static uint64_t read_files(const char **filelist, unsigned num_files,
 	 PreprocessedInputFile infile(filename,byte_limit - total_bytes, subsample_input) ;
 	 if (infile.good())
 	    {
-	    cout << "  Processing " << filename << endl ;
+	    SystemMessage::status("  Processing '%s'",filename) ;
 	    va_list argcopy ;
 	    va_copy(argcopy,args) ;
 	    if (!reader(&infile,argcopy))
@@ -387,7 +379,7 @@ static uint64_t read_files(const char **filelist, unsigned num_files,
 	    }
 	 else if (show_error)
 	    {
-	    cerr << "Error opening '" << filename << "' for reading" << endl ;
+	    SystemMessage::error("Unable to open '%s' for reading",filename) ;
 	    }
 	 total_bytes += infile.bytesRead() ;
 	 infile.close() ;
@@ -534,7 +526,7 @@ static bool select_models_by_name(const char *languages, BitVector &selected)
 	 }
       else
 	 {
-	 cerr << "Warning: no match for language descriptor " << desc << endl ;
+	 SystemMessage::warning("no match for language descriptor '%s'",desc) ;
 	 }
       desc = desc_end ;
       }
@@ -550,8 +542,7 @@ static bool select_models_by_similarity(size_t langid, BitVector &selected,
    bool did_select = false ;
    if (!weights)
       {
-      cout << "Unable to compute cross-language similarities, will not "
-	      "compute stop-grams." << endl ;
+      SystemMessage::error("Unable to compute cross-language similarities, will not compute stop-grams.") ;
       return did_select ;
       }
    char *endptr = nullptr ;
@@ -582,9 +573,8 @@ static bool select_models_by_similarity(size_t langid, BitVector &selected,
       selected.setBit(langnum,true) ;
       if (/*verbose &&*/ other)
 	 {
-	 cout << "  similarity to "<< other->language() << "_"
-	      << other->region() << "-" << other->encoding() << " is "
-	      << weights->score(langnum) << endl ;
+	 SystemMessage::status("  similarity to %s_%s-%s is %g",other->language(),other->region(),other->encoding(),
+	    weights->score(langnum)) ;
 	 }
       }
    return did_select ;
@@ -681,9 +671,8 @@ static NybbleTrie *load_stop_grams(const LanguageID *lang_info,
       }
    unsigned langid = language_identifier->languageNumber(lang_info) ;
    training_bytes = language_identifier->trainingBytes(langid) ;
-   cout << "Computing similarities relative to "
-	<< lang_info->language() << "_" << lang_info->region()
-	<< "-" << lang_info->encoding() << endl ;
+   SystemMessage::status("Computing similarities relative to %s_%s-%s",lang_info->language(),lang_info->region(),
+      lang_info->encoding()) ;
    Owned<LanguageScores> weights = language_identifier->similarity(langid) ;
    ScopedObject<BitVector> selected(language_identifier->numLanguages()) ;
    bool selected_models ;
@@ -841,7 +830,7 @@ static bool add_stop_grams(const char **filelist, unsigned num_files,
 {
    if (!stop_grams || stop_grams->size() <= 100)
       return true ;
-   cout << "Computing Stop-Grams" << endl ;
+   SystemMessage::status("Computing Stop-Grams") ;
    // accumulate counts for all the ngrams in the stop-gram list
    uint64_t total_bytes
       = read_files(filelist,num_files,false,&accumulate_confusible_ngrams,stop_grams) ;
@@ -915,11 +904,9 @@ static bool save_database(const char *database_file)
 	 }
       unsigned num_languages = count_languages(language_identifier,compare_langcode) ;
       unsigned num_pairs = count_languages(language_identifier,compare_codepair) ;
-      cout << "Database contains " << language_identifier->numLanguages()
-	   << " models, " << num_languages
-	   << " distinct language codes,\n\tand " << num_pairs
-	   << " language/encoding pairs" << endl ;
-      cout << "Saving database" << endl ;
+      SystemMessage::status("Database contains %lu models, %u distinct language codes,\n\t"
+	 "and %u language/encoding pairs",language_identifier->numLanguages(),num_languages,num_pairs) ;
+      SystemMessage::status("Saving database to '%s'",database_file) ;
       return language_identifier->write(database_file) ;
       }
    return false ;
@@ -983,8 +970,7 @@ static void dump_vocabulary(const NybbleTrie *ngrams, bool scaled,
    COutputFile f(vocab_file) ;
    if (!f)
       {
-      cerr << "Unable to open '" << vocab_file << "' to write vocabulary"
-	   << endl ;
+      SystemMessage::error("Unable to open '%s' to write vocabulary",vocab_file) ;
       return ;
       }
    if (total_bytes)
@@ -1068,7 +1054,7 @@ static uint64_t count_trigrams(const char **filelist, unsigned num_files,
 			       TrigramCounts &counts, bool skip_newlines,
 			       bool aligned, Owned<BigramCounts>& bigrams)
 {
-   cout << "Counting trigrams" << endl ;
+   SystemMessage::status("Counting trigrams") ;
    uint64_t total_bytes = read_files(filelist,num_files,true,&count_raw_trigrams,&counts) ;
    // count the bigrams before we clear any of the trigram counts
    bigrams = new BigramCounts(counts) ;
@@ -1196,7 +1182,7 @@ static uint64_t count_trigrams(const char **filelist, unsigned num_files,
 	 counts.clear('?','?','?') ;
 	 }
       }
-   cout << "  Processed " << total_bytes << " bytes" << endl ;
+   SystemMessage::status("  Processed '%lu' bytes",total_bytes) ;
    return total_bytes ;
 }
 
@@ -1434,8 +1420,7 @@ static NybbleTrie *restrict_ngrams(NybbleTrie *ngrams, unsigned top_K,
    if (!ngrams->enumerate(keybuf,max_length,find_ngram_cutoff,&enum_data)
        || enum_data.m_count < required)
       {
-      cout << "Only " << enum_data.m_count << " distinct ngrams at length "
-	   << max_length << ": collect more data" << endl ;
+      SystemMessage::warning("Only %u distinct ngrams at length %u: collect more data",enum_data.m_count,max_length) ;
       if (max_length < maximum_length)
 	 {
 	 return nullptr ;
@@ -1448,9 +1433,8 @@ static NybbleTrie *restrict_ngrams(NybbleTrie *ngrams, unsigned top_K,
    enum_data.m_min_freq = threshold ;
    if (show_threshold)
       {
-      cout << "  Enumerating ngrams of length " << minlen << " to "
-	   << max_length << " occurring at least " << threshold << " times"
-	   << endl ;
+      SystemMessage::status("  Enumerating ngrams of length %u to %u occurring at least %u times",
+	 minlen,max_length,threshold) ;
       }
    enum_data.m_have_max_length = false ;
    if (!ngrams->enumerate(keybuf,max_length,filter_ngrams,&enum_data) ||
@@ -1470,7 +1454,7 @@ static NybbleTrie *count_ngrams(const char **filelist, unsigned num_files,
 				bool &have_max_length,
 				bool skip_newlines, bool aligned)
 {
-   cout << "Counting n-grams up to length " << max_length << endl ;
+   SystemMessage::status("Counting n-grams up to length %u",max_length) ;
    (void)read_files(filelist,num_files,false,&count_ngrams,ngrams,min_length,max_length,skip_newlines,aligned) ;
    unsigned minlen = minimum_length ;
    if (minlen > max_length)
@@ -1489,8 +1473,7 @@ static NybbleTrie *count_ngrams(const char **filelist, unsigned num_files,
    // find the threshold at which to cut off ngrams to limit to topK
    if (verbose)
       {
-      cout << "  Determining threshold for ngrams of length " << minlen
-	   << " to " << max_length << endl ;
+      SystemMessage::status("  Determining threshold for ngrams of length %u to %u",minlen,max_length) ;
       }
    // remove any suffixes of an n-gram which have nearly the same
    //   frequency as the n-gram containing them (but don't remove
@@ -1509,8 +1492,7 @@ static NybbleTrie *count_ngrams(const char **filelist, unsigned num_files,
    if (!ngrams->enumerate(keybuf,max_length,find_ngram_cutoff,&enum_data)
        || enum_data.m_count < required)
       {
-      cout << "Only " << enum_data.m_count << " distinct ngrams at length "
-	   << max_length << ": collect more data" << endl ;
+      SystemMessage::warning("Only %u distinct ngrams at length %u: collect more data",enum_data.m_count,max_length) ;
       if (max_length < maximum_length)
 	 {
 	 return nullptr ;
@@ -1520,9 +1502,8 @@ static NybbleTrie *count_ngrams(const char **filelist, unsigned num_files,
    if (enum_data.m_count < top_K /*&& max_length == maximum_length*/)
       threshold = 1 ;
    enum_data.m_min_freq = threshold ;
-   cout << "  Enumerating ngrams of length " << minlen << " to "
-	<< max_length << " occurring at least " << threshold << " times"
-	<< endl ;
+   SystemMessage::status("  Enumerating ngrams of length %u to %u occurring at least %u times",
+      minlen,max_length,threshold) ;
    enum_data.m_have_max_length = false ;
    if (!ngrams->enumerate(keybuf,max_length,filter_ngrams,&enum_data) ||
        !enum_data.m_inserted_ngram)
@@ -1591,9 +1572,8 @@ static void add_ngrams(const NybbleTrie *ngrams, uint64_t total_bytes,
       if (langID < num_langs)
 	 {
 	 CharPtr spec = language_identifier->languageDescriptor(langID) ;
-	 cerr << "Duplicate language specification " << spec
-	      << " encountered in " << filename
-	      << ",\n  ignoring data to avoid database errors." << endl ;
+	 SystemMessage::warning("Duplicate language specification '%s' encountered in '%s',\n"
+	                        "  ignoring data to avoid database errors.",*spec,filename) ;
 	 }
       auto trie = language_identifier->unpackedTrie() ;
       if (trie)
@@ -1662,8 +1642,7 @@ static const char *add_UTF8_range(const char *range_spec,
    if (bad_spec)
       {
       // oops, invalid spec, skip to end
-      cerr << "Error in language range specification near\n\t"
-	   << range_spec << endl << endl ;
+      SystemMessage::error("invalild language range specification near\n\t%s",range_spec) ;
       range_spec = strchr(range_spec,'\0') ;
       }
    return range_spec ;
@@ -1965,8 +1944,8 @@ static bool load_frequencies(CFile& f, NybbleTrie* ngrams, uint64_t& total_bytes
 	       {
 	       if (!scaled)
 		  {
-		  cerr << "Warning: found scaled count in counts file that does not contain" << endl ;
-		  cerr << "the Scaled: directive; enabling scaled counts for remainder." << endl ;
+		  SystemMessage::warning("found scaled count in counts file that does not contain\n"
+		                         "the Scaled: directive; enabling scaled counts for remainder.") ;
 		  scaled = true ;
 		  }
 	       shift_count = *endptr++ - 'a' + 1 ;
@@ -2055,7 +2034,7 @@ static bool load_frequencies(CFile& f, NybbleTrie* ngrams, uint64_t& total_bytes
       bigrams = new BigramCounts ;
       if (!bigrams->read(f))
 	 {
-	 cerr << "Error reading bigram counts in vocabulary file" << endl ;
+	 SystemMessage::error("reading bigram counts in vocabulary file") ;
 	 bigrams = nullptr ;
 	 }
       }
@@ -2074,13 +2053,14 @@ static bool load_frequencies(CFile& f, NybbleTrie* ngrams, uint64_t& total_bytes
 static bool load_frequencies(const char **filelist, unsigned num_files,
 			     LanguageID &opts, bool textcat_format, bool no_save)
 {
-   cout << "Loading frequency list " ;
+   const char* fmt = "" ;
    if (textcat_format)
-      cout << "(TextCat format)" << endl ;
+      fmt = "(TextCat format)" ;
    else if (crubadan_format)
-      cout << "(Crubadan format)" << endl ;
+      fmt = "(Crubadan format)" ;
    else
-      cout << "(MkLangID format)" << endl ;
+      fmt = "(MkLangID format)" ;
+   SystemMessage::status("Loading frequency list %s",fmt) ;
    NewPtr<NybbleTrie> ngrams(1) ;
    if (!ngrams)
       {
@@ -2097,7 +2077,7 @@ static bool load_frequencies(const char **filelist, unsigned num_files,
       CInputFile fp(filename) ;
       if (fp)
 	 {
-	 cout << "  Reading " << filename << endl ;
+	 SystemMessage::status("  Reading '%s'",filename) ;
 	 load_frequencies(fp,*ngrams,total_bytes,textcat_format,opts,bigrams,scaled) ;
 	 if (textcat_format || num_files > 1)
 	    {
@@ -2118,11 +2098,11 @@ static bool load_frequencies(const char **filelist, unsigned num_files,
       if (no_save)
 	 {
 	 if (!vocabulary_file)
-	    cerr << "*** N-grams WERE NOT SAVED (read-only database) ***" << endl ;
+	    SystemMessage::error("*** N-grams WERE NOT SAVED (read-only database) ***") ;
 	 }
       else
 	 {
-	 cout << "Updating database" << endl ;
+	 SystemMessage::status("Updating database") ;
 	 if (!scaled)
 	    ngrams->scaleFrequencies(total_bytes,smoothing_power,log_smoothing_power) ;
 	 add_ngrams(ngrams,total_bytes,opts,filelist[0]) ;
@@ -2252,7 +2232,7 @@ static bool cluster_models_by_charset(LanguageIdentifier *clusterdb,
    for (unsigned i = 0 ; i < num_encs ; i++)
       {
       bool have_max_length = true ;
-      cerr << "adding encoding " << i << "  " << enc_info[i]->encoding() << endl;
+      SystemMessage::status("adding encoding '%u' '%s'", i, enc_info[i]->encoding()) ;
       Owned<NybbleTrie> clustered = restrict_ngrams(encodings[i],2*max_sizes[i],1,maxkey,1,have_max_length) ;
       delete encodings[i] ;
       uint64_t total_bytes = 1 ; //FIXME!!!
@@ -2275,13 +2255,12 @@ static bool cluster_models(const char* cluster_db_name, double cluster_thresh)
    Owned<LanguageIdentifier> clusterdb(cluster_db_name) ;
    if (!clusterdb)
       {
-      cerr << "Unable to create clustered language database "  << cluster_db_name << endl ;
+      SystemMessage::error("Unable to create clustered language database '%s'",cluster_db_name) ;
       return false ;
       }
    if (clusterdb->numLanguages() > 0)
       {
-      cerr << "Non-empty language database specified: "
-	   << cluster_db_name << endl ;
+      SystemMessage::error("Non-empty language database specified: '%s'",cluster_db_name) ;
       return false ;
       }
    if (cluster_thresh == 0.0)
@@ -2292,8 +2271,7 @@ static bool cluster_models(const char* cluster_db_name, double cluster_thresh)
    else
       {
       //TODO: nonzero clustering thresholds
-      cerr << "clustering thresholds other than 0.0 not implemented yet."
-	   << endl ;
+      SystemMessage::error("clustering thresholds other than 0.0 not implemented yet.") ;
       return false ;
       }
 }
@@ -2381,7 +2359,7 @@ static bool process_files(const char** filelist, unsigned num_files,
    bool scaled = false ;
    if (curr_ngrams && curr_ngrams->size() > 0)
       {
-      cout << "Using baseline n-gram model from language database" << endl ;
+      SystemMessage::status("Using baseline n-gram model from language database") ;
       ngrams = std::move(curr_ngrams) ;
       scaled = true ;
       total_bytes = training_bytes ;
@@ -2409,7 +2387,7 @@ static bool process_files(const char** filelist, unsigned num_files,
       }
    else if (!vocabulary_file)
       {
-      cerr << "*** N-grams WERE NOT SAVED (read-only database) ***" << endl ;
+      SystemMessage::warning("*** N-grams WERE NOT SAVED (read-only database) ***") ;
       }
    return true ;
 }
@@ -2430,8 +2408,7 @@ static void parse_bigram_extension(const char *arg)
 	 bigram_extension = BigramExt_None ;
       else
 	 {
-	 cerr << "Invalid value for -2 flag; bigram extension disabled."
-	      << endl ;
+	 SystemMessage::warning("Invalid value for -2 flag; bigram extension disabled.") ;
 	 bigram_extension = BigramExt_None ;
 	 }
       }
@@ -2452,8 +2429,7 @@ static void parse_UTF8_extension(const char *arg)
 	 bigram_extension = BigramExt_None ;
       else
 	 {
-	 cerr << "Invalid value for -8 flag; UTF8-to-UTF16 conversion disabled."
-	      << endl ;
+	 SystemMessage::warning("Invalid value for -8 flag; UTF8-to-UTF16 conversion disabled.") ;
 	 bigram_extension = BigramExt_None ;
 	 }
       }
@@ -2472,12 +2448,12 @@ static void parse_clustering(const char *arg, double &threshold,
       if (val < 0.0)
 	 {
 	 val = 0.0 ;
-	 cerr << "-C threshold adjusted to 0.0" << endl ;
+	 SystemMessage::warning("-C threshold adjusted to 0.0") ;
 	 }
       else if (val > 1.0)
 	 {
 	 val = 1.0 ;
-	 cerr << "-C threshold adjusted to 1.0" << endl ;
+	 SystemMessage::warning("-C threshold adjusted to 1.0") ;
 	 }
       if (endptr && *endptr == ',')
 	 {
@@ -2486,7 +2462,7 @@ static void parse_clustering(const char *arg, double &threshold,
 	 }
       else
 	 {
-	 cerr << "-C flag missing filename" << endl ;
+	 SystemMessage::warning("-C flag missing filename") ;
 	 dbfile = nullptr ;
 	 threshold = -1.0 ;
 	 }
@@ -2554,7 +2530,7 @@ static void parse_translit(const char *spec, CharPtr& from, CharPtr& to)
 	    *comma = '\0' ;
 	 else
 	    {
-	    cerr << "You may not omit the FROM encoding for -T" << endl ;
+	    SystemMessage::warning("You may not omit the FROM encoding for -T") ;
 	    from = nullptr ;
 	    }
 	 }
@@ -2653,18 +2629,18 @@ static bool process_argument_group(int &argc, const char **&argv,
    PreprocessedInputFile::setDefaultAlignment(alignment) ;
    PreprocessedInputFile::setIgnoreWhitespace(ignore_whitespace) ;
    if (byte_limit < (uint64_t)~0U && verbose)
-      cout << "Limiting training to " << byte_limit << " bytes" << endl ;
+      SystemMessage::status("Limiting training to %lu bytes",byte_limit) ;
    if (minimum_length < ABSOLUTE_MIN_LENGTH && !frequency_list)
       {
       minimum_length = ABSOLUTE_MIN_LENGTH ;
-      cerr << "Minimum length adjusted to " << ABSOLUTE_MIN_LENGTH << endl ;
+      SystemMessage::status("Minimum length adjusted to '%u'",ABSOLUTE_MIN_LENGTH) ;
       }
    if (bigram_extension != BigramExt_None && minimum_length < 4)
       minimum_length = 4 ;
    if (maximum_length > ABSOLUTE_MAX_LENGTH)
       {
       maximum_length = ABSOLUTE_MAX_LENGTH ;
-      cerr << "Maximum length adjusted to " << ABSOLUTE_MAX_LENGTH << endl ;
+      SystemMessage::status("Maximum length adjusted to '%u'",ABSOLUTE_MAX_LENGTH) ;
       }
    if (crubadan_format)
       {
@@ -2724,7 +2700,7 @@ static bool process_argument_group(int &argc, const char **&argv,
       CharPtr translit_to = from ? aprintf("%s//TRANSLIT",to ? *to : lang_info.encoding()) : nullptr ;
       if (!PreprocessedInputFile::setDefaultTransliteration(from,translit_to))
 	 {
-	 cerr << "Unable to perform conversion from " << from << " to " << translit_to << endl ;
+	 SystemMessage::warning("Unable to perform conversion from '%s' to '%s'",*from,*translit_to) ;
 	 }
       Owned<NybbleTrie> curr_ngrams { Fr::null } ;
       Owned<NybbleTrie> ngram_weights { Fr::null } ;
