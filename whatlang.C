@@ -24,13 +24,10 @@
 /*                                                                      */
 /************************************************************************/
 
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <iostream>
 #include "langid.h"
 #include "framepac/config.h"
 #include "framepac/file.h"
+#include "framepac/message.h"
 #include "framepac/texttransforms.h"
 #include "framepac/unicode.h"
 
@@ -378,8 +375,7 @@ static void set_weight(char type, double weight)
 	 set_stopgram_penalty(weight) ;
 	 break ;
       default:
-	 cerr << "Unknown weight type '" << type << "' in -W argument"
-	      << endl ;
+	 SystemMessage::error("Unknown weight type '%c' in -W argument",type) ;
 	 break ;
       }
    return ;

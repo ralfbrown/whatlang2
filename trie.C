@@ -5,7 +5,7 @@
 /*									*/
 /*  File: trie.C - Word-frequency trie					*/
 /*  Version:  1.30				       			*/
-/*  LastEdit: 2019-07-09						*/
+/*  LastEdit: 2019-07-15						*/
 /*									*/
 /*  (c) Copyright 2011,2012,2014,2015,2019 Ralf Brown/CMU		*/
 /*      This program is free software; you can redistribute it and/or   */
@@ -28,9 +28,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <iostream>
 #include "trie.h"
 #include "framepac/config.h"
+#include "framepac/message.h"
 #include "framepac/texttransforms.h"
 
 using namespace std ;
@@ -100,11 +100,11 @@ double scale_frequency(double freq, double power, double log_power)
       scaled *= 4.0 ;
       // the following should never trigger
       if (scaled > ((uint32_t)~0) / (double)TRIE_SCALE_FACTOR)
-	 cerr << "DEBUG: truncating scaledpercent " << scaled << endl ;
+	 SystemMessage::debug("truncating scaledpercent %g",scaled) ;
       // ditto
       if (scaled <= 0.0)
 	 {
-	 cerr << "DEBUG: scaling underflow: " << freq << " -> " << scaled << endl  ;
+	 SystemMessage::debug("scaling underflow: %g -> %g",freq,scaled)  ;
 	 scaled = DBL_MIN ;
 	 }
       }
@@ -309,8 +309,7 @@ bool NybbleTrie::loadWords(const char *filename, bool verbose)
 	    {
 	    if (!warned)
 	       {
-	       cerr << "Invalid text on line " << linenumber << " of file '"
-		    << filename << "'" << endl ;
+	       SystemMessage::error("Invalid text on line %u of file '%s'",linenumber,filename) ;
 	       warned = true ;
 	       }
 	    continue ;
@@ -322,12 +321,12 @@ bool NybbleTrie::loadWords(const char *filename, bool verbose)
 	 wc++ ;
 	 }
       if (verbose)
-	 cerr << "Read " << wc << " words from '" << (filename?filename:"") << "'" << endl ;
+	 SystemMessage::status("Read %u words from '%s'",wc,(filename?filename:"")) ;
       return true ;
       }
    else
       {
-      cerr << "Unable to read word list from '" << (filename?filename:"") << "'" << endl ;
+      SystemMessage::error("Unable to read word list from '%s'",(filename?filename:"")) ;
       return false ;
       }
 }

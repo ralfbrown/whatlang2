@@ -24,10 +24,8 @@
 /************************************************************************/
 
 #include <algorithm>
-#include <cstdlib>
-#include <cstdio>
+#include <cstring>
 #include <iostream>
-#include <memory.h>
 #include "framepac/file.h"
 #include "framepac/random.h"
 

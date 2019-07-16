@@ -5,7 +5,7 @@
 /*									*/
 /*  File: ptrie.C - packed Word-frequency multi-trie			*/
 /*  Version:  1.30				       			*/
-/*  LastEdit: 2019-07-12						*/
+/*  LastEdit: 2019-07-15						*/
 /*									*/
 /*  (c) Copyright 2011,2012,2015,2019 Ralf Brown/CMU			*/
 /*      This program is free software; you can redistribute it and/or   */
@@ -23,13 +23,11 @@
 /*                                                                      */
 /************************************************************************/
 
-#include <iostream>
-#include <stdio.h>
-#include <stdlib.h>
 #include <cstring>
 #include "mtrie.h"
 #include "ptrie.h"
 #include "framepac/file.h"
+#include "framepac/message.h"
 #include "framepac/utility.h"
 
 using namespace std ;
@@ -356,7 +354,7 @@ bool LangIDPackedMultiTrie::insertTerminals(PackedTrieNode *parent,
    parent->setFirstChild(firstchild) ;
    if (firstchild == NOCHILD_INDEX)
       {
-      cerr << "insertTerminals: firstchild==NOCHILD_INDEX"<<endl;
+      SystemMessage::error("insertTerminals: firstchild==NOCHILD_INDEX") ;
       return false ;
       }
    unsigned index = 0 ;
@@ -415,7 +413,7 @@ bool LangIDPackedMultiTrie::insertChildren(PackedTrieNode *parent,
    parent->setFirstChild(firstchild) ;
    if (firstchild == NOCHILD_INDEX)
       {
-      cerr << "insertChildren: firstchild==NOCHILD_INDEX" << endl ;
+      SystemMessage::error("insertChildren: firstchild==NOCHILD_INDEX") ;
       return false ;
       }
    unsigned index = 0 ;

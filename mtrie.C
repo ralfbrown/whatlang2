@@ -5,7 +5,7 @@
 /*									*/
 /*  File: mtrie.C - bit-slice-based Word-frequency multi-trie		*/
 /*  Version:  1.30				       			*/
-/*  LastEdit: 2019-07-14						*/
+/*  LastEdit: 2019-07-15						*/
 /*									*/
 /*  (c) Copyright 2011,2012,2015,2019 Carnegie Mellon University	*/
 /*      This program is free software; you can redistribute it and/or   */
@@ -24,12 +24,10 @@
 /************************************************************************/
 
 #include <cassert>
-#include <iostream>
-#include <stdio.h>
-#include <stdlib.h>
 #include <cstring>
 #include "mtrie.h"
 #include "framepac/memory.h"
+#include "framepac/message.h"
 #include "framepac/texttransforms.h"
 
 using namespace std ;
@@ -375,8 +373,7 @@ bool LangIDMultiTrie::loadWords(const char *filename, uint32_t langID, bool verb
 	    {
 	    if (!warned)
 	       {
-	       cerr << "Invalid text on line " << linenumber << " of file '"
-		    << filename << "'" << endl ;
+	       SystemMessage::error("Invalid text on line %u of file '%s'",linenumber,filename) ;
 	       warned = true ;
 	       }
 	    continue ;
@@ -388,12 +385,12 @@ bool LangIDMultiTrie::loadWords(const char *filename, uint32_t langID, bool verb
 	 wc++ ;
 	 }
       if (verbose)
-	 cerr << "Read " << wc << " words from '" << (filename?filename:"") << "'" << endl ;
+	 SystemMessage::status("Read %u words from '%s'",wc,(filename?filename:"")) ;
       return true ;
       }
    else
       {
-      cerr << "Unable to read word list from '" << (filename?filename:"") << "'" << endl ;
+      SystemMessage::warning("Unable to read word list from '%s'",(filename?filename:"")) ;
       return false ;
       }
 }
