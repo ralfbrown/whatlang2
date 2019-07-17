@@ -569,8 +569,7 @@ uint32_t LangIDMultiTrie::numFullByteNodes() const
 
 uint32_t LangIDMultiTrie::numTerminalNodes() const
 {
-   uint32_t count = 0 ;
-   return countTerminalNodes(ROOT_INDEX,count) ? count : 0 ;
+   return countTerminalNodes(ROOT_INDEX) ;
 }
 
 //----------------------------------------------------------------------
