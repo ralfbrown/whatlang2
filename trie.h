@@ -5,7 +5,7 @@
 /*									*/
 /*  File: trie.h - Word-frequency trie					*/
 /*  Version:  1.30				       			*/
-/*  LastEdit: 2019-07-11						*/
+/*  LastEdit: 2019-07-16						*/
 /*									*/
 /*  (c) Copyright 2011,2012,2014,2019 Carnegie Mellon University	*/
 /*      This program is free software; you can redistribute it and/or   */
@@ -132,6 +132,7 @@ class NybbleTrie
       unsigned longestKey() const { return m_maxkeylen ; }
       bool ignoringWhiteSpace() const { return m_ignorewhitespace ; }
       Node* node(NodeIndex N) const { return m_nodes.item(N) ; }
+      Node* rootNode() const { return node(ROOT_INDEX) ; }
       NodeIndex findKey(const uint8_t* key, unsigned keylength) const ;
       Node* findNode(const uint8_t* key, unsigned keylength) const { return node(findKey(key,keylength)) ; }
       uint32_t find(const uint8_t* key, unsigned keylength) const ;
@@ -141,6 +142,10 @@ class NybbleTrie
 			     unsigned curr_keylength_bits, EnumFn *fn, void *user_data) const ;
       bool singleChild(NodeIndex nodeindex) const ;
       bool singleChildSameFreq(NodeIndex nodeindex, bool allow_nonleaf, double ratio) const ;
+      bool allChildrenAreTerminals(NodeIndex nodeindex, uint32_t min_freq, unsigned = 0) const ;
+      unsigned numExtensions(NodeIndex nodeindex, uint32_t min_freq, unsigned = 0) const ;
+      uint32_t numFullByteNodes(uint32_t min_freq) const ;
+      uint32_t numTerminalNodes(uint32_t min_freq) const ;
 
       bool scaleFrequencies(uint64_t total_count) ;
       bool scaleFrequencies(uint64_t total_count, double power, double log_power) ;
@@ -154,6 +159,8 @@ class NybbleTrie
    private:
       void init(uint32_t capacity) ;
       bool extendNybble(NodeIndex& nodeindex, uint8_t nybble) const ;
+      size_t countTerminalNodes(NodeIndex nodeindex, uint32_t min_freq, unsigned keylen_bits = 0) const ;
+      size_t countFullByteNodes(NodeIndex nodeindex, uint32_t min_freq, unsigned keylen_bits = 0) const ;
    protected:
       Fr::ItemPool<Node> m_nodes ;
       void	       *m_userdata ;

@@ -5,7 +5,7 @@
 /*									*/
 /*  File: trie.C - Word-frequency trie					*/
 /*  Version:  1.30				       			*/
-/*  LastEdit: 2019-07-15						*/
+/*  LastEdit: 2019-07-16						*/
 /*									*/
 /*  (c) Copyright 2011,2012,2014,2015,2019 Ralf Brown/CMU		*/
 /*      This program is free software; you can redistribute it and/or   */
@@ -666,6 +666,106 @@ bool NybbleTrie::enumerateChildren(NodeIndex nodeindex,
 	 }
       }
    return true ;
+}
+
+//----------------------------------------------------------------------
+
+size_t NybbleTrie::countTerminalNodes(NodeIndex nodeindex, uint32_t min_freq, unsigned keylen_bits) const
+{
+   size_t count = 0 ;
+   auto n = node(nodeindex)   ;
+   if (!n->hasChildren())
+      {
+      //FIXME
+      return (keylen_bits % 8 == 0) ? 1 : 0 ;
+      }
+   keylen_bits += BITS_PER_LEVEL ;
+#if BITS_PER_LEVEL == 3
+   if (keylen_bits % 8 == 1) --keylen_bits ;
+#endif
+   for (size_t i = 0 ; i < (1<<BITS_PER_LEVEL) ; i++)
+      {
+      uint32_t child = n->childIndex(i) ;
+      if (child != NULL_INDEX)
+	 count += countTerminalNodes(child,min_freq,keylen_bits) ;
+      }
+   return count ;
+}
+
+//----------------------------------------------------------------------
+
+size_t NybbleTrie::countFullByteNodes(NodeIndex nodeindex, uint32_t min_freq, unsigned keylen_bits) const
+{
+   size_t count = 0 ;
+   if (keylen_bits % 8 == 0)
+      {
+      //FIXME
+      count++ ;
+      }
+   keylen_bits = keylen_bits + BITS_PER_LEVEL ;
+#if BITS_PER_LEVEL == 3
+   if (keylen_bits % 8 == 1) keylen_bits-- ;
+#endif
+   auto n = node(nodeindex) ;
+   for (size_t i = 0 ; i < (1<<BITS_PER_LEVEL) ; i++)
+      {
+      uint32_t child = n->childIndex(i) ;
+      if (child != NULL_INDEX)
+	 count += countFullByteNodes(child,min_freq,keylen_bits) ;
+      }
+   return count ;
+}
+
+//----------------------------------------------------------------------
+
+unsigned NybbleTrie::numExtensions(NodeIndex nodeindex, uint32_t min_freq, unsigned bits) const
+{
+   if (bits >= 8)
+      {
+      return 1 ;//FIXME
+      }
+   auto n = node(nodeindex) ;
+   unsigned count = 0 ;
+   for (size_t i = 0 ; i < (1<<BITS_PER_LEVEL) ; ++i)
+      {
+      auto child = n->childIndex(i) ;
+      if (child != NULL_INDEX)
+	 count += numExtensions(child,min_freq,bits+BITS_PER_LEVEL) ;
+      }
+   return count ;
+}
+
+//----------------------------------------------------------------------
+
+bool NybbleTrie::allChildrenAreTerminals(NodeIndex nodeindex, uint32_t min_freq, unsigned bits) const
+{
+   auto n = node(nodeindex) ;
+   if (bits >= 8)
+      {
+      //FIXME
+      return !n->hasChildren() ;
+      }
+   for (size_t i = 0 ; i < (1<<BITS_PER_LEVEL) ; ++i)
+      {
+      auto child = n->childIndex(i) ;
+      if (child != NULL_INDEX && !allChildrenAreTerminals(child,min_freq,bits+BITS_PER_LEVEL))
+	 return false ;
+      }
+   return true ;
+}
+
+//----------------------------------------------------------------------
+
+uint32_t NybbleTrie::numFullByteNodes(uint32_t min_freq) const
+{
+   return countFullByteNodes(ROOT_INDEX,min_freq) ;
+}
+
+//----------------------------------------------------------------------
+
+uint32_t NybbleTrie::numTerminalNodes(uint32_t min_freq) const
+{
+   return countTerminalNodes(ROOT_INDEX,min_freq) ;
 }
 
 //----------------------------------------------------------------------
