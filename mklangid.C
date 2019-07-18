@@ -5,7 +5,7 @@
 /*									*/
 /*  File:     mklangid.C	build language-id model database	*/
 /*  Version:  1.30							*/
-/*  LastEdit: 2019-07-15						*/
+/*  LastEdit: 2019-07-17						*/
 /*                                                                      */
 /*  (c) Copyright 2010,2011,2012,2013,2014,2015,2019			*/
 /*		 Ralf Brown/Carnegie Mellon University			*/
@@ -371,7 +371,7 @@ static uint64_t read_files(const char **filelist, unsigned num_files,
 	 PreprocessedInputFile infile(filename,byte_limit - total_bytes, subsample_input) ;
 	 if (infile.good())
 	    {
-	    SystemMessage::status("  Processing '%s'",filename) ;
+	    SystemMessage::status("  Processing %s",filename) ;
 	    va_list argcopy ;
 	    va_copy(argcopy,args) ;
 	    if (!reader(&infile,argcopy))
@@ -1171,7 +1171,7 @@ static uint64_t count_trigrams(const char **filelist, unsigned num_files,
 	 counts.clear('?','?','?') ;
 	 }
       }
-   SystemMessage::status("  Processed '%lu' bytes",total_bytes) ;
+   SystemMessage::status("  Processed %lu bytes",total_bytes) ;
    return total_bytes ;
 }
 
