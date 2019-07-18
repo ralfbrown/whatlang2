@@ -180,7 +180,7 @@ bool PackedTrieFreq::writeDataMapping(CFile& f)
 PackedTrieNode::PackedTrieNode()
 {
    m_firstchild.store(0U) ;
-   std::fill_n(m_children,lengthof(m_children),NULL_INDEX) ;
+   std::fill_n(m_children,lengthof(m_children),uint32_t(NULL_INDEX)) ;
    return ;
 }
 

@@ -166,7 +166,7 @@ double unscale_frequency(uint32_t freq, double power)
 
 NybbleTrieNode::NybbleTrieNode()
 {
-   std::fill_n(m_children,lengthof(m_children),NybbleTrie::NULL_INDEX) ;
+   std::fill_n(m_children,lengthof(m_children),uint32_t(NybbleTrie::NULL_INDEX)) ;
    return ;
 }
 
