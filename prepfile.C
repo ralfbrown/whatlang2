@@ -106,7 +106,7 @@ bool PreprocessedInputFile::shutdownTransliteration()
 
 //----------------------------------------------------------------------
 
-Fr::CFile* PreprocessedInputFile::open_sampled_input_file(const char *filename, size_t max_bytes)
+CFile* PreprocessedInputFile::open_sampled_input_file(const char *filename, size_t max_bytes)
 {
    // load in the entire input file
    auto fp = new Fr::CInputFile(filename) ;
@@ -194,13 +194,13 @@ bool PreprocessedInputFile::open(const char *filename, size_t sample_limit, bool
    m_bytes_read = 0 ;
    if (from_enc && to_enc)
       initializeTransliteration(from_enc,to_enc) ;
-   if (sample_limit != ~0U
+   if (sample_limit + 1 != 0
        && m_alignment == 1) // can't currently sample UTF16
       {
       m_fp = open_sampled_input_file(filename,sample_limit) ;
       }
    else
-      m_fp = new Fr::CInputFile(filename) ;
+      new (&m_fp) Fr::CInputFile(filename) ;
    return good() ;
 }
 
