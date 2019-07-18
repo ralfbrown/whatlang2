@@ -2070,11 +2070,11 @@ bool LanguageIdentifier::writeHeader(CFile& f) const
       return false ;
    // followed by the number of language info records
    uint32_t n_lang = numLanguages() ;
-      if (!f.writeValue(n_lang))
+   if (!f.writeValue(n_lang))
       return false ;
    // set the flag for whether we have bigram models following the multi-trie
    uint8_t have_bigrams = 1 ;
-   if (f.writeValue(have_bigrams))
+   if (!f.writeValue(have_bigrams))
       return false ;
    // pad the header with NULs for the unused reserved portion of the header
    return f.putNulls(LANGID_PADBYTES_1) ;
