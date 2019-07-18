@@ -297,7 +297,7 @@ build/trigram.o: trigram.C langid.h trie.h
 #########################################################################
 ## header files -- touching to ensure proper recompilation
 
-langid.h:	mtrie.h
+langid.h:	mtrie.h ptrie.h
 	touch langid.h
 
 #########################################################################
