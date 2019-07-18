@@ -525,8 +525,7 @@ int main(int argc, char **argv)
       bool multiple_files = (argc > 2) ;
       for (int i = 1 ; i < argc ; i++)
 	 {
-	 identify_languages(argv[i],*langid,blocksize,topN,cutoff_ratio,
-			    separate_sources,multiple_files,line_mode) ;
+	 identify_languages(argv[i],*langid,blocksize,topN,cutoff_ratio,separate_sources,multiple_files,line_mode) ;
 	 }
       }
    LanguageIdentifier::unload(langid) ;
