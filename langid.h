@@ -27,6 +27,7 @@
 #ifndef __LANGID_H_INCLUDED
 #define __LANGID_H_INCLUDED
 
+#include "mtrie.h"
 #include "ptrie.h"
 
 using namespace std ;
