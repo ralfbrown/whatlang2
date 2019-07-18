@@ -206,7 +206,7 @@ static const char *vocabulary_file = nullptr ;
 static double max_oversample = MAX_OVERSAMPLE ;
 static double affix_ratio = AFFIX_RATIO ;
 static double discount_factor = 1.0 ;
-static LanguageIdentifier *language_identifier = nullptr ;
+static Owned<LanguageIdentifier> language_identifier { null } ;
 static bool skip_numbers = false ;
 static bool subsample_input = false ;
 static uint64_t byte_limit = ~0 ;
@@ -1435,11 +1435,9 @@ static NybbleTrie *restrict_ngrams(NybbleTrie *ngrams, unsigned top_K,
 
 //----------------------------------------------------------------------
 
-static NybbleTrie *count_ngrams(const char **filelist, unsigned num_files,
-				NybbleTrie *ngrams,
-				unsigned min_length, unsigned max_length,
-				bool &have_max_length,
-				bool skip_newlines, bool aligned)
+static Owned<NybbleTrie> count_ngrams(const char **filelist, unsigned num_files,
+				NybbleTrie *ngrams, unsigned min_length, unsigned max_length,
+				bool &have_max_length, bool skip_newlines, bool aligned)
 {
    SystemMessage::status("Counting n-grams up to length %u",max_length) ;
    (void)read_files(filelist,num_files,false,&count_ngrams,ngrams,min_length,max_length,skip_newlines,aligned) ;
@@ -1448,9 +1446,9 @@ static NybbleTrie *count_ngrams(const char **filelist, unsigned num_files,
       minlen = max_length ;
    unsigned top_K = set_oversampling(topK,min_length,minimum_length,aligned) ;
    LocalAlloc<uint32_t> top_frequencies(top_K,true) ;
-   NewPtr<NybbleTrie> new_ngrams(1) ;
+   Owned<NybbleTrie> new_ngrams ;
    NgramEnumerationData enum_data(have_max_length) ;
-   enum_data.m_ngrams = new_ngrams.begin() ;
+   enum_data.m_ngrams = &new_ngrams ;
    enum_data.m_min_length = min_length ;
    enum_data.m_max_length = max_length ;
    enum_data.m_frequencies = top_frequencies ;
@@ -1482,7 +1480,7 @@ static NybbleTrie *count_ngrams(const char **filelist, unsigned num_files,
       SystemMessage::warning("Only %u distinct ngrams at length %u: collect more data",enum_data.m_count,max_length) ;
       if (max_length < maximum_length)
 	 {
-	 return nullptr ;
+	 return null ;
 	 }
       }
    uint32_t threshold = adjusted_threshold(top_frequencies) ;
@@ -1498,7 +1496,7 @@ static NybbleTrie *count_ngrams(const char **filelist, unsigned num_files,
       new_ngrams = nullptr ;
       }
    gc() ;
-   return new_ngrams.move() ;
+   return new_ngrams ;
 }
 
 //----------------------------------------------------------------------
@@ -2302,9 +2300,8 @@ static bool compute_ngrams(const char **filelist, unsigned num_files, Owned<Nybb
       if (max_length > maximum_length)
 	  max_length = maximum_length ;
       do {
-         NybbleTrie *new_ngrams
-	    = count_ngrams(filelist, num_files, ngrams, min_length,
-			   max_length, have_max_length, skip_newlines, aligned) ;
+         auto new_ngrams = count_ngrams(filelist, num_files, ngrams, min_length,
+	    				max_length, have_max_length, skip_newlines, aligned) ;
 	 if (new_ngrams)
 	    {
 	    ngrams = new_ngrams ;
@@ -2737,7 +2734,6 @@ static int real_main(int argc, const char **argv)
       }
    if (success && !no_save)
       save_database(database_file) ;
-   delete language_identifier ;
    language_identifier = nullptr ;
    return 0 ;
 }
