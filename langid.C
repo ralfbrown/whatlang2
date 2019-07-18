@@ -1405,7 +1405,7 @@ LanguageIdentifier::LanguageIdentifier(const char* language_data_file, bool run_
 Owned<LanguageIdentifier> LanguageIdentifier::tryLoading(const char* database_file, bool verbose)
 {
    if (!database_file)
-      return nullptr ;
+      return null ;
    CharPtr db_filename ;
    if (database_file[0] == '~' && database_file[1] == '/')
       {
@@ -1423,7 +1423,7 @@ Owned<LanguageIdentifier> LanguageIdentifier::tryLoading(const char* database_fi
       }
    if (!db_filename)
       db_filename = dup_string(database_file) ;
-   Owned<LanguageIdentifier> id(db_filename,verbose) ;
+   Owned<LanguageIdentifier> id(*db_filename,verbose) ;
    if (!id)
       {
       SystemMessage::no_memory("loading language database") ;
@@ -1433,7 +1433,7 @@ Owned<LanguageIdentifier> LanguageIdentifier::tryLoading(const char* database_fi
       {
       if (verbose)
 	 SystemMessage::error("Unsuccessfully tried to open '%s'",database_file) ;
-      return nullptr ;
+      return null ;
       }
    else if (verbose)
       {
