@@ -396,7 +396,7 @@ class LanguageIdentifier
       ~LanguageIdentifier() = default ;
 
       // factory
-      static LanguageIdentifier* load(const char* db_file, const char* charset_file, bool create = false,
+      static Fr::Owned<LanguageIdentifier> load(const char* db_file, const char* charset_file, bool create = false,
 	 bool verbose = false) ;
           // set charset_file to NULL for default search, "" to not use a separate
           //    database (use the main database for charset ID as well as lang ID)
@@ -473,7 +473,7 @@ class LanguageIdentifier
    private:
       void setAlignments() ;
       bool setAdjustmentFactors() ;
-      static LanguageIdentifier* tryLoading(const char* db_file, bool verbose) ;
+      static Fr::Owned<LanguageIdentifier> tryLoading(const char* db_file, bool verbose) ;
 
    private:
       Fr::Owned<LangIDPackedMultiTrie> m_langdata ;

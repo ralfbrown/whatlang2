@@ -737,7 +737,7 @@ LanguageID* LanguageID::read(CFile& f, unsigned file_version)
    if (!f)
       return nullptr ;
    Owned<LanguageID> langID ;
-   if (!read(f,*langID,file_version))
+   if (!read(f,&langID,file_version))
       {
       langID = nullptr ;
       }
@@ -1402,7 +1402,7 @@ LanguageIdentifier::LanguageIdentifier(const char* language_data_file, bool run_
 
 //----------------------------------------------------------------------
 
-LanguageIdentifier* LanguageIdentifier::tryLoading(const char* database_file, bool verbose)
+Owned<LanguageIdentifier> LanguageIdentifier::tryLoading(const char* database_file, bool verbose)
 {
    if (!database_file)
       return nullptr ;
@@ -1439,15 +1439,15 @@ LanguageIdentifier* LanguageIdentifier::tryLoading(const char* database_file, bo
       {
       SystemMessage::status("Opened language database '%s'",database_file) ;
       }
-   return id.move() ;
+   return id ;
 }
 
 //----------------------------------------------------------------------
 
-LanguageIdentifier* LanguageIdentifier::load(const char *database_file, const char *charset_file,
+Owned<LanguageIdentifier> LanguageIdentifier::load(const char *database_file, const char *charset_file,
 					     bool create, bool verbose)
 {
-   LanguageIdentifier *id = nullptr ;
+   Owned<LanguageIdentifier> id { null } ;
    if (database_file && *database_file)
       id = tryLoading(database_file, verbose) ;
    if (!id && !create)

@@ -70,11 +70,11 @@ ifeq ($(SANE),1)
 SANITIZE=-fsanitize=thread -fPIE -DHELGRIND
 LINKSAN=-pie
 else ifeq ($(SANE),2)
-SANITIZE=-fsanitize=address -fno-omit-framepointer -DPURIFY
+SANITIZE=-fsanitize=address -fno-omit-frame-pointer -DPURIFY
 else ifeq ($(SANE),3)
 SANITIZE=-fsanitize=leak -DPURIFY
 else ifeq ($(SANE),4)
-SANITIZE=-fsanitize=memory -fno-omit-framepointer
+SANITIZE=-fsanitize=memory -fno-omit-frame-pointer
 else ifeq ($(SANE),5)
 SANITIZE=-fsanitize=undefined
 endif
@@ -188,7 +188,7 @@ ifeq ($(BUILD_DBG),2)
  CFLAGSLOOP=
  LINKFLAGS += -ggdb3
 else ifeq ($(BUILD_DBG),1)
- CFLAGS +=-O0 -fno-inline -ggdb3 '-DDBDIR="$(DBDIR)"'
+ CFLAGS +=-Og -fno-inline -ggdb3 '-DDBDIR="$(DBDIR)"'
  CFLAGSLOOP=
  LINKFLAGS += -ggdb3
 else ifeq ($(BUILD_DBG),-1)

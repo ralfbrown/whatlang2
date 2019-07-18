@@ -2283,7 +2283,7 @@ static bool compute_ngrams(const char **filelist, unsigned num_files, Owned<Nybb
       return false ;
    ngrams = new NybbleTrie ;
    Owned<BigramCounts> bi_counts { Fr::null } ;
-   total_bytes = count_trigrams(filelist,num_files,**counts,skip_newlines,aligned,bi_counts) ;
+   total_bytes = count_trigrams(filelist,num_files,*counts,skip_newlines,aligned,bi_counts) ;
    unsigned top_K = set_oversampling(topK,ABSOLUTE_MIN_LENGTH,minimum_length,aligned) ;
    counts->filter(top_K,maximum_length,verbose) ;
    ngrams->ignoreWhiteSpace(ignore_whitespace) ;
