@@ -44,7 +44,7 @@ using namespace std ;
 #define LANGID_MIN_FILE_VERSION 6
 
 // reserved space for future additions to the file header
-#define LANGID_PADBYTES_1  63
+#define LANGID_PADBYTES_1  64
 
 #define LANGID_FILE_DMOFFSET  96
 
