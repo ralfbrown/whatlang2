@@ -278,7 +278,7 @@ void NybbleTrie::init(uint32_t cap)
    m_totaltokens = 0 ;
    m_ignorewhitespace = false ;
    if (cap == 0)
-      cap = 1 ;
+      cap = 16 ;
    m_nodes.reserve(cap) ;
    auto root = m_nodes.alloc() ;
    // initialize the root node
