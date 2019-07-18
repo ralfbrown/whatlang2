@@ -1813,7 +1813,7 @@ static bool load_frequencies(CFile& f, NybbleTrie* ngrams, uint64_t& total_bytes
 	       }
 	    }
 	 }
-      else if (buffer[0] == '#' || buffer[1] == ';')
+      else if (buffer[0] == '#' || buffer[0] == ';')
 	 {
 	 // comment line
 	 continue ;
