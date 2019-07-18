@@ -106,8 +106,7 @@ bool PreprocessedInputFile::shutdownTransliteration()
 
 //----------------------------------------------------------------------
 
-Fr::CFile* PreprocessedInputFile::open_sampled_input_file(const char *filename,
-						     size_t max_bytes)
+Fr::CFile* PreprocessedInputFile::open_sampled_input_file(const char *filename, size_t max_bytes)
 {
    // load in the entire input file
    auto fp = new Fr::CInputFile(filename) ;
@@ -116,13 +115,13 @@ Fr::CFile* PreprocessedInputFile::open_sampled_input_file(const char *filename,
    ListBuilder lb ;
    size_t numlines = 0 ;
    size_t total_bytes = 0 ;
-   while (Fr::String* line = fp->getline())
+   while (Fr::StringPtr line = fp->getline())
       {
       total_bytes += line->c_len() ;
       numlines++ ;
-      lb += line ;
+      lb += line.move() ;
       }
-   Fr::List* lines = lb.move() ;
+   Fr::ListPtr lines = lb ;
    // subsample the lines we read to be just a little more than the
    //   desired number of bytes
    double interval = max_bytes / (double)total_bytes ;
@@ -131,8 +130,8 @@ Fr::CFile* PreprocessedInputFile::open_sampled_input_file(const char *filename,
    size_t sampled = 0 ;
    if (interval >= 0.98)
       {
-      m_buffered_lines = lines->reverse() ;
-      lines = Fr::List::emptyList() ;
+      m_buffered_lines = lines.move()->reverse() ;
+//      lines = Fr::List::emptyList() ;
       sampled = total_bytes ;
       }
    else
