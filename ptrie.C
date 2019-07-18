@@ -46,7 +46,7 @@ using namespace Fr ;
 #define MULTITRIE_FORMAT_VERSION 3
 
 // reserve some space for future additions to the file format
-#define MULTITRIE_PADBYTES_1  58
+#define MULTITRIE_PADBYTES_1  59
 
 /************************************************************************/
 /*	Types								*/
