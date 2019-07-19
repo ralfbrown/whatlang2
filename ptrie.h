@@ -5,7 +5,7 @@
 /*									*/
 /*  File: ptrie.h - packed Word-frequency multi-trie			*/
 /*  Version:  1.30				       			*/
-/*  LastEdit: 2019-07-14						*/
+/*  LastEdit: 2019-07-18						*/
 /*									*/
 /*  (c) Copyright 2011,2012,2013,2015,2019 Carnegie Mellon University	*/
 /*      This program is free software; you can redistribute it and/or   */
@@ -68,9 +68,8 @@ class PackedTrieFreq
 
    public:
       void *operator new(size_t, void *where) { return where ; }
-      PackedTrieFreq() { m_freqinfo.store(TRIE_LASTENTRY) ; }
-      PackedTrieFreq(uint32_t freq, uint32_t langID, bool last = true,
-		     bool is_stop = false) ;
+      PackedTrieFreq() = default ;
+      PackedTrieFreq(uint32_t freq, uint32_t langID, bool last = true, bool is_stop = false) ;
       ~PackedTrieFreq() ;
 
       // accessors
@@ -79,8 +78,7 @@ class PackedTrieFreq
       static constexpr double minWeight()
 	 { return TRIE_FREQ_MANTISSA >> maxExponent() ; }
       static constexpr uint32_t maxLanguages() { return TRIE_LANGID_MASK+1 ; }
-      static void quantize(uint32_t value, uint32_t &mantissa,
-			   uint32_t &exponent) ;
+      static void quantize(uint32_t value, uint32_t &mantissa, uint32_t &exponent) ;
       static uint32_t mantissa(uint32_t scaled)
 	 {
 	 return (scaled & TRIE_FREQ_MANTISSA) >> TRIE_FREQ_MAN_SHIFT ;
@@ -105,16 +103,11 @@ class PackedTrieFreq
 	 }
 
       double probability(uint32_t langID) const ;
-      double probability() const 
-	 { return (scaledScore() / (100.0 * TRIE_SCALE_FACTOR)) ; }
-      double percentage() const
-	 { return (scaledScore() / (1.0 * TRIE_SCALE_FACTOR)) ; }
-      uint32_t languageID() const
-         { return m_freqinfo.load() & TRIE_LANGID_MASK ; }
-      bool isLast() const
-	 { return (m_freqinfo.load() & TRIE_LASTENTRY) != 0 ; }
-      bool isStopgram() const
-	 { return (m_freqinfo.load() & TRIE_STOPGRAM) != 0 ; }
+      double probability() const  { return (scaledScore() / (100.0 * TRIE_SCALE_FACTOR)) ; }
+      double percentage() const { return (scaledScore() / (1.0 * TRIE_SCALE_FACTOR)) ; }
+      uint32_t languageID() const { return m_freqinfo.load() & TRIE_LANGID_MASK ; }
+      bool isLast() const { return (m_freqinfo.load() & TRIE_LASTENTRY) != 0 ; }
+      bool isStopgram() const { return (m_freqinfo.load() & TRIE_STOPGRAM) != 0 ; }
       const PackedTrieFreq *next() const { return isLast() ? nullptr : (this + 1) ; }
       static bool dataMappingInitialized() { return s_value_map_initialized ; }
 
@@ -124,7 +117,7 @@ class PackedTrieFreq
       static bool writeDataMapping(Fr::CFile& f) ;
 
    private:
-      Fr::UInt32 m_freqinfo ;
+      Fr::UInt32 m_freqinfo { TRIE_LASTENTRY } ;
       static double s_value_map[TRIE_NUM_VALUES] ;
       static bool s_value_map_initialized ;
    } ;
@@ -138,8 +131,6 @@ class PackedTrieTerminalNode
       static constexpr uint32_t INVALID_FREQ = (uint32_t)~0 ;
    public:
       void *operator new(size_t, void *where) { return where ; }
-      PackedTrieTerminalNode() { m_frequency_info.store(INVALID_FREQ); }
-      ~PackedTrieTerminalNode() = default ;
 
       // accessors
       bool leaf() const { return m_frequency_info.load() != INVALID_FREQ ; }
@@ -147,10 +138,9 @@ class PackedTrieTerminalNode
          { return base + m_frequency_info.load() ; }
 
       // modifiers
-      void setFrequencies(uint32_t index)
-	 { m_frequency_info.store(index) ; }
+      void setFrequencies(uint32_t index) { m_frequency_info.store(index) ; }
    protected:
-      Fr::UInt32 m_frequency_info ;
+      Fr::UInt32 m_frequency_info { INVALID_FREQ } ;
    } ;
 
 //----------------------------------------------------------------------
@@ -158,9 +148,9 @@ class PackedTrieTerminalNode
 class PackedTrieNode : public PackedTrieTerminalNode
    {
    public:
+      static constexpr unsigned LENGTHOF_M_CHILDREN = (1<<PTRIE_BITS_PER_LEVEL) / (8*sizeof(Fr::UInt32)) ;
+   public:
       void *operator new(size_t, void *where) { return where ; }
-      PackedTrieNode() ;
-      ~PackedTrieNode() = default ;
 
       // accessors
       bool childPresent(unsigned int N) const ;
@@ -174,11 +164,9 @@ class PackedTrieNode : public PackedTrieTerminalNode
       void setPopCounts() ;
 
    private:
-      Fr::UInt32 m_firstchild ;
-#define LENGTHOF_M_CHILDREN ((1<<PTRIE_BITS_PER_LEVEL) / (8*sizeof(Fr::UInt32)))
+      Fr::UInt32 m_firstchild { 0 } ;
       Fr::UInt32 m_children[LENGTHOF_M_CHILDREN] { 0 } ;
       uint8_t	 m_popcounts[LENGTHOF_M_CHILDREN] { 0 } ;
-#undef LENGTHOF_M_CHILDREN
    } ;
 
 //----------------------------------------------------------------------

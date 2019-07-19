@@ -5,7 +5,7 @@
 /*									*/
 /*  File: ptrie.C - packed Word-frequency multi-trie			*/
 /*  Version:  1.30				       			*/
-/*  LastEdit: 2019-07-15						*/
+/*  LastEdit: 2019-07-18						*/
 /*									*/
 /*  (c) Copyright 2011,2012,2015,2019 Ralf Brown/CMU			*/
 /*      This program is free software; you can redistribute it and/or   */
@@ -67,16 +67,11 @@ void write_escaped_key(CFile& f, const uint8_t* key, unsigned keylen) ;
 /*	Helper functions						*/
 /************************************************************************/
 
-#ifndef lengthof
-#  define lengthof(x) (sizeof(x)/sizeof((x)[0]))
-#endif /* lengthof */
-
 /************************************************************************/
 /*	Methods for class PackedTrieFreq				*/
 /************************************************************************/
 
-PackedTrieFreq::PackedTrieFreq(uint32_t freq, uint32_t langID, bool last,
-			       bool is_stop)
+PackedTrieFreq::PackedTrieFreq(uint32_t freq, uint32_t langID, bool last, bool is_stop)
 {
    uint32_t data = (langID | (last * TRIE_LASTENTRY) | (is_stop * TRIE_STOPGRAM)) ;
    uint32_t mant ;
@@ -176,15 +171,6 @@ bool PackedTrieFreq::writeDataMapping(CFile& f)
 /************************************************************************/
 /*	Methods for class PackedTrieNode				*/
 /************************************************************************/
-
-PackedTrieNode::PackedTrieNode()
-{
-   m_firstchild.store(0U) ;
-//   std::fill_n(m_children,lengthof(m_children),uint32_t(NULL_INDEX)) ;
-   return ;
-}
-
-//----------------------------------------------------------------------
 
 bool PackedTrieNode::childPresent(unsigned int N) const 
 {
