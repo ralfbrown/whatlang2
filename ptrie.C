@@ -460,7 +460,7 @@ bool LangIDPackedMultiTrie::parseHeader(CFile& f, size_t& numfull, size_t& numfr
       return false ;
       }
    unsigned char bits ;
-   if (f.readValue(&bits) || bits != PTRIE_BITS_PER_LEVEL)
+   if (!f.readValue(&bits) || bits != PTRIE_BITS_PER_LEVEL)
       {
       // error: wrong type of trie
       return false ;
