@@ -245,8 +245,8 @@ class LangIDPackedMultiTrie // : public Fr::PackedMultiTrie<...>
 			     EnumFn *fn, void *user_data) const ;
 
       // I/O
-      static LangIDPackedMultiTrie *load(Fr::CFile& f, const char *filename) ;
-      static LangIDPackedMultiTrie *load(const char *filename) ;
+      static Fr::Owned<LangIDPackedMultiTrie> load(Fr::CFile& f, const char *filename) ;
+      static Fr::Owned<LangIDPackedMultiTrie> load(const char *filename) ;
       bool write(Fr::CFile& f) const ;
       bool write(const char *filename) const ;
       bool dump(Fr::CFile& f) const ;

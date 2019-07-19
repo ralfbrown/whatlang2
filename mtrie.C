@@ -446,7 +446,7 @@ bool LangIDMultiTrie::enumerateChildren(NodeIndex nodeindex,
 				      void *user_data) const
 {
    auto n = node(nodeindex) ;
-   assert(!(!n->leaf() && n->frequencies())) ;
+//   assert(!(!n->leaf() && n->frequencies())) ;
    if (n->leaf() && !fn(this,nodeindex,keybuf,curr_keylength_bits/8,user_data))
       return false ;
    if (curr_keylength_bits < max_keylength_bits)

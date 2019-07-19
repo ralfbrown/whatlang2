@@ -477,9 +477,9 @@ class LanguageIdentifier
       static Fr::Owned<LanguageIdentifier> tryLoading(const char* db_file, bool verbose) ;
 
    private:
-      Fr::Owned<LangIDPackedMultiTrie> m_langdata ;
-      Fr::Owned<LangIDMultiTrie> m_uncomplangdata ;
-      mutable Fr::Owned<LanguageScores> m_prior_scores { Fr::null } ;
+      Fr::Owned<LangIDPackedMultiTrie> m_langdata { nullptr } ;
+      Fr::Owned<LangIDMultiTrie> m_uncomplangdata { nullptr } ;
+      mutable Fr::Owned<LanguageScores> m_prior_scores { nullptr } ;
       Fr::ItemPoolFlat<LanguageID> m_langinfo ;
       Fr::DoublePtr          m_length_factors ;
       Fr::DoublePtr          m_adjustments ;

@@ -206,7 +206,7 @@ static const char *vocabulary_file = nullptr ;
 static double max_oversample = MAX_OVERSAMPLE ;
 static double affix_ratio = AFFIX_RATIO ;
 static double discount_factor = 1.0 ;
-static Owned<LanguageIdentifier> language_identifier { null } ;
+static Owned<LanguageIdentifier> language_identifier { nullptr } ;
 static bool skip_numbers = false ;
 static bool subsample_input = false ;
 static uint64_t byte_limit = ~0 ;
@@ -1480,7 +1480,7 @@ static Owned<NybbleTrie> count_ngrams(const char **filelist, unsigned num_files,
       SystemMessage::warning("Only %u distinct ngrams at length %u: collect more data",enum_data.m_count,max_length) ;
       if (max_length < maximum_length)
 	 {
-	 return null ;
+	 return nullptr ;
 	 }
       }
    uint32_t threshold = adjusted_threshold(top_frequencies) ;
@@ -2055,7 +2055,7 @@ static bool load_frequencies(const char **filelist, unsigned num_files,
    uint64_t total_bytes = 0 ;
    bool scaled = false ;
    { // start scope for bigrams
-   Owned<BigramCounts> bigrams { Fr::null } ;
+   Owned<BigramCounts> bigrams { nullptr } ;
    for (size_t i = 0 ; i < num_files ; i++)
       {
       const char *filename = filelist[i] ;
@@ -2280,7 +2280,7 @@ static bool compute_ngrams(const char **filelist, unsigned num_files, Owned<Nybb
    if (!counts)
       return false ;
    ngrams = new NybbleTrie ;
-   Owned<BigramCounts> bi_counts { Fr::null } ;
+   Owned<BigramCounts> bi_counts { nullptr } ;
    total_bytes = count_trigrams(filelist,num_files,*counts,skip_newlines,aligned,bi_counts) ;
    unsigned top_K = set_oversampling(topK,ABSOLUTE_MIN_LENGTH,minimum_length,aligned) ;
    counts->filter(top_K,maximum_length,verbose) ;
@@ -2338,7 +2338,7 @@ static bool process_files(const char** filelist, unsigned num_files,
 			  bool /*check_script TODO*/)
 {
    LanguageID opts(base_opts) ;
-   Owned<NybbleTrie> ngrams { Fr::null } ;
+   Owned<NybbleTrie> ngrams { nullptr } ;
    uint64_t total_bytes = 0 ;
    bool scaled = false ;
    if (curr_ngrams && curr_ngrams->size() > 0)
@@ -2686,8 +2686,8 @@ static bool process_argument_group(int &argc, const char **&argv,
 	 {
 	 SystemMessage::warning("Unable to perform conversion from '%s' to '%s'",*from,*translit_to) ;
 	 }
-      Owned<NybbleTrie> curr_ngrams { Fr::null } ;
-      Owned<NybbleTrie> ngram_weights { Fr::null } ;
+      Owned<NybbleTrie> curr_ngrams { nullptr } ;
+      Owned<NybbleTrie> ngram_weights { nullptr } ;
       uint64_t training_bytes = 0 ;
       Owned<NybbleTrie> stop_grams = load_stop_grams(&lang_info,related_langs,curr_ngrams,ngram_weights,
 	 					     training_bytes) ;

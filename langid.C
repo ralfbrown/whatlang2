@@ -1388,8 +1388,8 @@ LanguageIdentifier::LanguageIdentifier(const char* language_data_file, bool run_
       }
    setAlignments() ;
    setAdjustmentFactors() ;
-   if (!m_langdata)
-      m_langdata = new LangIDPackedMultiTrie ;
+//!!   if (!m_langdata)
+//!!      m_langdata = new LangIDPackedMultiTrie ;
    if (!m_langinfo)
       m_langinfo.reserve(1) ;
    m_string_counts = NewPtr<size_t>(numLanguages()) ;
@@ -1405,7 +1405,7 @@ LanguageIdentifier::LanguageIdentifier(const char* language_data_file, bool run_
 Owned<LanguageIdentifier> LanguageIdentifier::tryLoading(const char* database_file, bool verbose)
 {
    if (!database_file)
-      return null ;
+      return nullptr ;
    CharPtr db_filename ;
    if (database_file[0] == '~' && database_file[1] == '/')
       {
@@ -1433,7 +1433,7 @@ Owned<LanguageIdentifier> LanguageIdentifier::tryLoading(const char* database_fi
       {
       if (verbose)
 	 SystemMessage::error("Unsuccessfully tried to open '%s'",database_file) ;
-      return null ;
+      return nullptr ;
       }
    else if (verbose)
       {
@@ -1447,7 +1447,7 @@ Owned<LanguageIdentifier> LanguageIdentifier::tryLoading(const char* database_fi
 Owned<LanguageIdentifier> LanguageIdentifier::load(const char *database_file, const char *charset_file,
 					     bool create, bool verbose)
 {
-   Owned<LanguageIdentifier> id { null } ;
+   Owned<LanguageIdentifier> id { nullptr } ;
    if (database_file && *database_file)
       id = tryLoading(database_file, verbose) ;
    if (!id && !create)
@@ -1825,7 +1825,7 @@ bool LanguageIdentifier::identify(LanguageScores *scores,
       {
       scores->reserve(numLanguages()) ;
       }
-   m_langdata.get()->ignoreWhiteSpace(ignore_whitespace) ;
+   trie()->ignoreWhiteSpace(ignore_whitespace) ;
    if (m_length_factors)
       m_length_factors[2] = m_bigram_weight * length_factor(2) ;
    if (!alignments_)
@@ -1835,7 +1835,7 @@ bool LanguageIdentifier::identify(LanguageScores *scores,
    identify_languages(buffer,buflen,m_langdata,scores,alignments_,
 		      m_length_factors,apply_stop_grams,
 		      length_normalization) ;
-   m_langdata.get()->ignoreWhiteSpace(false) ;
+   trie()->ignoreWhiteSpace(false) ;
    return true ;
 }
 

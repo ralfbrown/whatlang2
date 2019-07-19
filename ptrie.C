@@ -624,21 +624,21 @@ bool LangIDPackedMultiTrie::enumerateChildren(uint32_t nodeindex,
 
 //----------------------------------------------------------------------
 
-LangIDPackedMultiTrie* LangIDPackedMultiTrie::load(CFile& f, const char *filename)
+Owned<LangIDPackedMultiTrie> LangIDPackedMultiTrie::load(CFile& f, const char *filename)
 {
    if (f)
       {
       //(if we use Owned trie(f,filename), template deduction tries to send 'f' by value instead of reference...)
       Owned<LangIDPackedMultiTrie> trie = new LangIDPackedMultiTrie(f,filename) ;
       if (trie && trie->good())
-	 return trie.move() ;
+	 return trie ;
       }
    return nullptr ;
 }
 
 //----------------------------------------------------------------------
 
-LangIDPackedMultiTrie *LangIDPackedMultiTrie::load(const char *filename)
+Owned<LangIDPackedMultiTrie> LangIDPackedMultiTrie::load(const char *filename)
 {
    CInputFile fp(filename,CFile::binary) ;
    return fp ? load(fp,filename) : nullptr ;
@@ -684,7 +684,7 @@ bool LangIDPackedMultiTrie::write(CFile& f) const
    if (!m_nodes.save(f))
       return false ;
    // write the frequency information
-   if (m_freq.save(f))
+   if (!m_freq.save(f))
       return false ;
    // write the terminals
    if (!m_terminals.save(f))
