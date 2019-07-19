@@ -1388,8 +1388,8 @@ LanguageIdentifier::LanguageIdentifier(const char* language_data_file, bool run_
       }
    setAlignments() ;
    setAdjustmentFactors() ;
-//!!   if (!m_langdata)
-//!!      m_langdata = new LangIDPackedMultiTrie ;
+   if (!m_langdata && !m_uncomplangdata)
+      m_langdata = new LangIDPackedMultiTrie ;
    if (!m_langinfo)
       m_langinfo.reserve(1) ;
    m_string_counts = NewPtr<size_t>(numLanguages()) ;

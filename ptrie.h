@@ -176,8 +176,8 @@ class PackedTrieNode : public PackedTrieTerminalNode
    private:
       Fr::UInt32 m_firstchild ;
 #define LENGTHOF_M_CHILDREN ((1<<PTRIE_BITS_PER_LEVEL) / (8*sizeof(Fr::UInt32)))
-      Fr::UInt32 m_children[LENGTHOF_M_CHILDREN] ;
-      uint8_t	 m_popcounts[LENGTHOF_M_CHILDREN] ;
+      Fr::UInt32 m_children[LENGTHOF_M_CHILDREN] { 0 } ;
+      uint8_t	 m_popcounts[LENGTHOF_M_CHILDREN] { 0 } ;
 #undef LENGTHOF_M_CHILDREN
    } ;
 

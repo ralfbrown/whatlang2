@@ -180,7 +180,7 @@ bool PackedTrieFreq::writeDataMapping(CFile& f)
 PackedTrieNode::PackedTrieNode()
 {
    m_firstchild.store(0U) ;
-   std::fill_n(m_children,lengthof(m_children),uint32_t(NULL_INDEX)) ;
+//   std::fill_n(m_children,lengthof(m_children),uint32_t(NULL_INDEX)) ;
    return ;
 }
 
@@ -271,7 +271,7 @@ LangIDPackedMultiTrie::LangIDPackedMultiTrie(const LangIDMultiTrie *multrie)
 	    m_freq.clear() ;
 	    m_terminals.clear() ;
 	    }
-	 SystemMessage::status("   converted %lu full nodes, %lu terminals, and %lu frquencies",
+	 SystemMessage::status("   converted %lu full nodes, %lu terminals, and %lu frequencies",
 	    m_nodes.size(), m_terminals.size(), m_freq.size()) ;
 	 }
       else
@@ -341,7 +341,7 @@ bool LangIDPackedMultiTrie::insertTerminals(PackedTrieNode *parent,
 				      uint32_t mnode_index,
 				      unsigned keylen)
 {
-   if (!parent || mnode_index == NULL_INDEX)
+   if (!parent)
       return false ;
    unsigned numchildren = mtrie->numExtensions(mnode_index) ;
    if (numchildren == 0)
@@ -396,7 +396,7 @@ bool LangIDPackedMultiTrie::insertChildren(PackedTrieNode *parent,
 				     uint32_t mnode_index,
 				     unsigned keylen)
 {
-   if (!parent || mnode_index == NULL_INDEX)
+   if (!parent)
       return false ;
    // first pass: fill in all the children
    unsigned numchildren = mtrie->numExtensions(mnode_index) ;
