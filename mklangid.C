@@ -885,12 +885,6 @@ static bool save_database(const char *database_file)
       database_file = DEFAULT_LANGID_DATABASE ;
    if (language_identifier->numLanguages() > 0)
       {
-      if (do_dump_trie)
-	 {
-	 CFile f(stdout) ;
-	 f.printf("=======================\n") ;
-	 language_identifier->dump(f,verbose) ;
-	 }
       unsigned num_languages = count_languages(language_identifier,compare_langcode) ;
       unsigned num_pairs = count_languages(language_identifier,compare_codepair) ;
       SystemMessage::status("Database contains %lu models, %u distinct language codes,\n\t"
@@ -1501,8 +1495,7 @@ static Owned<NybbleTrie> count_ngrams(const char **filelist, unsigned num_files,
 
 //----------------------------------------------------------------------
 
-static void merge_bigrams(NybbleTrie *ngrams, const BigramCounts *bigrams,
-			  bool scaled, uint64_t total_bytes)
+static void merge_bigrams(NybbleTrie *ngrams, const BigramCounts *bigrams, bool scaled, uint64_t total_bytes)
 {
    if (!ngrams || !bigrams)
       return ;
@@ -1528,8 +1521,8 @@ static void merge_bigrams(NybbleTrie *ngrams, const BigramCounts *bigrams,
 
 //----------------------------------------------------------------------
 
-static bool add_ngram(const NybbleTrie* trie, uint32_t nodeindex, const uint8_t *key,
-   unsigned keylen, void* user_data)
+static bool add_ngram(const NybbleTrie* trie, uint32_t nodeindex, const uint8_t *key, unsigned keylen,
+   		      void* user_data)
 {
    auto unpacked = reinterpret_cast<LangIDMultiTrie*>(user_data) ;
    if (!unpacked)
@@ -1537,17 +1530,15 @@ static bool add_ngram(const NybbleTrie* trie, uint32_t nodeindex, const uint8_t 
    auto node = trie->node(nodeindex) ;
    if (node)
       {
-      uint32_t freq = node->frequency() ;
-      unpacked->insert(key,keylen,unpacked->currentLanguage(),freq,
-		   node->isStopgram()) ;
+      auto freq = node->frequency() ;
+      unpacked->insert(key,keylen,unpacked->currentLanguage(), freq, node->isStopgram()) ;
       }
    return true ;
 }
 
 //----------------------------------------------------------------------
 
-static void add_ngrams(const NybbleTrie *ngrams, uint64_t total_bytes,
-		       const LanguageID &opts, const char *filename)
+static void add_ngrams(const NybbleTrie *ngrams, uint64_t total_bytes, const LanguageID &opts, const char *filename)
 {
    if (ngrams)
       {
@@ -1573,9 +1564,7 @@ static void add_ngrams(const NybbleTrie *ngrams, uint64_t total_bytes,
 
 //----------------------------------------------------------------------
 
-static const char *add_UTF8_range(const char *range_spec,
-				  NybbleTrie *ngrams,
-				  uint64_t &total_bytes)
+static const char *add_UTF8_range(const char *range_spec, NybbleTrie *ngrams, uint64_t &total_bytes)
 {
    bool bad_spec = false ;
    if (range_spec)
@@ -2035,8 +2024,8 @@ static bool load_frequencies(CFile& f, NybbleTrie* ngrams, uint64_t& total_bytes
 
 //----------------------------------------------------------------------
 
-static bool load_frequencies(const char **filelist, unsigned num_files,
-			     LanguageID &opts, bool textcat_format, bool no_save)
+static bool load_frequencies(const char **filelist, unsigned num_files, LanguageID &opts, bool textcat_format,
+   			     bool no_save)
 {
    const char* fmt = "" ;
    if (textcat_format)
@@ -2167,8 +2156,7 @@ static NybbleTrie *find_encoding(const char *enc_name, NewPtr<NybbleTrie*>& enco
 
 //----------------------------------------------------------------------
 
-static bool cluster_models_by_charset(LanguageIdentifier *clusterdb,
-				      const char *cluster_dbfile)
+static bool cluster_models_by_charset(LanguageIdentifier *clusterdb, const char *cluster_dbfile)
 {
    unsigned num_encs = 0 ;
    unsigned encs_alloc = 50 ;
@@ -2524,8 +2512,7 @@ static void parse_translit(const char *spec, CharPtr& from, CharPtr& to)
 
 //----------------------------------------------------------------------
 
-static bool process_argument_group(int &argc, const char **&argv,
-				   LanguageID &lang_info, bool no_save,
+static bool process_argument_group(int &argc, const char **&argv, LanguageID &lang_info, bool no_save,
 				   const char *argv0)
 {
    // reset any options which must be specified separately for each file group
@@ -2672,8 +2659,7 @@ static bool process_argument_group(int &argc, const char **&argv,
 	 if (frequency_textcat)
 	    filecount = (argv - filelist + 1) ;
 	 LanguageID local_lang_info(&lang_info) ;
-	 if (load_frequencies(filelist,filecount,local_lang_info,
-			      frequency_textcat,no_save))
+	 if (load_frequencies(filelist,filecount,local_lang_info,frequency_textcat,no_save))
 	    success = true ;
 	 filelist += filecount ;
 	 }
@@ -2731,6 +2717,13 @@ static int real_main(int argc, const char **argv)
 	 {
 	 success = true ;
 	 }
+      }
+   if (success && do_dump_trie)
+      {
+      SystemMessage::status("dumping generated trie") ;
+      CFile f(stdout) ;
+      f.printf("=======================\n") ;
+      language_identifier->dump(f,verbose) ;
       }
    if (success && !no_save)
       save_database(database_file) ;
