@@ -251,8 +251,7 @@ uint32_t MultiTrieNode::frequency(uint32_t langID) const
 
 //----------------------------------------------------------------------
 
-void MultiTrieNode::setFrequency(uint32_t langID, uint32_t freq,
-				 bool stopgram)
+void MultiTrieNode::setFrequency(uint32_t langID, uint32_t freq, bool stopgram)
 {
    auto f = MultiTrieFrequency::getAddress(m_frequency) ;
    if (f)
@@ -337,6 +336,7 @@ LangIDMultiTrie::LangIDMultiTrie(const char *filename, uint32_t langID, bool ver
 
 void LangIDMultiTrie::init(uint32_t cap)
 {
+   MultiTrieFrequency::allocateDummy() ;
    m_maxkeylen = 0 ;
    m_totaltokens = 0 ;
    m_ignorewhitespace = false ;
@@ -763,8 +763,7 @@ static bool dump_ngram(const LangIDMultiTrie* trie, NybbleTrie::NodeIndex nodein
       auto freq = node->frequencies() ;
       for ( ; freq ; freq = freq->next())
 	 {
-	 f.printf(" %lu=%lu",(unsigned long)freq->languageID(),
-		 (unsigned long)freq->frequency()) ;
+	 f.printf(" %lu=%lu",(unsigned long)freq->languageID(), (unsigned long)freq->frequency()) ;
 	 }
       f.printf("\n") ;
       }

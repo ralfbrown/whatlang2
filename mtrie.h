@@ -52,17 +52,17 @@ class MultiTrieFrequency
 	   m_langID = (langID & LANGID_MASK) | (stopgram * STOPGRAM_MASK) ;
 	   setNext(nxt) ; }
       ~MultiTrieFrequency() ;
-      static MultiTrieFrequency *allocate(uint32_t freq = 0,
-					  uint32_t langID = 0,
-					  bool stopgram = false) ;
+      static MultiTrieFrequency *allocate(uint32_t freq = 0, uint32_t langID = 0, bool stopgram = false) ;
+      // index zero is our null pointer, so we need to allocate and ignore the first item in the ItemPool
+      static void allocateDummy() { if (s_freq_records.size() == 0) (void)s_freq_records.alloc() ; }
 
       // accessors
       uint32_t frequency() const { return m_frequency ; }
       uint32_t frequency(uint32_t langID) const ;
       uint32_t languageID() const { return m_langID & LANGID_MASK ; }
       bool isStopgram() const { return (m_langID & STOPGRAM_MASK) != 0 ; }
-      static MultiTrieFrequency *getAddress(uint32_t index) { return s_freq_records.item(index) ; }
-      static uint32_t getIndex(MultiTrieFrequency *f)
+      static MultiTrieFrequency* getAddress(uint32_t index) { return index ? s_freq_records.item(index) : nullptr ; }
+      static uint32_t getIndex(MultiTrieFrequency* f)
          { auto first = s_freq_records.item(0) ;
            return first <= f ? (uint32_t)(f - first) : INVALID_FREQ ; }
       MultiTrieFrequency *next() const { return getAddress(m_next) ; }
