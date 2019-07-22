@@ -394,7 +394,8 @@ class LanguageIdentifier
    public:
       LanguageIdentifier(const char *language_data_file,
 			 bool verbose = false) ;
-      ~LanguageIdentifier() = default ;
+      ~LanguageIdentifier()
+	 { if (m_charsetident && m_charsetident != this) delete m_charsetident ; }
 
       // factory
       static Fr::Owned<LanguageIdentifier> load(const char* db_file, const char* charset_file, bool create = false,
