@@ -5,7 +5,7 @@
 /*									*/
 /*  File:     whatlang.C  main program/wrapper for simple identifier	*/
 /*  Version:  1.30							*/
-/*  LastEdit: 2019-07-15 						*/
+/*  LastEdit: 2019-07-23 						*/
 /*                                                                      */
 /*  (c) Copyright 2011,2012,2013,2014,2019				*/
 /*		 Ralf Brown/Carnegie Mellon University			*/
@@ -528,7 +528,6 @@ int main(int argc, char **argv)
 	 identify_languages(argv[i],*langid,blocksize,topN,cutoff_ratio,separate_sources,multiple_files,line_mode) ;
 	 }
       }
-   LanguageIdentifier::unload(langid) ;
    return 0 ;
 }
 
