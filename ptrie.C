@@ -278,8 +278,8 @@ LangIDPackedMultiTrie::LangIDPackedMultiTrie(CFile& f, const char *filename)
    size_t numterminals ;
    if (f && parseHeader(f,numfull,numfreq,numterminals))
       {
-      size_t offset = f.tell() ;
-      m_fmap = std::move(*new MemMappedROFile(filename)) ;
+      auto offset = f.tell() ;
+      m_fmap.open(filename) ;
       if (m_fmap)
 	 {
 	 // we can memory-map the file, so just point our member variables
@@ -615,7 +615,7 @@ Owned<LangIDPackedMultiTrie> LangIDPackedMultiTrie::load(CFile& f, const char *f
    if (f)
       {
       //(if we use Owned trie(f,filename), template deduction tries to send 'f' by value instead of reference...)
-      Owned<LangIDPackedMultiTrie> trie = new LangIDPackedMultiTrie(f,filename) ;
+      auto trie = new LangIDPackedMultiTrie(f,filename) ;
       if (trie && trie->good())
 	 return trie ;
       }
