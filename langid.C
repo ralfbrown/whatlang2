@@ -76,37 +76,6 @@ inline double clamp(double v, double lo, double hi)
 
 //----------------------------------------------------------------------
 
-static uint8_t read_byte(CFile& f, uint32_t default_value = (uint8_t)~0)
-{
-   uint8_t valbuf ;
-   return f.readValue(&valbuf) ? valbuf : default_value ;
-}
-
-//----------------------------------------------------------------------
-
-static bool write_uint8(CFile& f, uint8_t value)
-{
-   return f.writeValue(value) ;
-}
-
-//----------------------------------------------------------------------
-
-static uint32_t read_uint32(CFile& f, uint32_t default_value = (uint32_t)~0)
-{
-   UInt32 val ;
-   return f.readValue(&val) ? val.load() : default_value ;
-}
-
-//----------------------------------------------------------------------
-
-static bool write_uint32(CFile& f, uint32_t value)
-{
-   UInt32 val(value) ;
-   return f.writeValue(val) ;
-}
-
-//----------------------------------------------------------------------
-
 static CharPtr read_fixed_field(CFile& f, size_t len)
 {
    if (len == 0)
@@ -123,23 +92,6 @@ static CharPtr read_fixed_field(CFile& f, size_t len)
 
 //----------------------------------------------------------------------
 
-static bool read_uint64(CFile& f, uint64_t &value)
-{
-   UInt64 val ;
-   if (f.readValue(&val))
-      {
-      value = 0 ;
-      return false ;
-      }
-   else
-      {
-      value = val.load() ;
-      return true ;
-      }
-}
-
-//----------------------------------------------------------------------
-
 static bool write_fixed_field(CFile& f, const char *s, size_t len)
 {
    if (len == 0)
@@ -149,14 +101,6 @@ static bool write_fixed_field(CFile& f, const char *s, size_t len)
    if (f.write(s,count) < count)
       return false ;
    return f.putNulls(len-count) ;
-}
-
-//----------------------------------------------------------------------
-
-static bool write_uint64(CFile& f, uint64_t value)
-{
-   UInt64 val(value) ;
-   return f.writeValue(val) ;
 }
 
 //----------------------------------------------------------------------
@@ -841,21 +785,19 @@ bool LanguageID::read(CFile& f, LanguageID *langID, unsigned /*version*/)
    langID->m_encoding = read_fixed_field(f,LANGID_STRING_LENGTH) ;
    langID->m_source = read_fixed_field(f,LANGID_STRING_LENGTH) ;
    langID->m_script = read_fixed_field(f,LANGID_STRING_LENGTH) ;
-   (void)read_uint64(f,langID->m_trainbytes ) ;
-   uint8_t align = read_byte(f, 1) ;
+   langID->m_trainbytes = f.read64LE() ;
+   uint8_t align = f.read8() ;
    if (align < 1) align = 1 ;
-   (void)read_byte(f,0) ;
-   (void)read_byte(f,0) ;
-   (void)read_byte(f,0) ;
+   (void)f.read24LE() ;
    uint32_t cover = 0 ;
-   cover = read_uint32(f,0) ;
+   cover = f.read32LE() ;
    double cover_factor = ((double)cover) / (double)UINT32_MAX ;
    langID->setCoverageFactor(cover_factor) ;
-   cover = read_uint32(f,0) ;
+   cover = f.read32LE() ;
    langID->setCountedCoverage(cover * MAX_WEIGHTED_COVER / UINT32_MAX ) ;
-   cover = read_uint32(f,0) ;
+   cover = f.read32LE() ;
    langID->setFreqCoverage(cover * MAX_FREQ_COVER / UINT32_MAX ) ;
-   cover = read_uint32(f,0) ;
+   cover = f.read32LE() ;
    langID->setMatchFactor(cover * MAX_MATCH_FACTOR / UINT32_MAX ) ;
    langID->m_friendlyname = langID->m_language ;
    langID->setAlignment(align) ;
@@ -892,15 +834,13 @@ bool LanguageID::write(CFile& f) const
        write_fixed_field(f,m_encoding,LANGID_STRING_LENGTH) &&
        write_fixed_field(f,m_source,LANGID_STRING_LENGTH) &&
        write_fixed_field(f,m_script,LANGID_STRING_LENGTH) &&
-       write_uint64(f,m_trainbytes) &&
-       write_uint8(f,m_alignment) &&
-       write_uint8(f,0) &&
-       write_uint8(f,0) &&
-       write_uint8(f,0) &&
-       write_uint32(f,(uint32_t)(m_coverage * UINT32_MAX) ) &&
-       write_uint32(f,(uint32_t)(count_cover * UINT32_MAX) ) &&
-       write_uint32(f,(uint32_t)(freq_cover * UINT32_MAX) ) &&
-       write_uint32(f,(uint32_t)(match_factor * UINT32_MAX) ))
+       f.write64LE(m_trainbytes) &&
+       f.write8(m_alignment) &&
+       f.write24LE(0) &&
+       f.write32LE((uint32_t)(m_coverage * UINT32_MAX) ) &&
+       f.write32LE((uint32_t)(count_cover * UINT32_MAX) ) &&
+       f.write32LE((uint32_t)(freq_cover * UINT32_MAX) ) &&
+       f.write32LE((uint32_t)(match_factor * UINT32_MAX) ))
       success = true ;
    if (m_friendlyname && m_friendlyname != m_language && 
        m_friendlyname > m_language)
@@ -1355,7 +1295,7 @@ LanguageIdentifier::LanguageIdentifier(const char* language_data_file, bool run_
 	 {
 	 FilePath path(language_data_file) ;
 	 m_directory = dup_string(path.directory()) ;
-	 auto nlang = read_uint32(fp,0) ;
+	 auto nlang = fp.read32LE() ;
 	 if (nlang > 0)
 	    {
 	    m_langinfo.allocBatch(nlang) ;
