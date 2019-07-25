@@ -598,7 +598,7 @@ static Owned<NybbleTrie> load_stop_grams_selected(unsigned langid,
       {
       return new NybbleTrie ;
       }
-   uint64_t train = curr->trainingBytes() ;
+   auto train = curr->trainingBytes() ;
    if (train < TRAINSIZE_FULL_WEIGHT)
       {
       train = (train > TRAINSIZE_NO_WEIGHT) ? train - TRAINSIZE_NO_WEIGHT : 0 ;
@@ -641,9 +641,9 @@ static Owned<NybbleTrie> load_stop_grams_selected(unsigned langid,
    unsigned maxkey = ptrie->longestKey() ;
    if (maxkey > sizeof(key))
       maxkey = sizeof(key) ;
-   auto stop_grams = new NybbleTrie ;
-   curr_ngrams = new NybbleTrie ;
-   ngram_weights = new NybbleTrie ;
+   Owned<NybbleTrie> stop_grams ;
+   curr_ngrams.reinit() ;
+   ngram_weights.reinit() ;
    auto freq_base = ptrie->frequencyBaseAddress() ;
    StopGramInfo stop_gram_info(stop_grams,curr_ngrams,ngram_weights,
 			       freq_base,weights,selected,langid) ;
@@ -692,7 +692,7 @@ static Owned<NybbleTrie> load_stop_grams(const LanguageID *lang_info, const char
       }
    else
       {
-      stop_grams = new NybbleTrie ;
+      stop_grams.reinit() ;
       }
    return stop_grams ;
 }
@@ -1776,7 +1776,9 @@ static bool load_frequencies(CFile& f, NybbleTrie* ngrams, uint64_t& total_bytes
    bool first_line = true ;
    bool have_bigram_counts = false ;
    double codepoint_discount = 1.0 ;
-   Owned<BigramCounts> crubadan_bigrams { crubadan_format ? new BigramCounts : nullptr } ;
+   Owned<BigramCounts> crubadan_bigrams { nullptr } ;
+   if (crubadan_format)
+      crubadan_bigrams.reinit() ;
    bool have_script = false ;
    bool try_guessing_script = false ;
    opts.setCoverageFactor(1.0) ;
@@ -2004,7 +2006,7 @@ static bool load_frequencies(CFile& f, NybbleTrie* ngrams, uint64_t& total_bytes
       }
    if (have_bigram_counts)
       {
-      bigrams = new BigramCounts ;
+      bigrams.reinit() ;
       if (!bigrams->read(f))
 	 {
 	 SystemMessage::error("reading bigram counts in vocabulary file") ;
@@ -2266,7 +2268,7 @@ static bool compute_ngrams(const char **filelist, unsigned num_files, Owned<Nybb
    Owned<TrigramCounts> counts ;
    if (!counts)
       return false ;
-   ngrams = new NybbleTrie ;
+   ngrams.reinit() ;
    Owned<BigramCounts> bi_counts { nullptr } ;
    total_bytes = count_trigrams(filelist,num_files,*counts,skip_newlines,aligned,bi_counts) ;
    unsigned top_K = set_oversampling(topK,ABSOLUTE_MIN_LENGTH,minimum_length,aligned) ;
