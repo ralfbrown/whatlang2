@@ -1039,7 +1039,7 @@ static uint64_t count_trigrams(const char **filelist, unsigned num_files,
    SystemMessage::status("Counting trigrams") ;
    uint64_t total_bytes = read_files(filelist,num_files,true,&count_raw_trigrams,&counts) ;
    // count the bigrams before we clear any of the trigram counts
-   bigrams = new BigramCounts(counts) ;
+   bigrams.reinit(counts) ;
    if (bigram_extension == BigramExt_ASCIILittleEndian ||
        bigram_extension == BigramExt_UTF8LittleEndian)
       {

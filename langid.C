@@ -1401,7 +1401,7 @@ Owned<LanguageIdentifier> LanguageIdentifier::load(const char *database_file, co
 	 }
       }
    if (!id && create)
-      id = new LanguageIdentifier(database_file,verbose) ;
+      id.reinit(database_file,verbose) ;
    if (!id)
       {
       if (database_file && *database_file)
@@ -1518,7 +1518,7 @@ LangIDPackedMultiTrie* LanguageIdentifier::packedTrie()
 {
    if (!m_langdata && m_uncomplangdata)
       {
-      m_langdata = new LangIDPackedMultiTrie(m_uncomplangdata) ;
+      m_langdata.reinit(m_uncomplangdata) ;
       m_uncomplangdata = nullptr ;
       }
    return m_langdata ;
@@ -1530,7 +1530,7 @@ LangIDMultiTrie* LanguageIdentifier::unpackedTrie()
 {
    if (!m_uncomplangdata && m_langdata)
       {
-      m_uncomplangdata = new LangIDMultiTrie(m_langdata) ;
+      m_uncomplangdata.reinit(m_langdata) ;
       m_langdata = nullptr ;
       }
    return m_uncomplangdata.get() ;

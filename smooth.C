@@ -45,7 +45,7 @@ Owned<LanguageScores> LanguageIdentifier::smoothedScores(LanguageScores* scores,
    //   works at least as well
    if (!m_prior_scores)
       {
-      m_prior_scores = new LanguageScores(scores->numLanguages()) ;
+      m_prior_scores.reinit(scores->numLanguages()) ;
       m_prior_scores->addThresholded(scores,LANGID_ZERO_SCORE, ::log(match_length)) ;
       return scores ;
       }
