@@ -582,7 +582,7 @@ static bool select_models_by_similarity(size_t langid, BitVector &selected,
 
 //----------------------------------------------------------------------
 
-static NybbleTrie *load_stop_grams_selected(unsigned langid,
+static Owned<NybbleTrie> load_stop_grams_selected(unsigned langid,
 					    LanguageScores *weights,
    					    LangIDPackedMultiTrie *ptrie,
 					    const BitVector *selected,
@@ -653,8 +653,7 @@ static NybbleTrie *load_stop_grams_selected(unsigned langid,
 
 //----------------------------------------------------------------------
 
-static NybbleTrie *load_stop_grams(const LanguageID *lang_info,
-				   const char *languages,
+static Owned<NybbleTrie> load_stop_grams(const LanguageID *lang_info, const char *languages,
 				   Owned<NybbleTrie>& curr_ngrams,
 				   Owned<NybbleTrie>& ngram_weights,
 				   uint64_t &training_bytes)
@@ -684,7 +683,7 @@ static NybbleTrie *load_stop_grams(const LanguageID *lang_info,
       {
       selected_models = select_models_by_name(languages,*selected) ;
       }
-   NybbleTrie *stop_grams ;
+   Owned<NybbleTrie> stop_grams { nullptr } ;
    if (selected_models || 1) //!!! we need to run regardless, to create curr_ngrams
       {
       curr_ngrams = nullptr ;
@@ -2675,8 +2674,7 @@ static bool process_argument_group(int &argc, const char **&argv, LanguageID &la
       Owned<NybbleTrie> curr_ngrams { nullptr } ;
       Owned<NybbleTrie> ngram_weights { nullptr } ;
       uint64_t training_bytes = 0 ;
-      Owned<NybbleTrie> stop_grams = load_stop_grams(&lang_info,related_langs,curr_ngrams,ngram_weights,
-	 					     training_bytes) ;
+      auto stop_grams = load_stop_grams(&lang_info,related_langs,curr_ngrams,ngram_weights, training_bytes) ;
       success = process_files(filelist,argv-filelist+1,lang_info,curr_ngrams.move(),training_bytes,
 			      skip_newlines,omit_bigrams,ignore_whitespace,
 			      stop_grams,ngram_weights,no_save,check_script) ;
