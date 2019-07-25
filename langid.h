@@ -447,7 +447,7 @@ class LanguageIdentifier
       bool finishIdentification(LanguageScores *scores, unsigned select_highestN = 0,
 				double cutoff_ratio = 0.1) const ;
       Fr::Owned<LanguageScores> smoothedScores(LanguageScores* rawscores, int buflen) const ;
-      LanguageScores *similarity(unsigned langid) const ;
+      Fr::Owned<LanguageScores> similarity(unsigned langid) const ;
       bool sameLanguage(size_t L1, size_t L2,
 			bool ignore_region = false) const ;
       double bigramWeight() const { return m_bigram_weight ; }

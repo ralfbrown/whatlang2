@@ -673,7 +673,7 @@ static NybbleTrie *load_stop_grams(const LanguageID *lang_info,
    training_bytes = language_identifier->trainingBytes(langid) ;
    SystemMessage::status("Computing similarities relative to %s_%s-%s",lang_info->language(),lang_info->region(),
       lang_info->encoding()) ;
-   Owned<LanguageScores> weights = language_identifier->similarity(langid) ;
+   auto weights = language_identifier->similarity(langid) ;
    ScopedObject<BitVector> selected(language_identifier->numLanguages()) ;
    bool selected_models ;
    if (languages && *languages == '@')

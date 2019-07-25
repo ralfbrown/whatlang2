@@ -1886,11 +1886,11 @@ static bool cosine_term(const PackedTrieNode *node, const uint8_t *,
 
 //----------------------------------------------------------------------
 
-LanguageScores *LanguageIdentifier::similarity(unsigned langid) const
+Owned<LanguageScores> LanguageIdentifier::similarity(unsigned langid) const
 {
    if (langid >= numLanguages() || !trie())
       return nullptr ;
-   auto scores = new WeightedLanguageScores(numLanguages(),0.0) ;
+   Owned<WeightedLanguageScores> scores(numLanguages(),0.0) ;
    if (scores && trie())
       {
       scores->setLanguage(langid) ;
