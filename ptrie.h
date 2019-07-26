@@ -5,7 +5,7 @@
 /*									*/
 /*  File: ptrie.h - packed Word-frequency multi-trie			*/
 /*  Version:  1.30				       			*/
-/*  LastEdit: 2019-07-18						*/
+/*  LastEdit: 2019-07-26						*/
 /*									*/
 /*  (c) Copyright 2011,2012,2013,2015,2019 Carnegie Mellon University	*/
 /*      This program is free software; you can redistribute it and/or   */
@@ -138,6 +138,7 @@ class PackedTrieTerminalNode
          { return base + m_frequency_info.load() ; }
 
       // modifiers
+      void reinit() { setFrequencies(INVALID_FREQ) ; }
       void setFrequencies(uint32_t index) { m_frequency_info.store(index) ; }
    protected:
       Fr::UInt32 m_frequency_info { INVALID_FREQ } ;
