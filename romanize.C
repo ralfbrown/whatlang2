@@ -25,7 +25,7 @@
 
 #include <algorithm>
 #include <cstdio>
-#include "roman.h"
+#include "framepac/romanize.h"
 
 /************************************************************************/
 /************************************************************************/
@@ -63,7 +63,7 @@ int main(int argc, const char **argv)
 	 }
       // get the next UTF-8 codepoint
       wchar_t codepoint ;
-      unsigned len = Romanizer::utf8codepoint(buffer + bufpos,codepoint) ;
+      unsigned len = Fr::Romanizer::utf8codepoint(buffer + bufpos,codepoint) ;
       if (len == 0)
 	 {
 	 fprintf(stderr,"Invalid UTF-8 in input, aborting\n") ;
@@ -72,7 +72,7 @@ int main(int argc, const char **argv)
       bufpos += len ;
       // romanize it
       char romanized[8] ;
-      int bytes = Romanizer::romanize(codepoint,romanized) ;
+      int bytes = Fr::Romanizer::romanize(codepoint,romanized) ;
       // and write the result
       if (bytes > 0)
 	 {

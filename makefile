@@ -6,11 +6,14 @@ DBDIR=/usr/share/langident
 
 SHAREDLIB=
 
-OBJS = 	build/langid.o build/scan_langid.o \
-	build/mtrie.o build/prepfile.o \
+OBJS = 	build/langid.o \
+	build/mtrie.o \
+	build/prepfile.o \
 	build/ptrie.o \
-	build/roman.o build/smooth.o \
-	build/trie.o build/trigram.o
+	build/scan_langid.o \
+	build/smooth.o \
+	build/trie.o \
+	build/trigram.o
 
 EXES =	bin/mklangid \
 	bin/romanize \
@@ -282,9 +285,7 @@ build/prepfile.o: prepfile.C prepfile.h
 
 build/ptrie.o: ptrie.C ptrie.h mtrie.h
 
-build/roman.o: roman.C roman.h
-
-build/romanize.o: romanize.C roman.h
+build/romanize.o: romanize.C framepac/framepac/romanize.h
 
 build/smooth.o: smooth.C langid.h
 
