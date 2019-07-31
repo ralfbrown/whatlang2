@@ -5,7 +5,7 @@
 /*									*/
 /*  File:     romanize.C						*/
 /*  Version:  1.30							*/
-/*  LastEdit: 2019-07-15						*/
+/*  LastEdit: 2019-07-30						*/
 /*                                                                      */
 /*  (c) Copyright 2011,2012,2019 Ralf Brown/Carnegie Mellon University	*/
 /*      This program is free software; you can redistribute it and/or   */
@@ -25,7 +25,11 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <cstring>
+#include "framepac/file.h"
 #include "framepac/romanize.h"
+
+using namespace Fr ;
 
 /************************************************************************/
 /************************************************************************/
@@ -46,44 +50,16 @@ int main(int argc, const char **argv)
       usage(argv[0]) ;
       return 1 ;
       }
-   char buffer[32768] ;
-   unsigned bufpos = 0 ;
-   unsigned buflen = 0 ;
-   const unsigned highwater = 7 * sizeof(buffer) / 8 ;
-   buflen = fread(buffer,sizeof(char),sizeof(buffer),stdin) ;
-   while (buflen > bufpos)
+   Initialize() ;
+   CFile f(stdin) ;
+   while (CharPtr line = f.getCLine())
       {
-      if (bufpos >= highwater)
-	 {
-	 // refill the buffer
-	 std::copy_n(buffer+bufpos,buflen-bufpos,buffer) ;
-	 buflen -= bufpos ;
-	 bufpos = 0 ;
-	 buflen += fread(buffer+buflen,1,sizeof(buffer)-buflen,stdin) ;
-	 }
-      // get the next UTF-8 codepoint
-      wchar_t codepoint ;
-      unsigned len = Fr::Romanizer::utf8codepoint(buffer + bufpos,codepoint) ;
-      if (len == 0)
-	 {
-	 fprintf(stderr,"Invalid UTF-8 in input, aborting\n") ;
-	 break ;
-	 }
-      bufpos += len ;
-      // romanize it
-      char romanized[8] ;
-      int bytes = Fr::Romanizer::romanize(codepoint,romanized) ;
-      // and write the result
-      if (bytes > 0)
-	 {
-	 fwrite(romanized,sizeof(char),bytes,stdout) ;
-	 }
-      else
-	 {
-	 fprintf(stderr,"Error romanizing codepoint U%4.04X\n",codepoint) ;
-	 break ;
-	 }
+      CharPtr romanized = Romanizer::romanize(line) ;
+      if (romanized)
+	 fwrite(romanized,sizeof(char),strlen(romanized),stdout) ;
+      fputc('\n',stdout) ;
       }
+   Shutdown() ;
    return 0 ;
 }
 
