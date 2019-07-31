@@ -44,48 +44,35 @@ using namespace Fr ;
 
 class StringList
    {
-   private:
-      StringList *m_next ;
-      CharPtr     m_string ;
-      unsigned	  m_length ;
    public:
-      StringList(const char *strng) ;
+      StringList(CharPtr strng) ;
       ~StringList() = default ;
 
       // accessors
-      StringList *next() const { return m_next ; }
-      const char *string() const { return m_string ; }
+      StringList* next() const { return m_next ; }
+      const char* string() const { return m_string ; }
       unsigned length() const { return m_length ; }
       unsigned listlength() const ;
 
       // modifiers
-      void next(StringList *nxt) { m_next = nxt ; }
+      void next(StringList* nxt) { m_next = nxt ; }
 
       // factory
-      static void append(const char *strng, StringList **&last_string) ;
+      static void append(CharPtr strng, StringList**& last_string) ;
+
+   private:
+      StringList* m_next { nullptr } ;
+      CharPtr     m_string ;
+      unsigned	  m_length ;
    } ;
 
 /************************************************************************/
 /*	Methods for class StringList					*/
 /************************************************************************/
 
-StringList::StringList(const char *strng)
+StringList::StringList(CharPtr strng) : m_string(strng)
 {
-   m_next = nullptr ;
-   if (strng)
-      {
-      m_length = strlen(strng) ;
-      m_string.reallocate(0,m_length+1) ;
-      if (m_string)
-	 std::copy_n(strng,m_length+1,m_string.begin()) ;
-      else
-	 m_length = 0 ;
-      }
-   else
-      {
-      m_length = 0 ;
-      m_string = nullptr ;
-      }
+   m_length = m_string ? strlen(m_string) : 0 ;
    return ;
 }
 
@@ -103,7 +90,7 @@ unsigned StringList::listlength() const
 
 //----------------------------------------------------------------------
 
-void StringList::append(const char *strng, StringList **&last_string)
+void StringList::append(CharPtr strng, StringList**& last_string)
 {
    if (!last_string)
       return ;				// no list, so we can't do anything
@@ -111,7 +98,7 @@ void StringList::append(const char *strng, StringList **&last_string)
    if (!str)
       return ;				// Out of memory!  Ignore line
    *last_string = str ;
-   StringList **end_ptr = &str->m_next ;
+   StringList** end_ptr = &str->m_next ;
    last_string = end_ptr ;
    return ;
 }
@@ -130,14 +117,40 @@ static void usage(const char *argv0)
            "\t-lX\tsample lines more than 'X' bytes in length ('count' ignored)\n"
            "\t-LX\tsample lines less than 'X' bytes in length\n"
            "\t-u\tsample uniformly-spaced lines\n"
+           "\t-oF\twrite sampled lines to file F (default is standard output)\n"
            "\t-rF\twrite non-sampled (rejected) lines to file F\n"
+           "\t-R\tgenerate the same 'random' sample every time\n"
 	<< endl ;
    exit(1) ;
 }
 
 //----------------------------------------------------------------------
 
-static void take_uniform_bytes(StringList* lines, size_t sample_size, CFile& rejectfp)
+static void write_line(CFile& f, const char* line)
+{
+   if (f)
+      {
+      f.puts(line) ;
+      f.putc('\n') ;
+      }
+   return ;
+}
+  
+//----------------------------------------------------------------------
+
+static bool select_line(bool selected, CFile& selectfp, CFile& rejectfp, const char* line)
+{
+   if (selected)
+      write_line(selectfp,line) ;
+   else
+      write_line(rejectfp,line) ;
+   return selected ;
+}
+
+
+//----------------------------------------------------------------------
+
+static void take_uniform_bytes(StringList* lines, size_t sample_size, CFile& selectfp, CFile& rejectfp)
 {
    if (!lines)
       return ;
@@ -154,15 +167,8 @@ static void take_uniform_bytes(StringList* lines, size_t sample_size, CFile& rej
       Owned<StringList> line = lines ;
       lines = lines->next() ;
       size_t len = line->length() ;
-      if (sampled_bytes <= (total_bytes * sample_rate))
-	 {
-	 fputs(line->string(),stdout) ;
+      if (select_line(sampled_bytes <= (total_bytes * sample_rate),selectfp,rejectfp,line->string()))
 	 sampled_bytes += len ;
-	 }
-      else if (rejectfp)
-	 {
-	 rejectfp.puts(line->string()) ;
-	 }
       total_bytes += len ;
       }
    return ;
@@ -170,7 +176,7 @@ static void take_uniform_bytes(StringList* lines, size_t sample_size, CFile& rej
 
 //----------------------------------------------------------------------
 
-static void take_uniform_sample(StringList* lines, size_t sample_size, CFile& rejectfp)
+static void take_uniform_sample(StringList* lines, size_t sample_size, CFile& selectfp, CFile& rejectfp)
 {
    if (!lines)
       return ;
@@ -181,23 +187,15 @@ static void take_uniform_sample(StringList* lines, size_t sample_size, CFile& re
       {
       Owned<StringList> line = lines ;
       lines = lines->next() ;
-      double increment = interval ;
-      if ((size_t)(count + increment) > (size_t)count)
-	 {
-	 fputs(line->string(),stdout) ;
-	 }
-      else if (rejectfp)
-	 {
-	 rejectfp.puts(line->string()) ;
-	 }
-      count += increment ;
+      select_line((size_t)(count + interval) > (size_t)count,selectfp,rejectfp,line->string()) ;
+      count += interval ;
       }
    return ;
 }
 
 //----------------------------------------------------------------------
 
-static void take_random_sample(StringList* lines, size_t sample_size, CFile& rejectfp)
+static void take_random_sample(StringList* lines, size_t sample_size, CFile& selectfp, CFile& rejectfp)
 {
    size_t numlines = lines->listlength() ;
    if (sample_size >= numlines)
@@ -206,7 +204,7 @@ static void take_random_sample(StringList* lines, size_t sample_size, CFile& rej
 	 {
          Owned<StringList> line = lines ;
 	 lines = lines->next() ;
-	 fputs(line->string(),stdout) ;
+	 write_line(selectfp,line->string()) ;
          }
       }
    else
@@ -216,10 +214,7 @@ static void take_random_sample(StringList* lines, size_t sample_size, CFile& rej
 	 {
          Owned<StringList> line = lines ;
 	 lines = lines->next() ;
-	 if (selected[i])
-	    fputs(line->string(),stdout) ;
-	 else if (rejectfp)
-	    rejectfp.puts(line->string()) ;
+	 select_line(selected[i],selectfp,rejectfp,line->string()) ;
 	 }
       }
    return ;
@@ -233,10 +228,12 @@ int main(int argc, char **argv)
    bool use_bytes = false ;
    bool use_interval = false ;
    bool use_length = false ;
+   bool randomized = true ;
    unsigned min_length = 0 ;
    unsigned max_length = (unsigned)~0 ;
-   const char *reject_file = 0 ;
-   const char *argv0 = argv[0] ;
+   const char* output_file = "-" ;
+   const char* reject_file = 0 ;
+   const char* argv0 = argv[0] ;
    while (argc > 1 && argv[1][0] == '-')
       {
       switch (argv[1][1])
@@ -267,8 +264,14 @@ int main(int argc, char **argv)
 	    use_interval = false ;
 	    uniform_sample = false ;
 	    break ;
+	 case 'o':
+	    output_file = argv[1]+2 ;
+	    break ;
 	 case 'r':
 	    reject_file = argv[1]+2 ;
+	    break ;
+	 case 'R':
+	    randomized = false ;
 	    break ;
 	 case 'u':
 	    uniform_sample = true ;
@@ -297,30 +300,22 @@ int main(int argc, char **argv)
       {
       sample_size = atoi(argv[1]) ;
       }
-   StringList *lines = nullptr ;
-   StringList **lastline = &lines ;
+   StringList* lines = nullptr ;
+   StringList** lastline = &lines ;
    COutputFile rejectfp(reject_file) ;
    size_t numlines = 0 ;
-   while (!feof(stdin))
+   CFile f(stdin) ;
+   COutputFile selectfp(output_file) ;
+   while (CharPtr line = f.getCLine())
       {
-      char line[MAX_LINE] ;
-      line[0] = '\0' ;
-      if (!fgets(line,sizeof(line),stdin))
-	 break ;
       if (use_length)
 	 {
 	 unsigned len = strlen(line) ;
-	 if (len >= min_length && len <= max_length)
-	    fputs(line,stdout) ;
-	 else if (rejectfp)
-	    rejectfp.puts(line) ;
+	 select_line(len >= min_length && len <= max_length,selectfp,rejectfp,line) ;
 	 }
       else if (use_interval)
 	 {
-	 if (numlines % sample_size == 0)
-	    fputs(line,stdout) ;
-	 else if (rejectfp)
-	    rejectfp.puts(line) ;
+	 select_line(numlines % sample_size == 0,selectfp,rejectfp,line) ;
 	 }
       else
 	 {
@@ -331,15 +326,17 @@ int main(int argc, char **argv)
    *lastline = nullptr ;		// terminate list of lines
    if (use_bytes)
       {
-      take_uniform_bytes(lines,sample_size,rejectfp) ;
+      take_uniform_bytes(lines,sample_size,selectfp,rejectfp) ;
       }
    else if (uniform_sample)
       {
-      take_uniform_sample(lines,sample_size,rejectfp) ;
+      take_uniform_sample(lines,sample_size,selectfp,rejectfp) ;
       }
    else
       {
-      take_random_sample(lines,sample_size,rejectfp) ;
+      if (randomized)
+	 Randomize() ;
+      take_random_sample(lines,sample_size,selectfp,rejectfp) ;
       }
    return 0 ;
 }
