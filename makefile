@@ -302,6 +302,14 @@ langid.h:	mtrie.h ptrie.h
 	touch langid.h
 
 #########################################################################
+## submodule initialization
+
+framepac:
+	@[[ -e ../framepac/framepac ]] && echo "Linking to local install of FramepaC-ng" && ln -s ../framepac .
+	@[[ ! -e framepac ]] && [[ -e .git ]] && echo "Fetching FramepaC-ng" && git submodule add ../framepac-ng.git framepac && git submodule update --init
+	@[[ -e framepac ]] || (echo "Please install FramepaC-ng in subdir 'framepac'" ;exit 1)
+
+#########################################################################
 ## library
 
 $(LIBRARY): $(OBJS)
