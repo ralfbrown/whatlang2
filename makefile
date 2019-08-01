@@ -223,7 +223,7 @@ LIBIDXFLAGS = $(LIBRARY)
 #########################################################################
 ## standard targets
 
-all:  $(EXES)
+all:  framepac $(EXES)
 
 clean:
 	-$(RM) $(LIBRARY) build/*.o $(EXES)
