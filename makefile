@@ -1,6 +1,6 @@
 ## makefile for LangIdent
 
-INCDIR=./framepac
+FRAMEPAC=./framepac
 DESTDIR=/usr/bin
 DBDIR=/usr/share/langident
 
@@ -138,29 +138,11 @@ ZIPNAME=langident-$(RELEASE).zip
 endif
 
 WARN=-Wall -Wextra -Wno-deprecated -Wshadow -Wcast-align -Wmissing-noreturn -Wmissing-format-attribute
-#WARN += -Wunused-result (not on Doha)
-#WARN += -Wno-multichar -Wpacked -Wdisabled-optimization -Wpadded
+WARN += -Wunused-result -Wno-multichar -Wpacked -Wdisabled-optimization
+#WARN += -Wpadded
 
 LINKBITS=-m$(BITS)
-ifeq ($(CPU),99)
-  # auto-detection, assuming at least AMD "K8" level of features (any
-  #  x64 processor qualifies); required GCC 4.2+
-  CPUDEF=-march=native -D__886__ -D__BITS__=$(BITS)
-else ifeq ($(CPU),10)
-  # newest AMD chips: "Barcelona", PhenomII
-  CPUDEF=-march=amdfam10 -D__886__ -D__BITS__=$(BITS)
-else ifeq ($(CPU),8)
-  CPUDEF=-march=k8 -msse -D__BITS__=$(BITS)
-else ifeq ($(CPU),7)
-  CPUDEF=-march=athlon-xp -mmmx
-else ifeq ($(CPU),6)
-  CPUDEF=-march=i$(CPU)86 -mtune=i$(CPU)86 -mmmx
-else
-  CPUDEF=-march=i$(CPU)86 -mtune=i$(CPU)86
-endif
-ifneq ($(CPU),99)
-CPUDEF += -D__$(CPU)86__
-endif
+CPUDEF=-march=native -D__BITS__=$(BITS)
 
 CC = g++ -std=c++11
 CCLINK = $(CC)
@@ -177,14 +159,14 @@ CFLAGS +=$(SANITIZE)
 CFLAGS +=$(INCLUDEDIRS)
 CFLAGS +=$(SHAREDLIB)
 CFLAGS +=$(COMPILE_OPTS)
-CFLAGS +=-I$(INCDIR) -I..
+CFLAGS +=-I$(FRAMEPAC) -I..
 CFLAGEXE = -L$(LIBINSTDIR) $(PROFILE) -o $@
 LINKFLAGS =$(LINKBITS)
 LINKFLAGS +=$(LINKTYPE)
 LINKFLAGS +=$(PTHREAD)
 LINKFLAGS +=$(SANITIZE)
 LINKFLAGS +=$(LINKSAN)
-LINKFLAGS +=-L$(INCDIR)
+LINKFLAGS +=-L$(FRAMEPAC)
 
 ifeq ($(BUILD_DBG),2)
  CFLAGS += -ggdb3 -O0 -fno-inline -g3 '-DDBDIR="$(DBDIR)"'
@@ -251,19 +233,19 @@ lib:	$(LIBRARY)
 #########################################################################
 ## executables
 
-bin/mklangid: build/mklangid.o $(LIBRARY) $(INCDIR)/framepacng.a
+bin/mklangid: build/mklangid.o $(LIBRARY) $(FRAMEPAC)/framepacng.a
 	@mkdir -p bin
 	$(CCLINK) $(LINKFLAGS) $(CFLAGEXE) -o $@ $^
 
-bin/romanize: build/romanize.o $(LIBRARY) $(INCDIR)/framepacng.a
+bin/romanize: build/romanize.o $(LIBRARY) $(FRAMEPAC)/framepacng.a
 	@mkdir -p bin
 	$(CCLINK) $(LINKFLAGS) $(CFLAGEXE) -o $@ $^
 
-bin/whatlang: build/whatlang.o $(LIBRARY) $(INCDIR)/framepacng.a
+bin/whatlang: build/whatlang.o $(LIBRARY) $(FRAMEPAC)/framepacng.a
 	@mkdir -p bin
 	$(CCLINK) $(LINKFLAGS) $(CFLAGEXE) -o $@ $^
 
-bin/subsample: build/subsample.o $(INCDIR)/framepacng.a
+bin/subsample: build/subsample.o $(FRAMEPAC)/framepacng.a
 	@mkdir -p bin
 	$(CCLINK) $(LINKFLAGS) $(CFLAGEXE) -o $@ $^
 
@@ -305,7 +287,8 @@ langid.h:	mtrie.h ptrie.h
 ## submodule initialization
 
 framepac:
-	@[[ -e ../framepac/framepac ]] && echo "Linking to local install of FramepaC-ng" && ln -s ../framepac .
+	@[[ -e ../framepac-ng/framepac ]] && echo "Linking to local install of FramepaC-ng" && ln -s ../framepac-ng framepac ; true
+	@[[ -e ../framepac/framepac ]] && echo "Linking to local install of FramepaC-ng" && ln -s ../framepac framepac ; true
 	@[[ ! -e framepac ]] && [[ -e .git ]] && echo "Fetching FramepaC-ng" && git submodule add ../framepac-ng.git framepac && git submodule update --init
 	@[[ -e framepac ]] || (echo "Please install FramepaC-ng in subdir 'framepac'" ;exit 1)
 
@@ -317,14 +300,14 @@ $(LIBRARY): $(OBJS)
 	$(LIBRARIAN) $(LIBFLAGS) $(LIBRARY) $(OBJS)
 	$(LIBINDEXER) $(LIBIDXFLAGS)
 
-$(INCDIR)/framepacng.a:
-	( cd $(INCDIR) ; make lib )
+$(FRAMEPAC)/framepacng.a:
+	( cd $(FRAMEPAC) ; make lib )
 
 #########################################################################
 ## default compilation rule
 
-.C.o: ; $(CC) $(CFLAGS) $(CPUTYPE) -I$(INCDIR) -c $<
+.C.o: ; $(CC) $(CFLAGS) $(CPUTYPE) -c $<
 
 build/%.o : %.C
 	@mkdir -p build
-	$(CC) $(CFLAGS) $(CPUTYPE) -I$(INCDIR) -c -o $@ $<
+	$(CC) $(CFLAGS) $(CPUTYPE) -c -o $@ $<
