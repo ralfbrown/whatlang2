@@ -102,25 +102,25 @@ class PreprocessedInputFile
       unsigned getCodepoint() ;
 
    private:
-      Fr::CharPtr m_filename ;
-      Fr::CFile   m_fp ;
-      size_t	  m_max_sample_bytes ;
-      uint64_t	  m_bytes_read ;
-      bool	  m_piped ;
-      bool	  m_uniform_sample ;
-      bool	  m_convert_Latin1 ;
-      bool        m_ignore_whitespace ;
-      BigramExtension m_bigram_ext ;
-      unsigned    m_alignment ;
-      Fr::List   *m_buffered_lines ;
-      unsigned char buffered_char ;
-      unsigned    original_buffer_len ;
-      unsigned    translit_buffer_ptr ;
-      unsigned    translit_buffer_len ;
 #ifndef NO_ICONV
       iconv_t     m_conversion ;
       unsigned char original_buffer[BUFFER_SIZE] ;
 #endif /* !NO_ICONV */
+      Fr::CharPtr m_filename ;
+      Fr::CFile   m_fp ;
+      Fr::List   *m_buffered_lines ;
+      uint64_t	  m_bytes_read ;
+      size_t	  m_max_sample_bytes ;
+      BigramExtension m_bigram_ext ;
+      unsigned    m_alignment ;
+      unsigned    original_buffer_len ;
+      unsigned    translit_buffer_ptr ;
+      unsigned    translit_buffer_len ;
+      unsigned char buffered_char ;
+      bool	  m_piped ;
+      bool	  m_uniform_sample ;
+      bool	  m_convert_Latin1 ;
+      bool        m_ignore_whitespace ;
       unsigned char translit_buffer[2*BUFFER_SIZE] ;
       static Fr::CharPtr s_from_enc ;
       static Fr::CharPtr s_to_enc ;
