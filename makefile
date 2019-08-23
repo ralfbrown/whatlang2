@@ -211,7 +211,7 @@ clean:
 	-$(RM) $(LIBRARY) build/*.o $(EXES)
 
 allclean: clean
-	-rmdir bin build >& $(NULL) ; true
+	-rmdir bin build >$(NULL) ; true
 
 tags:
 	etags --c++ *.h *.C
@@ -287,10 +287,10 @@ langid.h:	mtrie.h ptrie.h
 ## submodule initialization
 
 framepac:
-	@[[ -e ../framepac-ng/framepac ]] && echo "Linking to local install of FramepaC-ng" && ln -s ../framepac-ng framepac ; true
-	@[[ -e ../framepac/framepac ]] && echo "Linking to local install of FramepaC-ng" && ln -s ../framepac framepac ; true
-	@[[ ! -e framepac ]] && [[ -e .git ]] && echo "Fetching FramepaC-ng" && git submodule add ../framepac-ng.git framepac && git submodule update --init
-	@[[ -e framepac ]] || (echo "Please install FramepaC-ng in subdir 'framepac'" ;exit 1)
+	@[ -e ../framepac-ng/framepac ] && echo "Linking to local install of FramepaC-ng" && ln -s ../framepac-ng framepac ; true
+	@[ -e ../framepac/framepac ] && echo "Linking to local install of FramepaC-ng" && ln -s ../framepac framepac ; true
+	@[ ! -e framepac ] && [ -e .git ] && echo "Fetching FramepaC-ng" && git submodule add -f ../framepac-ng.git framepac && git submodule update --init
+	@[ -e framepac ] || (echo "Please install FramepaC-ng in subdir 'framepac'" ;exit 1)
 
 #########################################################################
 ## library
